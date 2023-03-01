@@ -1,6 +1,6 @@
 {
   "name": "nostr-fetch-all",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A utility library that allows JS/TS apps to effortlessly fetch all past events from Nostr relays",
   "keywords": [
     "nostr"
@@ -16,7 +16,13 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "src",
+    "examples"
+  ],
   "scripts": {
+    "prepack": "yarn build",
     "test": "echo \"Error: no test specified\" && exit 1",
     "tsc": "tsc",
     "lint": "run-p tsc lint:*",
