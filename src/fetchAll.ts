@@ -64,8 +64,8 @@ const defaultFetchAllOptions: Required<FetchAllOptions> = {
 
 export const fetchAllEvents = async (
   relayUrl: string,
-  rangeFilter: FetchAllRangeFilter,
   filters: FetchAllFilter[],
+  rangeFilter: FetchAllRangeFilter,
   options: FetchAllOptions = {}
 ): Promise<NostrEvent[]> => {
   const opt: Required<FetchAllOptions> = {

@@ -16,15 +16,15 @@ const main = async () => {
   // fetch all text events (kind: 1) posted in last week from the relay
   const evs = await fetchAllEvents(
     relayUrl,
-    {
-      since: nDaysAgo(7),
-    },
     [
       {
         kinds: [eventKind.text],
         // authors: ["<your pubkey (hex)>"],
       },
     ],
+    {
+      since: nDaysAgo(7),
+    },
     { verifyEventSig: false }
   );
   console.log(`fetched ${evs.length} events`);
