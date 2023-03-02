@@ -40,7 +40,7 @@ export const eventKind = {
   relayList: 10002,
   clientAuth: 22242,
   article: 30023,
-};
+} as const;
 
 /**
  * Filter for event subscription
