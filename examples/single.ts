@@ -14,7 +14,7 @@ const relayUrl = process.argv[2] as string;
 
 const main = async () => {
   // fetch all text events (kind: 1) posted in last week from the relay
-  const evs = await fetchAllEvents(
+  const events = fetchAllEvents(
     relayUrl,
     [
       {
@@ -27,7 +27,13 @@ const main = async () => {
     },
     { verifyEventSig: false }
   );
-  console.log(`fetched ${evs.length} events`);
+
+  let cnt = 0;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  for await (const _ of events) {
+    cnt++;
+  }
+  console.log(`fetched ${cnt} events`);
 };
 
 main()
