@@ -24,8 +24,8 @@ const main = async () => {
     ],
     {
       since: nDaysAgo(7),
-    },
-    { verifyEventSig: false }
+    }
+    // { skipVerification: true }
   );
 
   let cnt = 0;

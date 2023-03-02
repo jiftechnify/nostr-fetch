@@ -73,7 +73,7 @@ const msgTypeNames: string[] = ["EVENT", "EOSE", "NOTICE", "OK", "AUTH"];
 
 export const parseR2CMessage = (
   rawMsg: string,
-  verifyEvSig: boolean
+  skipVerification: boolean
 ): R2CMessage | undefined => {
   let parsed: unknown;
   try {
@@ -116,7 +116,7 @@ export const parseR2CMessage = (
         console.error("malformed event in R2C EVENT");
         return undefined;
       }
-      if (verifyEvSig && !verifyEventSig(ev)) {
+      if (!skipVerification && !verifyEventSig(ev)) {
         console.error("couldn't verify signature of event");
         return undefined;
       }

@@ -9,12 +9,12 @@ export type FetchAllRangeFilter = Pick<Filter, "since" | "until">;
 export type FetchAllFilter = Omit<Filter, "limit" | "since" | "until">;
 
 export type FetchAllOptions = {
-  verifyEventSig?: boolean;
+  skipVerification?: boolean;
   limitPerReq?: number;
 };
 
 const defaultFetchAllOptions: Required<FetchAllOptions> = {
-  verifyEventSig: true,
+  skipVerification: false,
   limitPerReq: MAX_LIMIT_PER_REQ,
 };
 
@@ -36,7 +36,7 @@ export async function* fetchAllEvents(
     throw Error(`the relay '${relayUrl}' doesn't support EOSE`);
   }
 
-  const r = new Relay(relayUrl, { verifyEventSig: opt.verifyEventSig });
+  const r = new Relay(relayUrl, { skipVerification: opt.skipVerification });
   await r.connect();
 
   const seenEventIds = new Set<string>();

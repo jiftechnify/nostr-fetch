@@ -40,11 +40,11 @@ type RelaySubListeners = {
 };
 
 export type RelayOptions = {
-  verifyEventSig?: boolean;
+  skipVerification?: boolean;
 };
 
 const defaultRelayOptions: Required<RelayOptions> = {
-  verifyEventSig: true,
+  skipVerification: false,
 };
 
 export class Relay {
@@ -89,7 +89,7 @@ export class Relay {
       performance.now() - dispatchStartedAt < 5.0
     ) {
       const rawMsg = this.#msgQueue.shift() as string;
-      const parsed = parseR2CMessage(rawMsg, this.#options.verifyEventSig);
+      const parsed = parseR2CMessage(rawMsg, this.#options.skipVerification);
       if (parsed === undefined) {
         continue;
       }
