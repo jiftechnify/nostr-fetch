@@ -1,7 +1,7 @@
 import { Channel } from "./channel";
 import type { Filter, NostrEvent } from "./nostr";
 import { isRelaySupportEose } from "./nostr";
-import { Relay } from "./relay";
+import { initRelay, Relay, RelayOptions } from "./relay";
 
 const MAX_LIMIT_PER_REQ = 5000;
 
@@ -10,12 +10,26 @@ export type FetchAllFilter = Omit<Filter, "limit" | "since" | "until">;
 
 export type FetchAllOptions = {
   skipVerification?: boolean;
+  checkEoseSupportTimeoutMs?: number;
+  connectTimeoutMs?: number;
+  autoEoseTimeoutMs?: number;
   limitPerReq?: number;
 };
 
 const defaultFetchAllOptions: Required<FetchAllOptions> = {
   skipVerification: false,
+  checkEoseSupportTimeoutMs: 3000,
+  connectTimeoutMs: 5000,
+  autoEoseTimeoutMs: 10000,
   limitPerReq: MAX_LIMIT_PER_REQ,
+};
+
+const toRelayOptions = (faOpts: Required<FetchAllOptions>): RelayOptions => {
+  return {
+    skipVerification: faOpts.skipVerification,
+    connectTimeoutMs: faOpts.connectTimeoutMs,
+    autoEoseTimeoutMs: faOpts.autoEoseTimeoutMs,
+  };
 };
 
 export async function* fetchAllEvents(
@@ -32,11 +46,11 @@ export async function* fetchAllEvents(
   if (filters.length === 0) {
     throw Error("you must specify at least one filter");
   }
-  if (!(await isRelaySupportEose(relayUrl))) {
+  if (!(await isRelaySupportEose(relayUrl, opt.checkEoseSupportTimeoutMs))) {
     throw Error(`the relay '${relayUrl}' doesn't support EOSE`);
   }
 
-  const r = new Relay(relayUrl, { skipVerification: opt.skipVerification });
+  const r = initRelay(relayUrl, toRelayOptions(opt));
   await r.connect();
 
   const seenEventIds = new Set<string>();
@@ -128,10 +142,8 @@ const fetchEventsTillEose = (
 
   // prepare a subscription
   const sub = relay.prepareSub(filters);
-  sub.on("event", (evs: NostrEvent[]) => {
-    for (const e of evs) {
-      tx.send(e);
-    }
+  sub.on("event", (ev: NostrEvent) => {
+    tx.send(ev);
   });
   sub.on("eose", () => {
     sub.close();

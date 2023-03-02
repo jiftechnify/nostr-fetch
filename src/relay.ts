@@ -5,6 +5,7 @@ import {
   generateSubId,
   NostrEvent,
   parseR2CMessage,
+  R2CSubMessage,
   validateEvent,
 } from "./nostr";
 
@@ -24,7 +25,7 @@ type RelayEventCbTypes = {
 
 type RelayEventTypes = keyof RelayEventCbTypes;
 
-type SubEventCb = Callback<NostrEvent[]>;
+type SubEventCb = Callback<NostrEvent>;
 type SubEoseCb = Callback<void>;
 
 type SubEventCbTypes = {
@@ -34,20 +35,27 @@ type SubEventCbTypes = {
 
 type SubEventTypes = keyof SubEventCbTypes;
 
-type RelaySubListeners = {
-  event: Set<SubEventCb>;
-  eose: Set<SubEoseCb>;
-};
-
 export type RelayOptions = {
-  skipVerification?: boolean;
+  skipVerification: boolean;
+  connectTimeoutMs: number;
+  autoEoseTimeoutMs: number;
 };
 
-const defaultRelayOptions: Required<RelayOptions> = {
-  skipVerification: false,
+export interface Relay {
+  url: string;
+  connect(): Promise<void>;
+  close(): void;
+  prepareSub(filters: Filter[]): Subscription;
+
+  on<E extends RelayEventTypes>(type: E, cb: RelayEventCbTypes[E]): void;
+  off<E extends RelayEventTypes>(type: E, cb: RelayEventCbTypes[E]): void;
+}
+
+export const initRelay = (relayUrl: string, options: RelayOptions): Relay => {
+  return new RelayImpl(relayUrl, options);
 };
 
-export class Relay {
+class RelayImpl implements Relay {
   #relayUrl: string;
   #ws: WebSocket | undefined;
 
@@ -58,18 +66,25 @@ export class Relay {
   #onNotice: Set<RelayNoticeCb> = new Set();
   #onError: Set<RelayErrorCb> = new Set();
 
-  #subListeners: Map<string, RelaySubListeners> = new Map();
+  #subscriptions: Map<string, SubscriptionImpl> = new Map();
 
   #msgQueue: string[] = [];
   #handleMsgsInterval: NodeJS.Timer | undefined;
 
-  public constructor(relayUrl: string, options: RelayOptions = {}) {
+  constructor(relayUrl: string, options: RelayOptions) {
     this.#relayUrl = relayUrl;
-    this.#options = { ...defaultRelayOptions, ...options };
+    this.#options = options;
   }
 
   public get url(): string {
     return this.#relayUrl;
+  }
+
+  private forwardSubMsg(subId: string, msg: R2CSubMessage) {
+    const targSub = this.#subscriptions.get(subId);
+    if (targSub !== undefined) {
+      targSub._forwardSubMsg(msg);
+    }
   }
 
   private handleMsgs() {
@@ -78,9 +93,6 @@ export class Relay {
       this.#handleMsgsInterval = undefined;
       return;
     }
-
-    const evsPerSub: Map<string, NostrEvent[]> = new Map();
-    const eoseSubs: Set<string> = new Set();
 
     const dispatchStartedAt = performance.now();
 
@@ -100,18 +112,12 @@ export class Relay {
           if (!validateEvent(ev)) {
             break;
           }
-
-          const prev = evsPerSub.get(subId);
-          if (prev === undefined) {
-            evsPerSub.set(subId, [ev]);
-          } else {
-            prev.push(ev);
-          }
+          this.forwardSubMsg(subId, parsed);
           break;
         }
         case "EOSE": {
           const [, subId] = parsed;
-          eoseSubs.add(subId);
+          this.forwardSubMsg(subId, parsed);
           break;
         }
         case "NOTICE": {
@@ -121,26 +127,29 @@ export class Relay {
         }
       }
     }
-    this.#subListeners.forEach((subLs, subId) => {
-      const evs = evsPerSub.get(subId);
-      if (evs !== undefined) {
-        subLs.event.forEach((cb) => cb(evs));
-      }
-
-      if (eoseSubs.has(subId)) {
-        subLs.eose.forEach((cb) => cb());
-      }
-    });
   }
 
   public async connect(): Promise<void> {
     return new Promise<void>((resolve, reject) => {
+      let isTimedout = false;
+      const timeout = setTimeout(() => {
+        isTimedout = true;
+        reject(
+          Error(`attempt to connect to the relay '${this.#relayUrl}' timed out`)
+        );
+      }, this.#options.connectTimeoutMs);
+
       const ws = new WebSocket(this.#relayUrl);
 
       ws.onopen = () => {
-        this.#onConnect.forEach((cb) => cb());
-        this.#ws = ws;
-        resolve();
+        if (!isTimedout) {
+          console.log("open");
+          this.#onConnect.forEach((cb) => cb());
+          this.#ws = ws;
+          resolve();
+
+          clearTimeout(timeout);
+        }
       };
 
       ws.onerror = () => {
@@ -171,7 +180,17 @@ export class Relay {
     if (this.#ws === undefined) {
       throw Error("not connected to the relay");
     }
-    return new Subscription(this, filters);
+
+    const subId = generateSubId();
+    const sub = new SubscriptionImpl(
+      this,
+      subId,
+      filters,
+      this.#options.autoEoseTimeoutMs
+    );
+    this.#subscriptions.set(subId, sub);
+
+    return sub;
   }
 
   public on<E extends RelayEventTypes>(type: E, cb: RelayEventCbTypes[E]) {
@@ -214,7 +233,7 @@ export class Relay {
     }
   }
 
-  sendMessage(msg: C2RMessage) {
+  _sendC2RMessage(msg: C2RMessage) {
     const jstr = JSON.stringify(msg);
     // TODO: check WS connection status
     if (this.#ws === undefined) {
@@ -222,64 +241,105 @@ export class Relay {
     }
     this.#ws.send(jstr);
   }
-
-  addSubListener<E extends SubEventTypes>(
-    subId: string,
-    type: E,
-    cb: SubEventCbTypes[E]
-  ) {
-    const ls = this.#subListeners.get(subId) ?? {
-      event: new Set(),
-      eose: new Set(),
-    };
-
-    switch (type) {
-      case "event":
-        ls.event.add(cb as SubEventCb);
-        break;
-
-      case "eose":
-        ls.eose.add(cb as SubEoseCb);
-        break;
-    }
-
-    this.#subListeners.set(subId, ls);
-  }
-
-  clearSubListeners(subId: string) {
-    this.#subListeners.delete(subId);
-  }
 }
 
-export class Subscription {
-  #relay: Relay;
+export interface Subscription {
+  req(): void;
+  close(): void;
+  on<E extends SubEventTypes>(type: E, cb: SubEventCbTypes[E]): void;
+  off<E extends SubEventTypes>(type: E, cb: SubEventCbTypes[E]): void;
+}
+
+class SubscriptionImpl implements Subscription {
+  #relay: RelayImpl;
   #subId: string;
   #filters: Filter[];
 
-  constructor(relay: Relay, filters: Filter[]) {
+  #onEvent: Set<Callback<NostrEvent>> = new Set();
+  #onEose: Set<Callback<void>> = new Set();
+
+  #autoEoseTimeout: NodeJS.Timeout | undefined;
+  #autoEoseTimeoutMs: number;
+
+  constructor(
+    relay: RelayImpl,
+    subId: string,
+    filters: Filter[],
+    autoEoseTimeoutMs: number
+  ) {
     this.#relay = relay;
-    this.#subId = generateSubId();
+    this.#subId = subId;
     this.#filters = filters;
+    this.#autoEoseTimeoutMs = autoEoseTimeoutMs;
+  }
+
+  public req() {
+    console.log("req", this.#subId);
+
+    this.#relay._sendC2RMessage(["REQ", this.#subId, ...this.#filters]);
+    this.resetAutoEoseTimeout();
+  }
+
+  public close() {
+    console.log("close", this.#subId);
+    this.clearListeners();
+
+    this.#relay._sendC2RMessage(["CLOSE", this.#subId]);
   }
 
   public on<E extends SubEventTypes>(type: E, cb: SubEventCbTypes[E]) {
     switch (type) {
       case "event":
-        this.#relay.addSubListener(this.#subId, "event", cb as SubEventCb);
+        this.#onEvent.add(cb as SubEventCb);
         return;
 
       case "eose":
-        this.#relay.addSubListener(this.#subId, "eose", cb as SubEoseCb);
+        this.#onEose.add(cb as SubEoseCb);
         return;
     }
   }
 
-  public req() {
-    this.#relay.sendMessage(["REQ", this.#subId, ...this.#filters]);
+  public off<E extends SubEventTypes>(type: E, cb: SubEventCbTypes[E]) {
+    switch (type) {
+      case "event":
+        this.#onEvent.delete(cb as SubEventCb);
+        return;
+
+      case "eose":
+        this.#onEose.delete(cb as SubEoseCb);
+        return;
+    }
   }
 
-  public close() {
-    this.#relay.clearSubListeners(this.#subId);
-    this.#relay.sendMessage(["CLOSE", this.#subId]);
+  private clearListeners() {
+    this.#onEvent.clear();
+    this.#onEose.clear();
+  }
+
+  private resetAutoEoseTimeout() {
+    if (this.#autoEoseTimeout !== undefined) {
+      clearTimeout(this.#autoEoseTimeout);
+      this.#autoEoseTimeout = undefined;
+    }
+
+    this.#autoEoseTimeout = setTimeout(() => {
+      this.#onEose.forEach((cb) => cb());
+    }, this.#autoEoseTimeoutMs);
+  }
+
+  _forwardSubMsg(msg: R2CSubMessage) {
+    switch (msg[0]) {
+      case "EVENT":
+        this.#onEvent.forEach((cb) => cb(msg[2]));
+        this.resetAutoEoseTimeout();
+        break;
+
+      case "EOSE":
+        this.#onEose.forEach((cb) => cb());
+        if (this.#autoEoseTimeout !== undefined) {
+          clearTimeout(this.#autoEoseTimeout);
+        }
+        break;
+    }
   }
 }

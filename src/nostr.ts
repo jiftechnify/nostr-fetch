@@ -69,6 +69,10 @@ type R2CNotice = [type: "NOTICE", notice: unknown];
 
 export type R2CMessage = R2CEvent | R2CEose | R2CNotice;
 export type R2CMessageType = R2CMessage[0];
+
+export type R2CSubMessage = R2CEvent | R2CEose;
+export type R2CSubMessageType = R2CSubMessage[0];
+
 const msgTypeNames: string[] = ["EVENT", "EOSE", "NOTICE", "OK", "AUTH"];
 
 export const parseR2CMessage = (
@@ -232,28 +236,33 @@ const is64BytesHexStr = (s: string): boolean => {
 /* Check Relay's Capabilities */
 // checks if the relay supports EOSE message
 export const isRelaySupportEose = async (
-  relayUrl: string
+  relayUrl: string,
+  timeoutMs: number
 ): Promise<boolean> => {
   const httpsUrl = wssToHttps(relayUrl);
-  try {
-    const resp = await fetch(httpsUrl, {
-      headers: { Accept: "application/nostr+json" },
-    });
-    if (!resp.ok) {
-      throw Error("response is not ok");
-    }
-    const relayInfo = await resp.json();
 
-    if (!relayInfoHasSupportedNips(relayInfo)) {
-      throw Error(
-        "relay information document doesn't have valid 'supported_nips' property"
-      );
-    }
-    return relayInfo.supported_nips.includes(15);
-  } catch (err) {
-    console.error(err);
-    return false;
+  const abortCtor = new AbortController();
+  const fetchTimeout = setTimeout(() => {
+    abortCtor.abort();
+  }, timeoutMs);
+
+  const resp = await fetch(httpsUrl, {
+    headers: { Accept: "application/nostr+json" },
+    signal: abortCtor.signal,
+  });
+
+  clearTimeout(fetchTimeout);
+  if (!resp.ok) {
+    throw Error("relay information response is not ok");
   }
+  const relayInfo = await resp.json();
+
+  if (!relayInfoHasSupportedNips(relayInfo)) {
+    throw Error(
+      "relay information document doesn't have valid 'supported_nips' property"
+    );
+  }
+  return relayInfo.supported_nips.includes(15);
 };
 
 const wssToHttps = (url: string): string => {
