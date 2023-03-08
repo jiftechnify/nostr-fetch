@@ -63,8 +63,8 @@ export async function* fetchAllEvents(
           ...rangeFilter,
           ...filter,
           until: nextUntil,
-          // limitを明示的に指定することで、返されるイベントの順序が新しい順(created_atの降順)になることが保証される(NIP-01)
-          // nostreamはlimitが5000を超えるフィルタを受け付けないので、それ以下に制限する
+          // relays are supposed to return *latest* events by specifying `limit` explicitly (cf. [NIP-01](https://github.com/nostr-protocol/nips/blob/master/01.md)).
+          // nostream doesn't accept a filter which has `limit` grater than 5000, so limit `limit` to this threshold or less.
           limit: Math.min(opt.limitPerReq, MAX_LIMIT_PER_REQ),
         };
       });
@@ -86,9 +86,8 @@ export async function* fetchAllEvents(
       if (numNewEvents === 0) {
         break;
       }
-
-      // 次回取得時のuntilを、今回取得したうち最も古いイベントのcreated_atに設定
-      // +1は、untilに関してexclusiveなリレー実装でも正しく動くようにするため
+      // set next `until` to `created_at` of the oldest event returned in this time.
+      // `+ 1` is needed to make it work collectly even if we used relays which has "exclusive" behaviour with respect to `until`.
       nextUntil = oldestCreatedAt + 1;
     }
   } finally {
