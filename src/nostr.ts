@@ -29,6 +29,7 @@ export const eventKind = {
   encryptedDirectMessage: 4,
   eventDeletion: 5,
   reaction: 7,
+  badgeAward: 8,
   channelCreation: 40,
   channelMetadata: 41,
   channelMessage: 42,
@@ -39,7 +40,11 @@ export const eventKind = {
   zap: 9735,
   relayList: 10002,
   clientAuth: 22242,
+  nostrConnect: 24133,
+  profileBadges: 30008,
+  badgeDefinition: 30009,
   article: 30023,
+  appSpecificData: 30078,
 } as const;
 
 /**
