@@ -102,9 +102,7 @@ export class Channel<T> {
 
   async *[Symbol.asyncIterator]() {
     if (this.#iterAlreadyStarted) {
-      throw Error(
-        "Iterating a single channel in multiple location is not allowed"
-      );
+      throw Error("Iterating a single channel in multiple location is not allowed");
     }
 
     this.#iterAlreadyStarted = true;

@@ -1,2 +1,2 @@
-export * from "./fetchAll";
+export * from "./fetcher";
 export { eventKind, NostrEvent } from "./nostr";

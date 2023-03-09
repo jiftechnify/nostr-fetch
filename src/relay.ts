@@ -5,47 +5,32 @@ import {
   generateSubId,
   NostrEvent,
   parseR2CMessage,
-  R2CSubMessage,
-  validateEvent,
+  verifyEventSig,
 } from "./nostr";
-
-type Callback<E> = E extends void ? () => void : (ev: E) => void;
-
-type RelayConnectCb = Callback<void>;
-type RelayDisconnectCb = Callback<CloseEvent>;
-type RelayNoticeCb = Callback<unknown>;
-type RelayErrorCb = Callback<void>;
-
-type RelayEventCbTypes = {
-  connect: RelayConnectCb;
-  disconnect: RelayDisconnectCb;
-  notice: RelayNoticeCb;
-  error: RelayErrorCb;
-};
-
-type RelayEventTypes = keyof RelayEventCbTypes;
-
-type SubEventCb = Callback<NostrEvent>;
-type SubEoseCb = Callback<void>;
-
-type SubEventCbTypes = {
-  event: SubEventCb;
-  eose: SubEoseCb;
-};
-
-type SubEventTypes = keyof SubEventCbTypes;
+import type {
+  RelayConnectCb,
+  RelayDisconnectCb,
+  RelayErrorCb,
+  RelayEventCbTypes,
+  RelayEventTypes,
+  RelayNoticeCb,
+  SubEoseCb,
+  SubEventCb,
+  SubEventCbTypes,
+  SubEventTypes,
+  Subscription,
+  SubscriptionOptions,
+} from "./relayTypes";
 
 export type RelayOptions = {
-  skipVerification: boolean;
   connectTimeoutMs: number;
-  autoEoseTimeoutMs: number;
 };
 
 export interface Relay {
   url: string;
-  connect(): Promise<void>;
+  connect(): Promise<Relay>;
   close(): void;
-  prepareSub(filters: Filter[]): Subscription;
+  prepareSub(filters: Filter[], options: SubscriptionOptions): Subscription;
 
   on<E extends RelayEventTypes>(type: E, cb: RelayEventCbTypes[E]): void;
   off<E extends RelayEventTypes>(type: E, cb: RelayEventCbTypes[E]): void;
@@ -66,7 +51,7 @@ class RelayImpl implements Relay {
   #onNotice: Set<RelayNoticeCb> = new Set();
   #onError: Set<RelayErrorCb> = new Set();
 
-  #subscriptions: Map<string, SubscriptionImpl> = new Map();
+  #subscriptions: Map<string, RelaySubscription> = new Map();
 
   #msgQueue: string[] = [];
   #handleMsgsInterval: NodeJS.Timer | undefined;
@@ -80,10 +65,10 @@ class RelayImpl implements Relay {
     return this.#relayUrl;
   }
 
-  private forwardSubMsg(subId: string, msg: R2CSubMessage) {
+  private forwardToSub(subId: string, forwardFn: (sub: RelaySubscription) => void) {
     const targSub = this.#subscriptions.get(subId);
     if (targSub !== undefined) {
-      targSub._forwardSubMsg(msg);
+      forwardFn(targSub);
     }
   }
 
@@ -96,12 +81,9 @@ class RelayImpl implements Relay {
 
     const dispatchStartedAt = performance.now();
 
-    while (
-      this.#msgQueue.length > 0 &&
-      performance.now() - dispatchStartedAt < 5.0
-    ) {
+    while (this.#msgQueue.length > 0 && performance.now() - dispatchStartedAt < 5.0) {
       const rawMsg = this.#msgQueue.shift() as string;
-      const parsed = parseR2CMessage(rawMsg, this.#options.skipVerification);
+      const parsed = parseR2CMessage(rawMsg);
       if (parsed === undefined) {
         continue;
       }
@@ -109,15 +91,12 @@ class RelayImpl implements Relay {
       switch (parsed[0]) {
         case "EVENT": {
           const [, subId, ev] = parsed;
-          if (!validateEvent(ev)) {
-            break;
-          }
-          this.forwardSubMsg(subId, parsed);
+          this.forwardToSub(subId, (sub) => sub._forwardEvent(ev));
           break;
         }
         case "EOSE": {
           const [, subId] = parsed;
-          this.forwardSubMsg(subId, parsed);
+          this.forwardToSub(subId, (sub) => sub._forwardEose());
           break;
         }
         case "NOTICE": {
@@ -129,24 +108,21 @@ class RelayImpl implements Relay {
     }
   }
 
-  public async connect(): Promise<void> {
-    return new Promise<void>((resolve, reject) => {
+  public async connect(): Promise<Relay> {
+    return new Promise<Relay>((resolve, reject) => {
       let isTimedout = false;
       const timeout = setTimeout(() => {
         isTimedout = true;
-        reject(
-          Error(`attempt to connect to the relay '${this.#relayUrl}' timed out`)
-        );
+        reject(Error(`attempt to connect to the relay '${this.#relayUrl}' timed out`));
       }, this.#options.connectTimeoutMs);
 
       const ws = new WebSocket(this.#relayUrl);
 
       ws.onopen = () => {
         if (!isTimedout) {
-          console.log("open");
           this.#onConnect.forEach((cb) => cb());
           this.#ws = ws;
-          resolve();
+          resolve(this);
 
           clearTimeout(timeout);
         }
@@ -155,6 +131,8 @@ class RelayImpl implements Relay {
       ws.onerror = () => {
         this.#onError.forEach((cb) => cb());
         reject(Error("WebSocket error"));
+
+        clearTimeout(timeout);
       };
 
       ws.onclose = (e: CloseEvent) => {
@@ -176,18 +154,13 @@ class RelayImpl implements Relay {
     }
   }
 
-  public prepareSub(filters: Filter[]): Subscription {
+  public prepareSub(filters: Filter[], options: SubscriptionOptions): Subscription {
     if (this.#ws === undefined) {
       throw Error("not connected to the relay");
     }
 
-    const subId = generateSubId();
-    const sub = new SubscriptionImpl(
-      this,
-      subId,
-      filters,
-      this.#options.autoEoseTimeoutMs
-    );
+    const subId = options.subId ?? generateSubId();
+    const sub = new RelaySubscription(this, subId, filters, options);
     this.#subscriptions.set(subId, sub);
 
     return sub;
@@ -243,45 +216,34 @@ class RelayImpl implements Relay {
   }
 }
 
-export interface Subscription {
-  req(): void;
-  close(): void;
-  on<E extends SubEventTypes>(type: E, cb: SubEventCbTypes[E]): void;
-  off<E extends SubEventTypes>(type: E, cb: SubEventCbTypes[E]): void;
-}
-
-class SubscriptionImpl implements Subscription {
+class RelaySubscription implements Subscription {
   #relay: RelayImpl;
   #subId: string;
   #filters: Filter[];
+  #options: SubscriptionOptions;
 
-  #onEvent: Set<Callback<NostrEvent>> = new Set();
-  #onEose: Set<Callback<void>> = new Set();
+  #onEvent: Set<SubEventCb> = new Set();
+  #onEose: Set<SubEoseCb> = new Set();
 
   #autoEoseTimeout: NodeJS.Timeout | undefined;
-  #autoEoseTimeoutMs: number;
 
-  constructor(
-    relay: RelayImpl,
-    subId: string,
-    filters: Filter[],
-    autoEoseTimeoutMs: number
-  ) {
+  constructor(relay: RelayImpl, subId: string, filters: Filter[], options: SubscriptionOptions) {
     this.#relay = relay;
     this.#subId = subId;
     this.#filters = filters;
-    this.#autoEoseTimeoutMs = autoEoseTimeoutMs;
+    this.#options = options;
+  }
+
+  public get subId(): string {
+    return this.#subId;
   }
 
   public req() {
-    console.log("req", this.#subId);
-
     this.#relay._sendC2RMessage(["REQ", this.#subId, ...this.#filters]);
     this.resetAutoEoseTimeout();
   }
 
   public close() {
-    console.log("close", this.#subId);
     this.clearListeners();
 
     this.#relay._sendC2RMessage(["CLOSE", this.#subId]);
@@ -324,22 +286,22 @@ class SubscriptionImpl implements Subscription {
 
     this.#autoEoseTimeout = setTimeout(() => {
       this.#onEose.forEach((cb) => cb());
-    }, this.#autoEoseTimeoutMs);
+    }, this.#options.autoEoseTimeoutMs);
   }
 
-  _forwardSubMsg(msg: R2CSubMessage) {
-    switch (msg[0]) {
-      case "EVENT":
-        this.#onEvent.forEach((cb) => cb(msg[2]));
-        this.resetAutoEoseTimeout();
-        break;
+  _forwardEvent(ev: NostrEvent) {
+    this.resetAutoEoseTimeout();
 
-      case "EOSE":
-        this.#onEose.forEach((cb) => cb());
-        if (this.#autoEoseTimeout !== undefined) {
-          clearTimeout(this.#autoEoseTimeout);
-        }
-        break;
+    if (!this.#options.skipVerification && !verifyEventSig(ev)) {
+      return;
     }
+    this.#onEvent.forEach((cb) => cb(ev));
+  }
+
+  _forwardEose() {
+    if (this.#autoEoseTimeout !== undefined) {
+      clearTimeout(this.#autoEoseTimeout);
+    }
+    this.#onEose.forEach((cb) => cb());
   }
 }

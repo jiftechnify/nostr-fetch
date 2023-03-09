@@ -2,8 +2,7 @@ import { sha256 } from "@noble/hashes/sha256";
 import * as secp256k1 from "@noble/secp256k1";
 
 // to use `verifySync`, you need to set up `secp256k1.utils.sha256Sync`.
-secp256k1.utils.sha256Sync = (...msgs) =>
-  sha256(secp256k1.utils.concatBytes(...msgs));
+secp256k1.utils.sha256Sync = (...msgs) => sha256(secp256k1.utils.concatBytes(...msgs));
 
 /**
  * Nostr event data structure
@@ -80,10 +79,7 @@ export type R2CSubMessageType = R2CSubMessage[0];
 
 const msgTypeNames: string[] = ["EVENT", "EOSE", "NOTICE", "OK", "AUTH"];
 
-export const parseR2CMessage = (
-  rawMsg: string,
-  skipVerification: boolean
-): R2CMessage | undefined => {
+export const parseR2CMessage = (rawMsg: string): R2CMessage | undefined => {
   let parsed: unknown;
   try {
     parsed = JSON.parse(rawMsg) as unknown;
@@ -92,11 +88,7 @@ export const parseR2CMessage = (
     return undefined;
   }
 
-  if (
-    !Array.isArray(parsed) ||
-    parsed.length === 0 ||
-    typeof parsed[0] !== "string"
-  ) {
+  if (!Array.isArray(parsed) || parsed.length === 0 || typeof parsed[0] !== "string") {
     console.error("malformed R2C message");
     return undefined;
   }
@@ -125,10 +117,10 @@ export const parseR2CMessage = (
         console.error("malformed event in R2C EVENT");
         return undefined;
       }
-      if (!skipVerification && !verifyEventSig(ev)) {
-        console.error("couldn't verify signature of event");
-        return undefined;
-      }
+      // if (!skipVerification && !verifyEventSig(ev)) {
+      //   console.error("couldn't verify signature of event");
+      //   return undefined;
+      // }
 
       return parsed as R2CEvent;
     }
@@ -152,15 +144,9 @@ export const parseR2CMessage = (
 };
 
 // schema validation for Nostr events
-export const validateEvent = (
-  rawEv: Record<string, unknown>
-): rawEv is NostrEvent => {
+export const validateEvent = (rawEv: Record<string, unknown>): rawEv is NostrEvent => {
   // id: 32-bytes lowercase hex-encoded sha256
-  if (
-    !("id" in rawEv) ||
-    typeof rawEv["id"] !== "string" ||
-    !is32BytesHexStr(rawEv["id"])
-  ) {
+  if (!("id" in rawEv) || typeof rawEv["id"] !== "string" || !is32BytesHexStr(rawEv["id"])) {
     return false;
   }
 
@@ -187,11 +173,7 @@ export const validateEvent = (
   if (!("tags" in rawEv) || !Array.isArray(rawEv["tags"])) {
     return false;
   }
-  if (
-    rawEv["tags"].some(
-      (t) => !Array.isArray(t) || t.every((e) => typeof e !== "string")
-    )
-  ) {
+  if (rawEv["tags"].some((t) => !Array.isArray(t) || t.every((e) => typeof e !== "string"))) {
     return false;
   }
 
@@ -201,11 +183,7 @@ export const validateEvent = (
   }
 
   // sig: 64-bytes hex of the signature
-  if (
-    !("sig" in rawEv) ||
-    typeof rawEv["sig"] !== "string" ||
-    !is64BytesHexStr(rawEv["sig"])
-  ) {
+  if (!("sig" in rawEv) || typeof rawEv["sig"] !== "string" || !is64BytesHexStr(rawEv["sig"])) {
     return false;
   }
 
@@ -216,17 +194,8 @@ const utf8Encoder = new TextEncoder();
 
 // verifies the signature of the Nostr event
 export const verifyEventSig = (ev: NostrEvent): boolean => {
-  const serializedEv = JSON.stringify([
-    0,
-    ev.pubkey,
-    ev.created_at,
-    ev.kind,
-    ev.tags,
-    ev.content,
-  ]);
-  const evHash = secp256k1.utils.bytesToHex(
-    sha256(utf8Encoder.encode(serializedEv))
-  );
+  const serializedEv = JSON.stringify([0, ev.pubkey, ev.created_at, ev.kind, ev.tags, ev.content]);
+  const evHash = secp256k1.utils.bytesToHex(sha256(utf8Encoder.encode(serializedEv)));
   return secp256k1.schnorr.verifySync(ev.sig, evHash, ev.pubkey);
 };
 
@@ -240,10 +209,7 @@ const is64BytesHexStr = (s: string): boolean => {
 
 /* Check Relay's Capabilities */
 // checks if the relay supports EOSE message
-export const isRelaySupportEose = async (
-  relayUrl: string,
-  timeoutMs: number
-): Promise<boolean> => {
+export const isRelaySupportEose = async (relayUrl: string, timeoutMs: number): Promise<boolean> => {
   const httpsUrl = wssToHttps(relayUrl);
 
   const abortCtor = new AbortController();
@@ -263,9 +229,7 @@ export const isRelaySupportEose = async (
   const relayInfo = await resp.json();
 
   if (!relayInfoHasSupportedNips(relayInfo)) {
-    throw Error(
-      "relay information document doesn't have valid 'supported_nips' property"
-    );
+    throw Error("relay information document doesn't have valid 'supported_nips' property");
   }
   return relayInfo.supported_nips.includes(15);
 };
@@ -280,9 +244,7 @@ type RelayInfoWithSupportedNips = {
   supported_nips: number[];
 };
 
-const relayInfoHasSupportedNips = (
-  relayInfo: unknown
-): relayInfo is RelayInfoWithSupportedNips =>
+const relayInfoHasSupportedNips = (relayInfo: unknown): relayInfo is RelayInfoWithSupportedNips =>
   typeof relayInfo === "object" &&
   relayInfo !== null &&
   "supported_nips" in relayInfo &&
