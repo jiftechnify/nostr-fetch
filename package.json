@@ -1,15 +1,15 @@
 {
-  "name": "nostr-fetch-all",
-  "version": "0.2.0",
-  "description": "A utility library that allows JS/TS apps to effortlessly fetch all past events from Nostr relays",
+  "name": "nostr-fetch",
+  "version": "0.3.0",
+  "description": "A utility library that allows JS/TS apps to effortlessly fetch past events from Nostr relays",
   "keywords": [
     "nostr"
   ],
   "author": "jiftechnify <jiftech.stlfy@gmail.com>",
-  "repository": "https://github.com/jiftechnify/nostr-fetch-all",
-  "homepage": "https://github.com/jiftechnify/nostr-fetch-all#readme",
+  "repository": "https://github.com/jiftechnify/nostr-fetch",
+  "homepage": "https://github.com/jiftechnify/nostr-fetch#readme",
   "bugs": {
-    "url": "https://github.com/jiftechnify/nostr-fetch-all/issues"
+    "url": "https://github.com/jiftechnify/nostr-fetch/issues"
   },
   "license": "MIT",
   "type": "module",

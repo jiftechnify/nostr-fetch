@@ -1,16 +1,16 @@
-# nostr-fetch-all
+# nostr-fetch
 A utility library that allows JS/TS apps to effortlessly fetch *past* events from Nostr relays.
 
 ## Installation
 ```
 # npm
-npm install nostr-fetch-all
+npm install nostr-fetch
 
 # yarn
-yarn add nostr-fetch-all
+yarn add nostr-fetch
 
 # pnpm
-pnpm add nostr-fetch-all
+pnpm add nostr-fetch
 ```
 
 ## Usage
