@@ -122,14 +122,20 @@ class RelayImpl implements Relay {
         if (!isTimedout) {
           this.#onConnect.forEach((cb) => cb());
           this.#ws = ws;
+
+          // set error listeners after the connection opened successfully
+          ws.onerror = () => {
+            this.#onError.forEach((cb) => cb());
+          };
+
           resolve(this);
 
           clearTimeout(timeout);
         }
       };
 
+      // error listeners are *not* activated while attempt to connect is in progress
       ws.onerror = () => {
-        this.#onError.forEach((cb) => cb());
         reject(Error("WebSocket error"));
 
         clearTimeout(timeout);

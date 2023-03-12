@@ -41,7 +41,11 @@ type ConnectFailedRelay = {
   relayUrl: string;
   failedAt: number; // unixtime(ms)
 };
-type ManagedRelay = AliveRelay | ConnectFailedRelay;
+type DisconnectedRelay = {
+  state: "disconnected";
+  relayUrl: string;
+};
+type ManagedRelay = AliveRelay | ConnectFailedRelay | DisconnectedRelay;
 
 class RelayPoolImpl implements RelayPool {
   #relays: Map<string, ManagedRelay> = new Map();
@@ -54,8 +58,11 @@ class RelayPoolImpl implements RelayPool {
   }
 
   private relayShouldBeReconnected(relay: ManagedRelay): boolean {
-    // TODO: make the threshold configuarable
-    return relay.state === "connectFailed" && currUnixtimeMilli() - relay.failedAt > 60 * 1000;
+    return (
+      // TODO: make the threshold configuarable
+      (relay.state === "connectFailed" && currUnixtimeMilli() - relay.failedAt > 60 * 1000) ||
+      relay.state === "disconnected"
+    );
   }
 
   private async addRelays(relayUrls: string[], relayOpts: RelayOptions): Promise<void> {
@@ -72,10 +79,15 @@ class RelayPoolImpl implements RelayPool {
         try {
           const r = initRelay(rurl, relayOpts);
 
-          // debug log
-          r.on("connect", () => this.#logForDebug?.(`[${rurl}] conenct`));
-          r.on("disconnect", (ev) => this.#logForDebug?.(`[${rurl}] disconenct: ${ev}`));
-          r.on("error", () => this.#logForDebug?.(`[${rurl}] WebSocket error`));
+          r.on("connect", () => this.#logForDebug?.(`[${rurl}] connect`));
+          r.on("disconnect", (ev) => {
+            this.#logForDebug?.(`[${rurl}] disconnect: ${ev}`);
+            this.#relays.set(r.url, { state: "disconnected", relayUrl: r.url });
+          });
+          r.on("error", () => {
+            this.#logForDebug?.(`[${rurl}] WebSocket error`);
+            this.#relays.set(r.url, { state: "disconnected", relayUrl: r.url });
+          });
           r.on("notice", (notice) => this.#logForDebug?.(`[${rurl}] NOTICE: ${notice}`));
 
           await r.connect();
