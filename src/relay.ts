@@ -172,6 +172,10 @@ class RelayImpl implements Relay {
     return sub;
   }
 
+  _removeSub(subId: string) {
+    this.#subscriptions.delete(subId);
+  }
+
   public on<E extends RelayEventTypes>(type: E, cb: RelayEventCbTypes[E]) {
     switch (type) {
       case "connect":
@@ -251,6 +255,7 @@ class RelaySubscription implements Subscription {
 
   public close() {
     this.clearListeners();
+    this.#relay._removeSub(this.#subId);
 
     this.#relay._sendC2RMessage(["CLOSE", this.#subId]);
   }
