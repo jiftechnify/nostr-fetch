@@ -117,11 +117,6 @@ export const parseR2CMessage = (rawMsg: string): R2CMessage | undefined => {
         console.error("malformed event in R2C EVENT");
         return undefined;
       }
-      // if (!skipVerification && !verifyEventSig(ev)) {
-      //   console.error("couldn't verify signature of event");
-      //   return undefined;
-      // }
-
       return parsed as R2CEvent;
     }
     case "EOSE": {
