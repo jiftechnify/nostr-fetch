@@ -172,7 +172,7 @@ export const validateEvent = (rawEv: Record<string, unknown>): rawEv is NostrEve
   if (!("tags" in rawEv) || !Array.isArray(rawEv["tags"])) {
     return false;
   }
-  if (rawEv["tags"].some((t) => !Array.isArray(t) || t.every((e) => typeof e !== "string"))) {
+  if (rawEv["tags"].some((tag) => !Array.isArray(tag) || tag.some((e) => typeof e !== "string"))) {
     return false;
   }
 
@@ -189,6 +189,14 @@ export const validateEvent = (rawEv: Record<string, unknown>): rawEv is NostrEve
   return true;
 };
 
+const is32BytesHexStr = (s: string): boolean => {
+  return /^[a-f0-9]{64}$/.test(s);
+};
+
+const is64BytesHexStr = (s: string): boolean => {
+  return /^[a-f0-9]{128}$/.test(s);
+};
+
 const utf8Encoder = new TextEncoder();
 
 // verifies the signature of the Nostr event
@@ -196,14 +204,6 @@ export const verifyEventSig = (ev: NostrEvent): boolean => {
   const serializedEv = JSON.stringify([0, ev.pubkey, ev.created_at, ev.kind, ev.tags, ev.content]);
   const evHash = secp256k1.utils.bytesToHex(sha256(utf8Encoder.encode(serializedEv)));
   return secp256k1.schnorr.verifySync(ev.sig, evHash, ev.pubkey);
-};
-
-const is32BytesHexStr = (s: string): boolean => {
-  return /^[a-f0-9]{64}$/.test(s);
-};
-
-const is64BytesHexStr = (s: string): boolean => {
-  return /^[a-f0-9]{128}$/.test(s);
 };
 
 /* Check Relay's Capabilities */
