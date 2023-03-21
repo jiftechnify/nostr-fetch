@@ -36,6 +36,11 @@ type AliveRelay = {
   relayUrl: string;
   relay: Relay;
 };
+type ConnectingRelay = {
+  state: "connecting";
+  relayUrl: string;
+  wait: Promise<void>;
+};
 type ConnectFailedRelay = {
   state: "connectFailed";
   relayUrl: string;
@@ -45,7 +50,7 @@ type DisconnectedRelay = {
   state: "disconnected";
   relayUrl: string;
 };
-type ManagedRelay = AliveRelay | ConnectFailedRelay | DisconnectedRelay;
+type ManagedRelay = AliveRelay | ConnectingRelay | ConnectFailedRelay | DisconnectedRelay;
 
 class RelayPoolImpl implements RelayPool {
   #relays: Map<string, ManagedRelay> = new Map();
@@ -68,18 +73,24 @@ class RelayPoolImpl implements RelayPool {
   // `relayUrls` should be normalized in advance.
   private async addRelays(relayUrls: string[], relayOpts: RelayOptions): Promise<void> {
     const relaysToConnect: string[] = [];
+    const waitsForConnnect: Promise<void>[] = [];
+
     for (const rurl of relayUrls) {
       const r = this.#relays.get(rurl);
       if (r === undefined || this.relayShouldBeReconnected(r)) {
         relaysToConnect.push(rurl);
+      } else if (r.state === "connecting") {
+        waitsForConnnect.push(r.wait);
       }
     }
 
-    const connResults = await Promise.all(
-      relaysToConnect.map(async (rurl): Promise<ManagedRelay> => {
+    await Promise.all([
+      ...relaysToConnect.map(async (rurl): Promise<void> => {
+        const deferred = new VoidDeferred();
         try {
-          const r = initRelay(rurl, relayOpts);
+          this.#relays.set(rurl, { state: "connecting", relayUrl: rurl, wait: deferred.promise });
 
+          const r = initRelay(rurl, relayOpts);
           r.on("connect", () => this.#logForDebug?.(`[${rurl}] connect`));
           r.on("disconnect", (ev) => {
             this.#logForDebug?.(`[${rurl}] disconnect: ${ev}`);
@@ -92,17 +103,20 @@ class RelayPoolImpl implements RelayPool {
           r.on("notice", (notice) => this.#logForDebug?.(`[${rurl}] NOTICE: ${notice}`));
 
           await r.connect();
-          return { state: "alive", relayUrl: rurl, relay: r };
+          this.#relays.set(rurl, { state: "alive", relayUrl: rurl, relay: r });
         } catch {
           console.error(`failed to connect to the relay '${rurl}'`);
-          return { state: "connectFailed", relayUrl: rurl, failedAt: currUnixtimeMilli() };
+          this.#relays.set(rurl, {
+            state: "connectFailed",
+            relayUrl: rurl,
+            failedAt: currUnixtimeMilli(),
+          });
+        } finally {
+          deferred.resolve();
         }
-      })
-    );
-
-    for (const res of connResults) {
-      this.#relays.set(res.relayUrl, res);
-    }
+      }),
+      ...waitsForConnnect,
+    ]);
   }
 
   public async ensureRelays(relayUrls: string[], relayOpts: RelayOptions): Promise<Relay[]> {
@@ -232,5 +246,20 @@ class RelayPoolSubscription implements Subscription {
   private clearListeners() {
     this.#onEvent.clear();
     this.#onEose.clear();
+  }
+}
+
+interface VoidDeferred {
+  resolve(): void;
+}
+
+class VoidDeferred {
+  promise: Promise<void>;
+  constructor() {
+    this.promise = new Promise((resolve) => {
+      this.resolve = () => {
+        resolve();
+      };
+    });
   }
 }
