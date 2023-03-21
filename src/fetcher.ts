@@ -1,5 +1,5 @@
 import { Channel } from "./channel";
-import type { Filter, NostrEvent } from "./nostr";
+import { Filter, NostrEvent, verifyEventSig } from "./nostr";
 import type { Relay } from "./relay";
 import { initRelayPool, RelayPool } from "./relayPool";
 import type { SubscriptionOptions } from "./relayTypes";
@@ -38,6 +38,15 @@ export type FetchAllOptions = FetchOptions & {
 const defaultFetchAllOptions: Required<FetchAllOptions> = {
   ...defaultFetchOptions,
   sort: false,
+};
+
+export type FetchLatestOptions = FetchOptions & {
+  reduceVerification?: boolean;
+};
+
+const defaultFetchLatestOptions: Required<FetchLatestOptions> = {
+  ...defaultFetchOptions,
+  reduceVerification: true,
 };
 
 // eslint-disable-next-line require-yield
@@ -195,10 +204,10 @@ export class NostrFetcher {
     relayUrls: string[],
     filters: FetchFilter[],
     limit: number,
-    options: FetchOptions = {}
+    options: FetchLatestOptions = {}
   ): Promise<NostrEvent[]> {
-    const opts: Required<FetchOptions> = {
-      ...defaultFetchOptions,
+    const opts: Required<FetchLatestOptions> = {
+      ...defaultFetchLatestOptions,
       ...options,
     };
 
@@ -216,6 +225,11 @@ export class NostrFetcher {
     const [tx, chIter] = Channel.make<NostrEvent>();
     const globalSeenEventIds = new Set<string>();
     const initialUntil = Math.floor(Date.now() / 1000);
+    const subOpts: SubscriptionOptions = {
+      ...opts,
+      // skip "full" verification if `reduceVerification` is enabled
+      skipVerification: opts.skipVerification || opts.reduceVerification,
+    };
 
     // fetch at most `limit` events from each relay
     Promise.all(
@@ -239,7 +253,7 @@ export class NostrFetcher {
           let numNewEvents = 0;
           let oldestCreatedAt = Number.MAX_SAFE_INTEGER;
 
-          for await (const e of this.fetchEventsTillEose(r, refinedFilters, opts)) {
+          for await (const e of this.fetchEventsTillEose(r, refinedFilters, subOpts)) {
             // eliminate duplicated events
             if (!localSeenEventIds.has(e.id)) {
               numNewEvents++;
@@ -270,13 +284,29 @@ export class NostrFetcher {
       tx.close();
     });
 
-    // collect events from relays, then return latest `limit` events
+    // collect events from relays
     const evs: NostrEvent[] = [];
     for await (const ev of chIter) {
       evs.push(ev);
     }
     evs.sort((a, b) => b.created_at - a.created_at);
-    return evs.slice(0, limit);
+
+    // return latest `limit` events if not "reduced verification mode"
+    if (opts.skipVerification || !opts.reduceVerification) {
+      return evs.slice(0, limit);
+    }
+
+    // reduced verification: return latest `limit` events whose signature is valid
+    const res: NostrEvent[] = [];
+    for (const ev of evs) {
+      if (verifyEventSig(ev)) {
+        res.push(ev);
+        if (res.length >= limit) {
+          break;
+        }
+      }
+    }
+    return res;
   }
 
   /**
@@ -292,10 +322,10 @@ export class NostrFetcher {
   public async fetchLastEvent(
     relayUrls: string[],
     filters: FetchFilter[],
-    options: FetchOptions = {}
+    options: FetchLatestOptions = {}
   ): Promise<NostrEvent | undefined> {
-    const opts: FetchOptions & { abortSubBeforeEoseTimeoutMs: number } = {
-      ...defaultFetchOptions,
+    const opts: FetchLatestOptions & { abortSubBeforeEoseTimeoutMs: number } = {
+      ...defaultFetchLatestOptions,
       // override default value of `abortSubBeforeEoseTimeoutMs` (10000 -> 1000)
       abortSubBeforeEoseTimeoutMs: options.abortSubBeforeEoseTimeoutMs ?? 1000,
     };
