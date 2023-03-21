@@ -96,7 +96,7 @@ public async fetchLatestEvents(
     relayUrls: string[],
     filters: FetchFilter[],
     limit: number,
-    options: FetchOptions = {}
+    options: FetchLatestOptions = {}
 ): Promise<NostrEvent[]>
 ```
 
@@ -110,7 +110,7 @@ Events in the result will be sorted in "newest to oldest" order.
 public async fetchLastEvent(
     relayUrls: string[],
     filters: FetchFilter[],
-    options: FetchOptions = {}
+    options: FetchLatestOptions = {}
 ): Promise<NostrEvent | undefined>
 ```
 
