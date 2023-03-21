@@ -16,8 +16,12 @@ export type RelayEventCbTypes = {
 
 export type RelayEventTypes = keyof RelayEventCbTypes;
 
+type EoseEventPayload = {
+  aborted: boolean;
+};
+
 export type SubEventCb = Callback<NostrEvent>;
-export type SubEoseCb = Callback<void>;
+export type SubEoseCb = Callback<EoseEventPayload>;
 
 export type SubEventCbTypes = {
   event: SubEventCb;
@@ -37,5 +41,5 @@ export interface Subscription {
 export interface SubscriptionOptions {
   subId?: string;
   skipVerification: boolean;
-  autoEoseTimeoutMs: number;
+  abortSubBeforeEoseTimeoutMs: number;
 }

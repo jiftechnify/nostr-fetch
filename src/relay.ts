@@ -235,7 +235,7 @@ class RelaySubscription implements Subscription {
   #onEvent: Set<SubEventCb> = new Set();
   #onEose: Set<SubEoseCb> = new Set();
 
-  #autoEoseTimeout: NodeJS.Timeout | undefined;
+  #abortSubTimer: NodeJS.Timeout | undefined;
 
   constructor(relay: RelayImpl, subId: string, filters: Filter[], options: SubscriptionOptions) {
     this.#relay = relay;
@@ -250,7 +250,7 @@ class RelaySubscription implements Subscription {
 
   public req() {
     this.#relay._sendC2RMessage(["REQ", this.#subId, ...this.#filters]);
-    this.resetAutoEoseTimeout();
+    this.resetAbortSubTimer();
   }
 
   public close() {
@@ -289,19 +289,19 @@ class RelaySubscription implements Subscription {
     this.#onEose.clear();
   }
 
-  private resetAutoEoseTimeout() {
-    if (this.#autoEoseTimeout !== undefined) {
-      clearTimeout(this.#autoEoseTimeout);
-      this.#autoEoseTimeout = undefined;
+  private resetAbortSubTimer() {
+    if (this.#abortSubTimer !== undefined) {
+      clearTimeout(this.#abortSubTimer);
+      this.#abortSubTimer = undefined;
     }
 
-    this.#autoEoseTimeout = setTimeout(() => {
-      this.#onEose.forEach((cb) => cb());
-    }, this.#options.autoEoseTimeoutMs);
+    this.#abortSubTimer = setTimeout(() => {
+      this.#onEose.forEach((cb) => cb({ aborted: true }));
+    }, this.#options.abortSubBeforeEoseTimeoutMs);
   }
 
   _forwardEvent(ev: NostrEvent) {
-    this.resetAutoEoseTimeout();
+    this.resetAbortSubTimer();
 
     if (!this.#options.skipVerification && !verifyEventSig(ev)) {
       return;
@@ -310,9 +310,9 @@ class RelaySubscription implements Subscription {
   }
 
   _forwardEose() {
-    if (this.#autoEoseTimeout !== undefined) {
-      clearTimeout(this.#autoEoseTimeout);
+    if (this.#abortSubTimer !== undefined) {
+      clearTimeout(this.#abortSubTimer);
     }
-    this.#onEose.forEach((cb) => cb());
+    this.#onEose.forEach((cb) => cb({ aborted: false }));
   }
 }

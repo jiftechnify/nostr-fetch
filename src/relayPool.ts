@@ -188,7 +188,7 @@ class RelayPoolSubscription implements Subscription {
         this.#eoseRelays.add(rurl);
         // fire EOSE callbacks at the moment when all relays have reached EOSE.
         if (this.#eoseRelays.size === this.#relaySubs.size) {
-          this.#onEose.forEach((cb) => cb());
+          this.#onEose.forEach((cb) => cb({ aborted: false })); // TODO
         }
       });
 

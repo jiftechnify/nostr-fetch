@@ -19,17 +19,15 @@ const MAX_LIMIT_PER_REQ = 5000;
 
 export type FetchOptions = {
   skipVerification?: boolean;
-  checkEoseSupportTimeoutMs?: number;
   connectTimeoutMs?: number;
-  autoEoseTimeoutMs?: number;
+  abortSubBeforeEoseTimeoutMs?: number;
   limitPerReq?: number;
 };
 
 const defaultFetchOptions: Required<FetchOptions> = {
   skipVerification: false,
-  checkEoseSupportTimeoutMs: 3000,
   connectTimeoutMs: 5000,
-  autoEoseTimeoutMs: 10000,
+  abortSubBeforeEoseTimeoutMs: 10000,
   limitPerReq: MAX_LIMIT_PER_REQ,
 };
 
@@ -296,7 +294,12 @@ export class NostrFetcher {
     filters: FetchFilter[],
     options: FetchOptions = {}
   ): Promise<NostrEvent | undefined> {
-    const latest1 = await this.fetchLatestEvents(relayUrls, filters, 1, options);
+    const opts: FetchOptions & { abortSubBeforeEoseTimeoutMs: number } = {
+      ...defaultFetchOptions,
+      // override default value of `abortSubBeforeEoseTimeoutMs` (10000 -> 1000)
+      abortSubBeforeEoseTimeoutMs: options.abortSubBeforeEoseTimeoutMs ?? 1000,
+    };
+    const latest1 = await this.fetchLatestEvents(relayUrls, filters, 1, opts);
     return latest1[0];
   }
 
@@ -327,7 +330,11 @@ export class NostrFetcher {
     sub.on("event", (ev: NostrEvent) => {
       tx.send(ev);
     });
-    sub.on("eose", () => {
+    sub.on("eose", ({ aborted }) => {
+      if (aborted) {
+        this.#logForDebug?.(`subscription (id: ${sub.subId}) aborted before EOSE due to timeout`);
+      }
+
       sub.close();
       relay.off("notice", onNotice);
       relay.off("error", onError);
