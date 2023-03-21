@@ -8,7 +8,7 @@ import type {
   Subscription,
   SubscriptionOptions,
 } from "./relayTypes";
-import { currUnixtimeMilli } from "./utils";
+import { currUnixtimeMilli, normalizeRelayUrls } from "./utils";
 
 export interface RelayPool {
   ensureRelays(relayUrls: string[], relayOpts: RelayOptions): Promise<Relay[]>;
@@ -65,6 +65,7 @@ class RelayPoolImpl implements RelayPool {
     );
   }
 
+  // `relayUrls` should be normalized in advance.
   private async addRelays(relayUrls: string[], relayOpts: RelayOptions): Promise<void> {
     const relaysToConnect: string[] = [];
     for (const rurl of relayUrls) {
@@ -105,10 +106,11 @@ class RelayPoolImpl implements RelayPool {
   }
 
   public async ensureRelays(relayUrls: string[], relayOpts: RelayOptions): Promise<Relay[]> {
-    await this.addRelays(relayUrls, relayOpts);
+    const normalizedUrls = normalizeRelayUrls(relayUrls);
+    await this.addRelays(normalizedUrls, relayOpts);
 
     const res: Relay[] = [];
-    for (const rurl of relayUrls) {
+    for (const rurl of normalizedUrls) {
       const r = this.#relays.get(rurl);
       if (r !== undefined && r.state === "alive") {
         res.push(r.relay);
@@ -122,12 +124,13 @@ class RelayPoolImpl implements RelayPool {
     filters: Filter[],
     opts: RelayOptions & SubscriptionOptions
   ): Promise<Subscription> {
-    await this.addRelays(relayUrls, opts);
+    const normalizedUrls = normalizeRelayUrls(relayUrls);
+    await this.addRelays(normalizedUrls, opts);
 
     const subId = generateSubId();
     const subs = new Map<string, Subscription>();
 
-    for (const rurl of relayUrls) {
+    for (const rurl of normalizedUrls) {
       const r = this.#relays.get(rurl);
       if (r !== undefined && r.state === "alive") {
         const rsub = r.relay.prepareSub(filters, { ...opts, subId });
