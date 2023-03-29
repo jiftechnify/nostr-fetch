@@ -3,10 +3,13 @@ import fs from "fs-extra";
 
 const DIST_DIR = "./dist";
 
+/** @type import("esbuild").BuildOptions */
 const sharedBuildOptions = {
   entryPoints: ["src/index.ts"],
   outdir: DIST_DIR,
   bundle: true,
+  packages: "external",
+  minify: true,
   sourcemap: "external",
 };
 
