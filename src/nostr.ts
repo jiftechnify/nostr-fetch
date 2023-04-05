@@ -27,6 +27,7 @@ export const eventKind = {
   contacts: 3,
   encryptedDirectMessage: 4,
   eventDeletion: 5,
+  repost: 6,
   reaction: 7,
   badgeAward: 8,
   channelCreation: 40,
