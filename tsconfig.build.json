@@ -7,4 +7,5 @@
     "declarationMap": true,
     "emitDeclarationOnly": true,
   },
+  "exclude": ["src/**/*.spec.ts", "examples/**/*.ts"]
 }
