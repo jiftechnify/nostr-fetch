@@ -47,6 +47,8 @@ export const eventKind = {
   categorizedBookmarkList: 30001,
   profileBadges: 30008,
   badgeDefinition: 30009,
+  marketplaceStall: 30017,
+  marketplaceProduct: 30018,
   article: 30023,
   appSpecificData: 30078,
 } as const;
