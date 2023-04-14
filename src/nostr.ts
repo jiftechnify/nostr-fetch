@@ -84,7 +84,7 @@ export type R2CMessageType = R2CMessage[0];
 export type R2CSubMessage = R2CEvent | R2CEose;
 export type R2CSubMessageType = R2CSubMessage[0];
 
-const msgTypeNames: string[] = ["EVENT", "EOSE", "NOTICE", "OK", "AUTH"];
+const msgTypeNames: string[] = ["EVENT", "EOSE", "NOTICE", "OK", "AUTH", "COUNT"];
 
 export const parseR2CMessage = (rawMsg: string): R2CMessage | undefined => {
   let parsed: unknown;
@@ -105,8 +105,8 @@ export const parseR2CMessage = (rawMsg: string): R2CMessage | undefined => {
     console.error("unknown R2C message type:", parsed[0]);
     return undefined;
   }
-  if (msgType === "OK" || msgType === "AUTH") {
-    console.warn("ignoring R2C OK/AUTH message");
+  if (msgType === "OK" || msgType === "AUTH" || msgType === "COUNT") {
+    console.warn("ignoring R2C OK/AUTH/COUNT message");
     return undefined;
   }
   switch (msgType) {
