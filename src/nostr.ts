@@ -35,6 +35,7 @@ export const eventKind = {
   channelMessage: 42,
   channelHideMessage: 43,
   channelMuteUser: 44,
+  fileMetadata: 1063,
   report: 1984,
   zapRequest: 9734,
   zap: 9735,
