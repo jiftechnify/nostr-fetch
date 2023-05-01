@@ -1,7 +1,7 @@
 import { Channel } from "./channel";
 import { Filter, NostrEvent, verifyEventSig } from "./nostr";
 import type { Relay } from "./relay";
-import { initRelayPool, RelayPool } from "./relayPool";
+import { RelayPool, initRelayPool } from "./relayPool";
 import type { SubscriptionOptions } from "./relayTypes";
 
 export type FetchFilter = Omit<Filter, "limit" | "since" | "until">;
@@ -20,6 +20,7 @@ const MAX_LIMIT_PER_REQ = 5000;
 export type FetchOptions = {
   skipVerification?: boolean;
   connectTimeoutMs?: number;
+  abortController?: AbortController | undefined;
   abortSubBeforeEoseTimeoutMs?: number;
   limitPerReq?: number;
 };
@@ -27,6 +28,7 @@ export type FetchOptions = {
 const defaultFetchOptions: Required<FetchOptions> = {
   skipVerification: false,
   connectTimeoutMs: 5000,
+  abortController: undefined,
   abortSubBeforeEoseTimeoutMs: 10000,
   limitPerReq: MAX_LIMIT_PER_REQ,
 };
@@ -336,7 +338,8 @@ export class NostrFetcher {
   private fetchEventsTillEose(
     relay: Relay,
     filters: Filter[],
-    subOpts: SubscriptionOptions
+    subOpts: SubscriptionOptions,
+    abortController?: AbortController
   ): AsyncIterable<NostrEvent> {
     const [tx, chIter] = Channel.make<NostrEvent>();
 
@@ -354,6 +357,12 @@ export class NostrFetcher {
     };
     relay.on("notice", onNotice);
     relay.on("error", onError);
+
+    if (abortController !== undefined) {
+      abortController.signal.addEventListener("abort", () => {
+        console.log("abort!");
+      });
+    }
 
     // prepare a subscription
     const sub = relay.prepareSub(filters, subOpts);
