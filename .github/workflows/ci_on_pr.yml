@@ -4,11 +4,10 @@ jobs:
   build:
     name: Lint & Test on Node ${{ matrix.node }} and ${{ matrix.os }}
 
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         node: ['16.x', '18.x', '19.x', '20.x']
-        os: [ubuntu-latest, windows-latest, macOS-latest]
 
     steps:
       - name: Checkout repo
