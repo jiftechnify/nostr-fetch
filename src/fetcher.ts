@@ -20,7 +20,7 @@ const MAX_LIMIT_PER_REQ = 5000;
 export type FetchOptions = {
   skipVerification?: boolean;
   connectTimeoutMs?: number;
-  abortController?: AbortController | undefined;
+  abortSignal?: AbortSignal | undefined;
   abortSubBeforeEoseTimeoutMs?: number;
   limitPerReq?: number;
 };
@@ -28,7 +28,7 @@ export type FetchOptions = {
 const defaultFetchOptions: Required<FetchOptions> = {
   skipVerification: false,
   connectTimeoutMs: 5000,
-  abortController: undefined,
+  abortSignal: undefined,
   abortSubBeforeEoseTimeoutMs: 10000,
   limitPerReq: MAX_LIMIT_PER_REQ,
 };
@@ -127,7 +127,12 @@ export class NostrFetcher {
           let numNewEvents = 0;
           let oldestCreatedAt = Number.MAX_SAFE_INTEGER;
 
-          for await (const e of this.fetchEventsTillEose(r, refinedFilters, opts)) {
+          for await (const e of this.fetchEventsTillEose(
+            r,
+            refinedFilters,
+            opts,
+            opts.abortSignal
+          )) {
             // eliminate duplicated events
             if (!localSeenEventIds.has(e.id)) {
               numNewEvents++;
@@ -141,6 +146,11 @@ export class NostrFetcher {
                 tx.send(e);
               }
             }
+          }
+
+          if (opts.abortSignal?.aborted) {
+            this.#logForDebug?.(`[${r.url}] aborted`);
+            break;
           }
           if (numNewEvents === 0) {
             this.#logForDebug?.(`[${r.url}] got ${localSeenEventIds.size} events`);
@@ -255,7 +265,12 @@ export class NostrFetcher {
           let numNewEvents = 0;
           let oldestCreatedAt = Number.MAX_SAFE_INTEGER;
 
-          for await (const e of this.fetchEventsTillEose(r, refinedFilters, subOpts)) {
+          for await (const e of this.fetchEventsTillEose(
+            r,
+            refinedFilters,
+            subOpts,
+            opts.abortSignal
+          )) {
             // eliminate duplicated events
             if (!localSeenEventIds.has(e.id)) {
               numNewEvents++;
@@ -269,6 +284,11 @@ export class NostrFetcher {
                 tx.send(e);
               }
             }
+          }
+
+          if (opts.abortSignal?.aborted) {
+            this.#logForDebug?.(`[${r.url}] aborted`);
+            break;
           }
 
           remainingLimit -= numNewEvents;
@@ -339,33 +359,29 @@ export class NostrFetcher {
     relay: Relay,
     filters: Filter[],
     subOpts: SubscriptionOptions,
-    abortController?: AbortController
+    signal: AbortSignal | undefined
   ): AsyncIterable<NostrEvent> {
     const [tx, chIter] = Channel.make<NostrEvent>();
 
     const onNotice = (n: unknown) => {
       tx.error(Error(`NOTICE: ${JSON.stringify(n)}`));
-
-      relay.off("notice", onNotice);
-      relay.off("error", onError);
+      removeRelayListeners();
     };
     const onError = () => {
       tx.error(Error("ERROR"));
-
+      removeRelayListeners();
+    };
+    const removeRelayListeners = () => {
       relay.off("notice", onNotice);
       relay.off("error", onError);
     };
+
     relay.on("notice", onNotice);
     relay.on("error", onError);
 
-    if (abortController !== undefined) {
-      abortController.signal.addEventListener("abort", () => {
-        console.log("abort!");
-      });
-    }
-
     // prepare a subscription
     const sub = relay.prepareSub(filters, subOpts);
+
     sub.on("event", (ev: NostrEvent) => {
       tx.send(ev);
     });
@@ -375,10 +391,17 @@ export class NostrFetcher {
       }
 
       sub.close();
-      relay.off("notice", onNotice);
-      relay.off("error", onError);
-
       tx.close();
+      removeRelayListeners();
+    });
+
+    console.log(signal);
+    signal?.addEventListener("abort", () => {
+      this.#logForDebug?.(`subscription (id: ${sub.subId}) aborted via AbortController`);
+
+      sub.close();
+      tx.close();
+      removeRelayListeners();
     });
 
     // start the subscription
