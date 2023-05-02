@@ -61,10 +61,10 @@ export class NostrFetcher {
   #logForDebug: typeof console.log | undefined;
 
   constructor(initOpts: FetcherInitOptions = {}) {
-    const opts = { ...defaultFetcherInitOptions, ...initOpts };
-    this.#relayPool = initRelayPool(opts);
+    const finalOpts = { ...defaultFetcherInitOptions, ...initOpts };
+    this.#relayPool = initRelayPool(finalOpts);
 
-    if (opts.enableDebugLog) {
+    if (finalOpts.enableDebugLog) {
       this.#logForDebug = console.log;
     }
   }
@@ -88,7 +88,7 @@ export class NostrFetcher {
     timeRangeFilter: FetchTimeRangeFilter,
     options: FetchOptions = {}
   ): Promise<AsyncIterable<NostrEvent>> {
-    const opts: Required<FetchOptions> = {
+    const finalOpts: Required<FetchOptions> = {
       ...defaultFetchOptions,
       ...options,
     };
@@ -102,7 +102,7 @@ export class NostrFetcher {
       return emptyAsyncGen();
     }
 
-    const relays = await this.#relayPool.ensureRelays(relayUrls, opts);
+    const relays = await this.#relayPool.ensureRelays(relayUrls, finalOpts);
 
     const [tx, chIter] = Channel.make<NostrEvent>();
     const globalSeenEventIds = new Set<string>();
@@ -120,7 +120,7 @@ export class NostrFetcher {
               until: nextUntil,
               // relays are supposed to return *latest* events by specifying `limit` explicitly (cf. [NIP-01](https://github.com/nostr-protocol/nips/blob/master/01.md)).
               // nostream doesn't accept a filter which has `limit` grater than 5000, so limit `limit` to this threshold or less.
-              limit: Math.min(opts.limitPerReq, MAX_LIMIT_PER_REQ),
+              limit: Math.min(finalOpts.limitPerReq, MAX_LIMIT_PER_REQ),
             };
           });
 
@@ -130,8 +130,8 @@ export class NostrFetcher {
           for await (const e of this.fetchEventsTillEose(
             r,
             refinedFilters,
-            opts,
-            opts.abortSignal
+            finalOpts,
+            finalOpts.abortSignal
           )) {
             // eliminate duplicated events
             if (!localSeenEventIds.has(e.id)) {
@@ -148,7 +148,7 @@ export class NostrFetcher {
             }
           }
 
-          if (opts.abortSignal?.aborted) {
+          if (finalOpts.abortSignal?.aborted) {
             this.#logForDebug?.(`[${r.url}] aborted`);
             break;
           }
@@ -185,17 +185,17 @@ export class NostrFetcher {
     timeRangeFilter: FetchTimeRangeFilter,
     options: FetchAllOptions = {}
   ): Promise<NostrEvent[]> {
-    const opts = { ...defaultFetchAllOptions, ...options };
+    const finalOpts = { ...defaultFetchAllOptions, ...options };
 
     const res: NostrEvent[] = [];
 
-    const allEvents = await this.allEventsIterator(relayUrls, filters, timeRangeFilter, opts);
+    const allEvents = await this.allEventsIterator(relayUrls, filters, timeRangeFilter, finalOpts);
     for await (const ev of allEvents) {
       res.push(ev);
     }
 
     // sort events in "newest to oldest" order if `sort` options is specified
-    if (opts.sort) {
+    if (finalOpts.sort) {
       res.sort((a, b) => b.created_at - a.created_at);
     }
     return res;
@@ -218,7 +218,7 @@ export class NostrFetcher {
     limit: number,
     options: FetchLatestOptions = {}
   ): Promise<NostrEvent[]> {
-    const opts: Required<FetchLatestOptions> = {
+    const finalOpts: Required<FetchLatestOptions> = {
       ...defaultFetchLatestOptions,
       ...options,
     };
@@ -232,15 +232,15 @@ export class NostrFetcher {
       return [];
     }
 
-    const relays = await this.#relayPool.ensureRelays(relayUrls, opts);
+    const relays = await this.#relayPool.ensureRelays(relayUrls, finalOpts);
 
     const [tx, chIter] = Channel.make<NostrEvent>();
     const globalSeenEventIds = new Set<string>();
     const initialUntil = Math.floor(Date.now() / 1000);
     const subOpts: SubscriptionOptions = {
-      ...opts,
+      ...finalOpts,
       // skip "full" verification if `reduceVerification` is enabled
-      skipVerification: opts.skipVerification || opts.reduceVerification,
+      skipVerification: finalOpts.skipVerification || finalOpts.reduceVerification,
     };
 
     // fetch at most `limit` events from each relay
@@ -269,7 +269,7 @@ export class NostrFetcher {
             r,
             refinedFilters,
             subOpts,
-            opts.abortSignal
+            finalOpts.abortSignal
           )) {
             // eliminate duplicated events
             if (!localSeenEventIds.has(e.id)) {
@@ -286,7 +286,7 @@ export class NostrFetcher {
             }
           }
 
-          if (opts.abortSignal?.aborted) {
+          if (finalOpts.abortSignal?.aborted) {
             this.#logForDebug?.(`[${r.url}] aborted`);
             break;
           }
@@ -314,7 +314,7 @@ export class NostrFetcher {
     evs.sort((a, b) => b.created_at - a.created_at);
 
     // return latest `limit` events if not "reduced verification mode"
-    if (opts.skipVerification || !opts.reduceVerification) {
+    if (finalOpts.skipVerification || !finalOpts.reduceVerification) {
       return evs.slice(0, limit);
     }
 
@@ -346,12 +346,12 @@ export class NostrFetcher {
     filters: FetchFilter[],
     options: FetchLatestOptions = {}
   ): Promise<NostrEvent | undefined> {
-    const opts: FetchLatestOptions & { abortSubBeforeEoseTimeoutMs: number } = {
+    const finalOpts: FetchLatestOptions & { abortSubBeforeEoseTimeoutMs: number } = {
       ...defaultFetchLatestOptions,
       // override default value of `abortSubBeforeEoseTimeoutMs` (10000 -> 1000)
       abortSubBeforeEoseTimeoutMs: options.abortSubBeforeEoseTimeoutMs ?? 1000,
     };
-    const latest1 = await this.fetchLatestEvents(relayUrls, filters, 1, opts);
+    const latest1 = await this.fetchLatestEvents(relayUrls, filters, 1, finalOpts);
     return latest1[0];
   }
 
@@ -382,6 +382,7 @@ export class NostrFetcher {
     // prepare a subscription
     const sub = relay.prepareSub(filters, subOpts);
 
+    // handle subscription events
     sub.on("event", (ev: NostrEvent) => {
       tx.send(ev);
     });
@@ -395,7 +396,7 @@ export class NostrFetcher {
       removeRelayListeners();
     });
 
-    console.log(signal);
+    // handle abortion
     signal?.addEventListener("abort", () => {
       this.#logForDebug?.(`subscription (id: ${sub.subId}) aborted via AbortController`);
 
