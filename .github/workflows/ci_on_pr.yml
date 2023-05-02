@@ -1,0 +1,28 @@
+name: CI on PR opened / updated
+on: pull_request
+jobs:
+  build:
+    name: Lint & Test on Node ${{ matrix.node }} and ${{ matrix.os }}
+
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: ['16.x', '18.x', '19.x', '20.x']
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+
+      - name: Use Node ${{ matrix.node }}
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Install dependencies
+        uses: bahmutov/npm-install@v1
+
+      - name: Lint
+        run: yarn lint
+
+      - name: Test
+        run: yarn test
