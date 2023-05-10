@@ -1,12 +1,6 @@
 /* global WebSocket, CloseEvent, MessageEvent */
-import {
-  C2RMessage,
-  Filter,
-  generateSubId,
-  NostrEvent,
-  parseR2CMessage,
-  verifyEventSig,
-} from "./nostr";
+import { verifyEventSig } from "./crypto";
+import { C2RMessage, Filter, generateSubId, NostrEvent, parseR2CMessage } from "./nostr";
 import type {
   RelayConnectCb,
   RelayDisconnectCb,

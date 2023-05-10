@@ -1,5 +1,4 @@
-import type { SimplePool, Relay as ToolsRelay, Sub as ToolsSub } from "nostr-tools";
-import { Filter, generateSubId } from "../nostr";
+import { Filter, generateSubId } from "nostr-fetch/src/nostr";
 import type {
   RelayEventCbTypes,
   RelayHandle,
@@ -10,8 +9,9 @@ import type {
   SubEventCbTypes,
   Subscription,
   SubscriptionOptions,
-} from "../relayTypes";
-import { normalizeRelayUrls } from "../utils";
+} from "nostr-fetch/src/relayTypes";
+import { normalizeRelayUrls } from "nostr-fetch/src/utils";
+import type { SimplePool, Relay as ToolsRelay, Sub as ToolsSub } from "nostr-tools";
 
 class ToolsSubAdapter implements Subscription {
   #relay: ToolsRelay;

@@ -1,8 +1,8 @@
+import { simplePoolAdapter } from "@nostr-fetch/adapter-nostr-tools";
+import { eventKind, NostrFetcher } from "nostr-fetch";
 import { SimplePool } from "nostr-tools";
 import "websocket-polyfill";
 
-import { eventKind, NostrFetcher } from "../../src/index";
-import { simplePoolAdapter } from "../../src/nostr-tools/adapter";
 import { defaultRelays, nHoursAgo } from "../utils";
 
 const main = async () => {

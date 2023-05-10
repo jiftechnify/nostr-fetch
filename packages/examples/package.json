@@ -1,0 +1,33 @@
+{
+  "name": "nostr-fetch-examples",
+  "version": "0.1.0",
+  "description": "nostr-fetch examples",
+  "author": "jiftechnify <jiftech.stlfy@gmail.com>",
+  "repository": "https://github.com/jiftechnify/nostr-fetch",
+  "homepage": "https://github.com/jiftechnify/nostr-fetch#readme",
+  "bugs": {
+    "url": "https://github.com/jiftechnify/nostr-fetch/issues"
+  },
+  "license": "MIT",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "tsc": "tsc",
+    "lint": "run-p tsc lint:*",
+    "lint:format": "prettier --check --loglevel warn src/**/*.ts",
+    "lint:js": "eslint --max-warnings 0 src/",
+    "fix": "run-s fix:*",
+    "fix:format": "prettier --write --loglevel warn src/**/*.ts",
+    "fix:js": "eslint --fix src/",
+    "exec-ts": "node --loader esbuild-register/loader -r esbuild-register"
+  },
+  "dependencies": {
+    "@nostr-fetch/adapter-nostr-tools": "*",
+    "nostr-fetch": "*",
+    "nostr-tools": "^1.10.1",
+    "websocket-polyfill": "^0.0.3"
+  },
+  "volta": {
+    "node": "18.14.2"
+  }
+}

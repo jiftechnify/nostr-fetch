@@ -1,5 +1,6 @@
 import { Channel } from "./channel";
-import { Filter, NostrEvent, verifyEventSig } from "./nostr";
+import { verifyEventSig } from "./crypto";
+import type { Filter, NostrEvent } from "./nostr";
 import { initRelayPool } from "./relayPool";
 import type { RelayHandle, RelayPoolHandle, SubscriptionOptions } from "./relayTypes";
 

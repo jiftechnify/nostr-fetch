@@ -1,5 +1,6 @@
+import { eventKind, NostrFetcher } from "nostr-fetch";
 import "websocket-polyfill";
-import { eventKind, NostrFetcher } from "../src/index";
+
 import { defaultRelays } from "./utils";
 
 const main = async () => {

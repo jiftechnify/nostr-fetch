@@ -1,5 +1,6 @@
+import { eventKind, NostrEvent, NostrFetcher } from "nostr-fetch";
 import "websocket-polyfill";
-import { eventKind, NostrEvent, NostrFetcher } from "../src/index";
+
 import { defaultRelays } from "./utils";
 
 if (process.argv.length <= 2) {
