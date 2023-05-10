@@ -17,7 +17,7 @@ class ToolsSubAdapter implements Subscription {
   #relay: ToolsRelay;
   #subId: string;
   #filters: Filter[];
-  #options: SubscriptionOptions;
+  #options: SubscriptionOptions; // TODO: respect `abortSubBeforeEoseTimeoutMs`
 
   #sub: ToolsSub | undefined;
 
@@ -190,7 +190,7 @@ class SimplePoolAdapter implements RelayPoolHandle {
   public async ensureRelays(relayUrls: string[], _: RelayOptions): Promise<RelayHandle[]> {
     const normalizedUrls = normalizeRelayUrls(relayUrls);
 
-    // TODO: timeout
+    // TODO: respect `connectTimeoutMs`
     const ensureResults = await Promise.allSettled(
       normalizedUrls.map((url) =>
         this.#simplePool.ensureRelay(url).then((r) => new ToolsRelayAdapter(url, r))
@@ -218,8 +218,11 @@ class SimplePoolAdapter implements RelayPoolHandle {
 }
 
 /**
- * Wraps a nostr-tools `SimplePool` to allow it to interoperate with nostr-fetch.
- * @param sp
- * @returns
+ * Wraps a nostr-tools' `SimplePool`, allowing it to interoperate with nostr-fetch.
+ *
+ * Limitations: if you use this adapter, some fetch options will be ignored (for now):
+ *
+ * - `connectTimeoutMs`
+ * - `abortSubBeforeEoseTimeoutMs`
  */
 export const simplePoolAdapter = (sp: SimplePool): RelayPoolHandle => new SimplePoolAdapter(sp);
