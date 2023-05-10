@@ -58,6 +58,6 @@ export type RelayHandle = {
 
 // minimum APIs for relay pool handles that is required to fetch events.
 export type RelayPoolHandle = {
-  ensureRelays(relsyUrls: string[], relayOpts: RelayOptions): Promise<RelayHandle[]>;
+  ensureRelays(relayUrls: string[], relayOpts: RelayOptions): Promise<RelayHandle[]>;
   closeAll(): void;
 };
