@@ -1,8 +1,7 @@
 import { Channel } from "./channel";
 import { Filter, NostrEvent, verifyEventSig } from "./nostr";
-import type { Relay } from "./relay";
-import { RelayPool, initRelayPool } from "./relayPool";
-import type { SubscriptionOptions } from "./relayTypes";
+import { initRelayPool } from "./relayPool";
+import type { RelayHandle, RelayPoolHandle, SubscriptionOptions } from "./relayTypes";
 
 export type FetchFilter = Omit<Filter, "limit" | "since" | "until">;
 export type FetchTimeRangeFilter = Pick<Filter, "since" | "until">;
@@ -57,16 +56,37 @@ async function* emptyAsyncGen() {
 }
 
 export class NostrFetcher {
-  #relayPool: RelayPool;
+  #relayPool: RelayPoolHandle;
   #logForDebug: typeof console.log | undefined;
 
-  constructor(initOpts: FetcherInitOptions = {}) {
-    const finalOpts = { ...defaultFetcherInitOptions, ...initOpts };
-    this.#relayPool = initRelayPool(finalOpts);
+  private constructor(relayPool: RelayPoolHandle, initOpts: Required<FetcherInitOptions>) {
+    this.#relayPool = relayPool;
 
-    if (finalOpts.enableDebugLog) {
+    if (initOpts.enableDebugLog) {
       this.#logForDebug = console.log;
     }
+  }
+
+  /**
+   * Initializes `NostrFetcher` with the default relay pool implementation.
+   */
+  public static init(initOpts: FetcherInitOptions = {}) {
+    const finalOpts = { ...defaultFetcherInitOptions, ...initOpts };
+    const rp = initRelayPool(finalOpts);
+    return new NostrFetcher(rp, finalOpts);
+  }
+
+  /**
+   * Initializes `NostrFetcher` with the given relay pool implementation.
+   *
+   * ```ts
+   * const pool = new SimplePool();
+   * const fetcher = NostrFetcher.withRelayPool(simplePoolAdapter(pool));
+   * ```
+   */
+  public static withRelayPool(relayPool: RelayPoolHandle, initOpts: FetcherInitOptions = {}) {
+    const finalOpts = { ...defaultFetcherInitOptions, ...initOpts };
+    return new NostrFetcher(relayPool, finalOpts);
   }
 
   /**
@@ -356,7 +376,7 @@ export class NostrFetcher {
   }
 
   private fetchEventsTillEose(
-    relay: Relay,
+    relay: RelayHandle,
     filters: Filter[],
     subOpts: SubscriptionOptions,
     signal: AbortSignal | undefined

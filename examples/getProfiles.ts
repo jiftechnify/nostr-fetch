@@ -13,7 +13,7 @@ const getName = (content: string): string => {
 };
 
 const main = async () => {
-  const fetcher = new NostrFetcher();
+  const fetcher = NostrFetcher.init();
 
   // get pubkeys of followees from the latest kind 3 event
   const lastFollowEvent = await fetcher.fetchLastEvent(defaultRelays, [

@@ -1,6 +1,8 @@
 import { Filter, generateSubId, NostrEvent } from "./nostr";
-import { initRelay, Relay, RelayOptions } from "./relay";
+import { initRelay, Relay } from "./relay";
 import type {
+  RelayOptions,
+  RelayPoolHandle,
   SubEoseCb,
   SubEventCb,
   SubEventCbTypes,
@@ -10,14 +12,15 @@ import type {
 } from "./relayTypes";
 import { currUnixtimeMilli, normalizeRelayUrls } from "./utils";
 
-export interface RelayPool {
+export interface RelayPool extends RelayPoolHandle {
   ensureRelays(relayUrls: string[], relayOpts: RelayOptions): Promise<Relay[]>;
-  prepareSub(
-    relayUrls: string[],
-    filters: Filter[],
-    opts: RelayOptions & SubscriptionOptions
-  ): Promise<Subscription>;
   closeAll(): void;
+
+  // prepareSub(
+  //   relayUrls: string[],
+  //   filters: Filter[],
+  //   opts: RelayOptions & SubscriptionOptions
+  // ): Promise<Subscription>;
 
   // on<E extends RelayEventTypes>(type: E, cb: RelayEventCbTypes[E]): void;
   // off<E extends RelayEventTypes>(type: E, cb: RelayEventCbTypes[E]): void;

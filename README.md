@@ -42,7 +42,6 @@ The entry point of Nostr events fetching.
 
 It manages connections to Nostr relays under the hood. It is recommended to reuse single `NostrFetcher` instance in entire app.
 
-
 ### `NostrFetcher#allEventsIterator()`
 
 ```ts
@@ -59,7 +58,7 @@ Returns an async iterable of all events matching the filters from Nostr relays s
 You can iterate over events using for-await-of loop.
 
 ```ts
-const fetcher = new NostrFetcher();
+const fetcher = NostrFetcher.init();
 const events = await fetcher.allEventsIterator([...], [{...}], {...});
 for await (const ev of events) {
     // process events
