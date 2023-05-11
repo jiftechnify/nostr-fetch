@@ -30,7 +30,7 @@ jobs:
             turbo-${{ github.job }}-${{ github.ref_name }}-${{ matrix.node }}-
 
       - name: Install dependencies
-        uses: yarn
+        run: yarn
 
       - name: Lint
         run: yarn lint-gha
