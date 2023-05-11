@@ -1,9 +1,10 @@
+import { eventKind, NostrFetcher } from "nostr-fetch";
 import "websocket-polyfill";
-import { eventKind, NostrFetcher } from "../src/index";
+
 import { defaultRelays, nHoursAgo } from "./utils";
 
 const main = async () => {
-  const fetcher = new NostrFetcher();
+  const fetcher = NostrFetcher.init();
 
   // fetch all text events (kind: 1) posted in last 24 hours from the relays
   const events = await fetcher.fetchAllEvents(

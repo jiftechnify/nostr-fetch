@@ -14,25 +14,135 @@ pnpm add nostr-fetch
 ```
 
 ## Usage
-See codes under `examples` directory.
 
-> **Note**
->
-> You must install and import `websocket-polyfill` to use this on Node.js.
-> ```ts
-> import 'websocket-polyfill';
-> ```
+### Basic
 
-You can run examples by following the steps (using `npm` for example):
+```ts
+import { eventKind, NostrFetcher } from "nostr-fetch";
+
+const nHoursAgo = (hrs: number): number =>
+  Math.floor(new Date(Date.now() - hrs * 60 * 60 * 1000).getTime() / 1000);
+
+const fetcher = NostrFetcher.init();
+const relayUrls = [/* relay URLs */];
+
+// fetches all text events since 24 hr ago in streaming manner
+const postIter = await fetcher.allEventsIterator(
+    relayUrls, 
+    /* filters (kinds, authors, ids, tags) */
+    [
+        { kinds: [ eventKind.text ] }
+    ],
+    /* time range filter (since, until) */
+    { since: nHoursAgo(24) },
+    /* fetch options (optional) */
+    { skipVerification: true }
+);
+for await (const ev of postIter) {
+    console.log(ev.content);
+}
+
+// fetches all text events since 24 hr ago, as a single array
+const allPosts = await fetcher.fetchAllEvents(
+    relayUrls,
+    /* filters */
+    [
+        { kinds: [ eventKind.text ] }
+    ],
+    /* time range filter */
+    { since: nHoursAgo(24) },
+    /* fetch options (optional) */
+    { sort: true }
+)
+
+// fetches latest 100 text events
+// internally: 
+// fetch latest 100 events from each relay ->
+// merge lists of events -> take latest 100 events
+const latestPosts = await fetcher.fetchLatestEvents(
+    relayUrls,
+    /* filters */
+    [
+        { kinds: [ eventKind.text ] }
+    ],
+    /* number of events to fetch */
+    100,
+);
+
+// fetches the last metadata event published by pubkey "deadbeef..."
+// internally:
+// fetch the last event from each relay -> take the latest one
+const lastMetadata = await fetcher.fetchLastEvent(
+    relayUrls,
+    /* filters */
+    [
+        { kinds: [ eventKind.metadata ], authors: [ "deadbeef..." ] }
+    ],
+)
+```
+### Working with `nostr-tools`
+
+First, install the adapter package.
 
 ```bash
-# first, install dependencies
-npm install
+npm install @nostr-fetch/adapter-nostr-tools
+```
+
+```ts
+import { eventKind, NostrFetcher } from "nostr-fetch";
+import { simplePoolAdapter } from "@nostr-fetch/adapter-nostr-tools";
+import { SimplePool } from "nostr-tools";
+
+const pool = new SimplePool();
+
+// wrap SimplePool with simplePoolAdapter to make it interoperable with nostr-fetch
+const fetcher = NostrFetcher.withRelayPool(simplePoolAdapter(pool));
+
+// now, you can use any fetch methods described above!
+```
+
+### Aborting
+
+```ts
+import { eventKind, NostrFecher } from 'nostr-fetch'
+
+const fetcher = NostrFetcher.init();
+const relayUrls = [/* relay URLs */];
+
+const abortCtrl = new AbortController();
+
+const evIter = await fetcher.allEventsIterator(
+    relayUrls,
+    [/* filters */],
+    {/* time range */},
+    /* pass `AbortController.signal` here to enable abortion! */
+    { abortSignal: abortCtrl.signal } 
+);
+
+// abort after 1 sec
+setTimeout(() => abortCtrl.abort(), 1000);
+
+for await (const ev of evIter) {
+    // ...
+}
+```
+
+## Examples
+You can find example codes under `packages/examples` directory.
+
+To run examples, follow the steps (using `npm` for example):
+
+```bash
+# first time only: install dependencies & build subpackages
+npm install && npm run build
+
 
 # then, execute example
-npm run exec-ts examples/fetchAll.ts
-# getProfiles.ts takes a hex pubkey as an argument
-npm run exec-ts examples/getProfiles.ts <your hex pubkey>
+# the command executes packages/examples/src/fetchAll.ts
+npm run example fetchAll
+
+# "getProfiles" takes a hex pubkey as an argument
+npm run example getProfiles <your hex pubkey>
 ```
 
 ## API
@@ -42,6 +152,19 @@ The entry point of Nostr events fetching.
 
 It manages connections to Nostr relays under the hood. It is recommended to reuse single `NostrFetcher` instance in entire app.
 
+You should instantiate it with following initializers instead of the constructor.
+
+#### `NostrFetcher.init()`
+
+Initializes a `NostrFetcher` instance based on the default relay pool implementation.
+
+#### `NostrFetcher.withRelayPool()`
+
+Initializes a `NostrFetcher` instance based on a custom relay pool implementation passed as an argument.
+
+This opens up interoperability with other relay pool implementations such as [nostr-tools](https://github.com/nbd-wtf/nostr-tools)' `SimplePool`.
+
+---
 
 ### `NostrFetcher#allEventsIterator()`
 
@@ -59,7 +182,7 @@ Returns an async iterable of all events matching the filters from Nostr relays s
 You can iterate over events using for-await-of loop.
 
 ```ts
-const fetcher = new NostrFetcher();
+const fetcher = NostrFetcher.init();
 const events = await fetcher.allEventsIterator([...], [{...}], {...});
 for await (const ev of events) {
     // process events
@@ -69,6 +192,8 @@ for await (const ev of events) {
 > **Note**
 >
 > There are no guarantees about the order of returned events. Especially, events are not necessarily ordered in "newest to oldest" order.
+
+---
 
 ### `NostrFetcher#fetchAllEvents()`
 
@@ -89,6 +214,8 @@ If `sort: true` is specified in `options`, events in the resulting array will be
 >
 > There are no guarantees about the order of returned events if `sort` options is not specified.
 
+---
+
 ### `NostrFetcher#fetchLatestEvents()`
 
 ```ts
@@ -104,6 +231,8 @@ Fetches latest up to `limit` events matching the filters from Nostr relays speci
 
 Events in the result will be sorted in "newest to oldest" order.
 
+---
+
 ### `NostrFetcher#fetchLastEvent()`
 
 ```ts
@@ -117,6 +246,8 @@ public async fetchLastEvent(
 Fetches the last event matching the filters from Nostr relays specified by the array of URLs.
 
 Returns `undefined` if no event matching the filters exists in any relay.
+
+---
 
 ### `NostrFetcher#shutdown()`
 

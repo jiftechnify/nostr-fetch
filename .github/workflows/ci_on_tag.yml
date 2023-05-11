@@ -4,7 +4,7 @@ on:
     tags:
       - '*'
 jobs:
-  prerelease:
+  ci-on-tag:
     name: "Check Releasability (lint, test and build): Node ${{ matrix.node }}"
     
     runs-on: ubuntu-latest
@@ -21,14 +21,22 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
 
+      - name: Cache turbo
+        uses: actions/cache@v3
+        with:
+          path: .turbo
+          key: turbo-${{ github.job }}-${{ github.ref_name }}-${{ matrix.node }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ github.job }}-${{ github.ref_name }}-${{ matrix.node }}-
+
       - name: Install dependencies
-        uses: bahmutov/npm-install@v1
+        uses: yarn
 
       - name: Lint
-        run: yarn lint
+        run: yarn lint-gha
 
       - name: Test
-        run: yarn test
+        run: yarn test-gha
 
       - name: Build
-        run: yarn build
+        run: yarn build-gha

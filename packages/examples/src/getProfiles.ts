@@ -1,9 +1,10 @@
+import { eventKind, NostrEvent, NostrFetcher } from "nostr-fetch";
 import "websocket-polyfill";
-import { eventKind, NostrEvent, NostrFetcher } from "../src/index";
+
 import { defaultRelays } from "./utils";
 
 if (process.argv.length <= 2) {
-  console.error("specify hex pubkey");
+  console.error("specify your hex pubkey!");
   process.exit(1);
 }
 const pubkey = process.argv[2] as string;
@@ -13,7 +14,7 @@ const getName = (content: string): string => {
 };
 
 const main = async () => {
-  const fetcher = new NostrFetcher();
+  const fetcher = NostrFetcher.init();
 
   // get pubkeys of followees from the latest kind 3 event
   const lastFollowEvent = await fetcher.fetchLastEvent(defaultRelays, [

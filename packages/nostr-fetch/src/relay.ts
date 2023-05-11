@@ -1,19 +1,15 @@
 /* global WebSocket, CloseEvent, MessageEvent */
-import {
-  C2RMessage,
-  Filter,
-  generateSubId,
-  NostrEvent,
-  parseR2CMessage,
-  verifyEventSig,
-} from "./nostr";
+import { verifyEventSig } from "./crypto";
+import { C2RMessage, Filter, generateSubId, NostrEvent, parseR2CMessage } from "./nostr";
 import type {
   RelayConnectCb,
   RelayDisconnectCb,
   RelayErrorCb,
   RelayEventCbTypes,
   RelayEventTypes,
+  RelayHandle,
   RelayNoticeCb,
+  RelayOptions,
   SubEoseCb,
   SubEventCb,
   SubEventCbTypes,
@@ -22,11 +18,7 @@ import type {
   SubscriptionOptions,
 } from "./relayTypes";
 
-export type RelayOptions = {
-  connectTimeoutMs: number;
-};
-
-export interface Relay {
+export interface Relay extends RelayHandle {
   url: string;
   connect(): Promise<Relay>;
   close(): void;

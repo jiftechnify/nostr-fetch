@@ -1,8 +1,8 @@
 name: CI on PR opened / updated
 on: pull_request
 jobs:
-  build:
-    name: Lint & Test on Node ${{ matrix.node }} and ${{ matrix.os }}
+  ci-on-pr:
+    name: Lint & Test on Node ${{ matrix.node }}
 
     runs-on: ubuntu-latest
     strategy:
@@ -11,18 +11,26 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Use Node ${{ matrix.node }}
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node }}
 
+      - name: Cache turbo
+        uses: actions/cache@v3
+        with:
+          path: .turbo
+          key: turbo-${{ github.job }}-${{ github.ref_name }}-${{ matrix.node }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ github.job }}-${{ github.ref_name }}-${{ matrix.node }}-
+
       - name: Install dependencies
-        uses: bahmutov/npm-install@v1
+        run: yarn 
 
       - name: Lint
-        run: yarn lint
+        run: yarn lint-gha
 
       - name: Test
-        run: yarn test
+        run: yarn test-gha

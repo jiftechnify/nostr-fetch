@@ -1,9 +1,10 @@
+import { eventKind, NostrFetcher } from "nostr-fetch";
 import "websocket-polyfill";
-import { eventKind, NostrFetcher } from "../src/index";
+
 import { defaultRelays } from "./utils";
 
 const main = async () => {
-  const fetcher = new NostrFetcher();
+  const fetcher = NostrFetcher.init();
 
   // fetch the latest 100 text events (kind: 1) from the relays
   const latestPosts = await fetcher.fetchLatestEvents(
