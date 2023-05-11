@@ -1,23 +1,25 @@
-name: Check releasability on tags pushed
-on:
+name: CI
+on: 
+  pull_request:
   push:
     tags:
-      - '*'
+      - "*"
+
 jobs:
-  ci-on-tag:
-    name: "Check Releasability (lint, test and build): Node ${{ matrix.node }}"
-    
+  ci:
+    name: Lint, Test and Build on Node ${{ matrix.node }}
+
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node: ['16.x', '18.x', '19.x', '20.x']
+        node: ["16.x", "18.x", "19.x", "20.x"]
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Use Node ${{ matrix.node }}
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node }}
 
@@ -32,11 +34,8 @@ jobs:
       - name: Install dependencies
         run: yarn
 
-      - name: Lint
-        run: yarn lint-gha
-
-      - name: Test
-        run: yarn test-gha
-
-      - name: Build
+      - name: Lint, Test and Build
         run: yarn build-gha
+
+      - name: Lint Examples
+        run: yarn lint-examples-gha

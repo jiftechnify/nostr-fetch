@@ -7,6 +7,12 @@
     "build": {
       "dependsOn": ["lint", "test"],
       "outputs": ["dist/**"]
+    },
+    "lint-examples": {
+      "dependsOn": ["build"]
+    },
+    "fix-examples": {
+      "dependsOn": ["build"]
     }
   }
 }

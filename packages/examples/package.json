@@ -13,10 +13,10 @@
   "private": true,
   "scripts": {
     "tsc": "tsc",
-    "lint": "run-p tsc lint:*",
+    "lint-examples": "run-p tsc lint:*",
     "lint:format": "prettier --check --loglevel warn src/**/*.ts",
     "lint:js": "eslint --max-warnings 0 src/",
-    "fix": "run-s fix:*",
+    "fix-examples": "run-s fix:*",
     "fix:format": "prettier --write --loglevel warn src/**/*.ts",
     "fix:js": "eslint --fix src/",
     "exec-ts": "node --loader esbuild-register/loader -r esbuild-register"
