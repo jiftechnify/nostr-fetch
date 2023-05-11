@@ -22,7 +22,8 @@
   ],
   "scripts": {
     "prepack": "yarn build",
-    "test": "vitest",
+    "test": "vitest run",
+    "testw": "vitest",
     "tsc": "tsc",
     "lint": "run-p tsc lint:*",
     "lint:format": "prettier --check --loglevel warn src/**/*.ts",

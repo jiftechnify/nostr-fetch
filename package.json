@@ -15,16 +15,9 @@
     "packages/*"
   ],
   "scripts": {
-    "test": "vitest",
-    "lint": "run-p tsc lint:*",
-    "lint:format": "prettier --check --loglevel warn src/**/*.ts",
-    "lint:js": "eslint --max-warnings 0 src/",
-    "fix": "run-s fix:*",
-    "fix:format": "prettier --write --loglevel warn src/**/*.ts",
-    "fix:js": "eslint --fix src/",
-    "build": "npm-run-all tsc -p build:*",
-    "build:modules": "node build.js",
-    "build:types": "tsc -p tsconfig.build.json",
+    "lint": "turbo lint",
+    "fix": "turbo fix",
+    "build": "turbo build",
     "exec-ts": "node --loader esbuild-register/loader -r esbuild-register"
   },
   "devDependencies": {
@@ -41,6 +34,7 @@
     "nostr-tools": "^1.10.1",
     "npm-run-all": "^4.1.5",
     "prettier": "2.7.1",
+    "turbo": "^1.9.3",
     "typescript": "^4.9.4",
     "vitest": "^0.29.2",
     "websocket-polyfill": "^0.0.3"
