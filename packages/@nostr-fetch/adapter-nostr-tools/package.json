@@ -34,7 +34,7 @@
     "build:types": "tsc -p tsconfig.build.json"
   },
   "peerDependencies": {
-    "nostr-fetch": "^0.4.4",
+    "nostr-fetch": "^0.5.0",
     "nostr-tools": "^1.10.1"
   },
   "volta": {
