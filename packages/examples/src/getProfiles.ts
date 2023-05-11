@@ -4,7 +4,7 @@ import "websocket-polyfill";
 import { defaultRelays } from "./utils";
 
 if (process.argv.length <= 2) {
-  console.error("specify hex pubkey");
+  console.error("specify your hex pubkey!");
   process.exit(1);
 }
 const pubkey = process.argv[2] as string;

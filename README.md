@@ -13,26 +13,22 @@ yarn add nostr-fetch
 pnpm add nostr-fetch
 ```
 
-## Usage
-See codes under `examples` directory.
+## Examples
+You can find example codes under `packages/examples` directory.
 
-> **Note**
->
-> You must install and import `websocket-polyfill` to use this on Node.js.
-> ```ts
-> import 'websocket-polyfill';
-> ```
-
-You can run examples by following the steps (using `npm` for example):
+To run examples, follow the steps (using `npm` for example):
 
 ```bash
-# first, install dependencies
-npm install
+# first time only: install dependencies & build subpackages
+npm install && npm run build
+
 
 # then, execute example
-npm run exec-ts examples/fetchAll.ts
-# getProfiles.ts takes a hex pubkey as an argument
-npm run exec-ts examples/getProfiles.ts <your hex pubkey>
+# the command executes packages/examples/src/fetchAll.ts
+npm run example fetchAll
+
+# "getProfiles" takes a hex pubkey as an argument
+npm run example getProfiles <your hex pubkey>
 ```
 
 ## API
