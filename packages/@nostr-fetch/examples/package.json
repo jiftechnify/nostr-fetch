@@ -2,7 +2,6 @@
   "name": "@nostr-fetch/examples",
   "version": "0.5.0",
   "description": "nostr-fetch examples",
-  "license": "MIT",
   "type": "module",
   "private": true,
   "scripts": {
