@@ -128,7 +128,7 @@ for await (const ev of evIter) {
 ```
 
 ## Examples
-You can find example codes under `packages/examples` directory.
+You can find example codes under `packages/@nostr-fetch/examples` directory.
 
 To run examples, follow the steps (using `npm` for example):
 
@@ -138,7 +138,7 @@ npm install && npm run build
 
 
 # then, execute example
-# the command executes packages/examples/src/fetchAll.ts
+# the command executes packages/@nostr-fetch/examples/src/fetchAll.ts
 npm run example fetchAll
 
 # "getProfiles" takes a hex pubkey as an argument
