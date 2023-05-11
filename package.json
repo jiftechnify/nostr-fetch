@@ -19,7 +19,7 @@
     "fix": "turbo fix",
     "test": "turbo test",
     "build": "turbo build",
-    "lint-gha": "turbo lint --cache-dir .turbo",
+    "lint-gha": "turbo lint --filter=!nostr-fetch-examples --cache-dir .turbo",
     "test-gha": "turbo test --cache-dir .turbo",
     "build-gha": "turbo build --cache-dir .turbo",
     "example": "node scripts/runExample.js"
