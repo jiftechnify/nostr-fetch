@@ -25,6 +25,9 @@
     "example": "node scripts/runExample.js"
   },
   "devDependencies": {
+    "@lerna-lite/changed": "^2.3.0",
+    "@lerna-lite/cli": "^2.3.0",
+    "@lerna-lite/publish": "^2.3.0",
     "@tsconfig/strictest": "^1.0.1",
     "@types/fs-extra": "^11.0.1",
     "@types/node": "^18.14.2",
