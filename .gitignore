@@ -12,3 +12,6 @@ yarn-error.log*
 .vscode
 
 .turbo
+
+# same as the root README.  auto copied at build time.
+packages/nostr-fetch/README.md
