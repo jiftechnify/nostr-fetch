@@ -13,6 +13,120 @@ yarn add nostr-fetch
 pnpm add nostr-fetch
 ```
 
+## Usage
+
+### Basic
+
+```ts
+import { eventKind, NostrFetcher } from "nostr-fetch";
+
+const nHoursAgo = (hrs: number): number =>
+  Math.floor(new Date(Date.now() - hrs * 60 * 60 * 1000).getTime() / 1000);
+
+const fetcher = NostrFetcher.init();
+const relayUrls = [/* relay URLs */];
+
+// fetches all text events since 24 hr ago in streaming manner
+const postIter = await fetcher.allEventsIterator(
+    relayUrls, 
+    /* filters (kinds, authors, ids, tags) */
+    [
+        { kinds: [ eventKind.text ] }
+    ],
+    /* time range filter (since, until) */
+    { since: nHoursAgo(24) },
+    /* fetch options (optional) */
+    { skipVerification: true }
+);
+for await (const ev of postIter) {
+    console.log(ev.content);
+}
+
+// fetches all text events since 24 hr ago, as a single array
+const allPosts = await fetcher.fetchAllEvents(
+    relayUrls,
+    /* filters */
+    [
+        { kinds: [ eventKind.text ] }
+    ],
+    /* time range filter */
+    { since: nHoursAgo(24) },
+    /* fetch options (optional) */
+    { sort: true }
+)
+
+// fetches latest 100 text events
+// internally: 
+// fetch latest 100 events from each relay ->
+// merge lists of events -> take latest 100 events
+const latestPosts = await fetcher.fetchLatestEvents(
+    relayUrls,
+    /* filters */
+    [
+        { kinds: [ eventKind.text ] }
+    ],
+    /* number of events to fetch */
+    100,
+);
+
+// fetches the last metadata event published by pubkey "deadbeef..."
+// internally:
+// fetch the last event from each relay -> take the latest one
+const lastMetadata = await fetcher.fetchLastEvent(
+    relayUrls,
+    /* filters */
+    [
+        { kinds: [ eventKind.metadata ], authors: [ "deadbeef..." ] }
+    ],
+)
+```
+### Working with `nostr-tools`
+
+First, install the adapter package.
+
+```bash
+npm install @nostr-fetch/adapter-nostr-tools
+```
+
+```ts
+import { eventKind, NostrFetcher } from "nostr-fetch";
+import { simplePoolAdapter } from "@nostr-fetch/adapter-nostr-tools";
+import { SimplePool } from "nostr-tools";
+
+const pool = new SimplePool();
+
+// wrap SimplePool with simplePoolAdapter to make it interoperable with nostr-fetch
+const fetcher = NostrFetcher.withRelayPool(simplePoolAdapter(pool));
+
+// now, you can use any fetch methods described above!
+```
+
+### Aborting
+
+```ts
+import { eventKind, NostrFecher } from 'nostr-fetch'
+
+const fetcher = NostrFetcher.init();
+const relayUrls = [/* relay URLs */];
+
+const abortCtrl = new AbortController();
+
+const evIter = await fetcher.allEventsIterator(
+    relayUrls,
+    [/* filters */],
+    {/* time range */},
+    /* pass `AbortController.signal` here to enable abortion! */
+    { abortSignal: abortCtrl.signal } 
+);
+
+// abort after 1 sec
+setTimeout(() => abortCtrl.abort(), 1000);
+
+for await (const ev of evIter) {
+    // ...
+}
+```
+
 ## Examples
 You can find example codes under `packages/examples` directory.
 
