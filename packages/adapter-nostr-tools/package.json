@@ -17,6 +17,9 @@
     "dist",
     "src"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "prepack": "yarn build",
     "tsc": "tsc",
