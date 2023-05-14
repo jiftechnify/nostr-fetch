@@ -17,7 +17,7 @@ class ToolsSubAdapter implements Subscription {
   #relay: ToolsRelay;
   #subId: string;
   #filters: Filter[];
-  #options: SubscriptionOptions; // TODO: respect `abortSubBeforeEoseTimeoutMs`
+  #options: SubscriptionOptions;
 
   #sub: ToolsSub | undefined;
 
@@ -27,6 +27,9 @@ class ToolsSubAdapter implements Subscription {
 
   // associates adapted `eose` callbacks with original callbacks
   #onEoseAdapted: Map<SubEoseCb, () => void> = new Map();
+
+  // subscription auto abortion timer
+  #abortSubTimer: NodeJS.Timeout | undefined;
 
   constructor(relay: ToolsRelay, subId: string, filters: Filter[], options: SubscriptionOptions) {
     this.#relay = relay;
@@ -46,6 +49,18 @@ class ToolsSubAdapter implements Subscription {
       id: this.#subId,
     });
 
+    // register callbacks which control subscription auto abortion
+    this.registerCb("event", () => {
+      // reset the auto abortion timer every time a new event arrives
+      this.resetAbortSubTimer();
+    });
+    this.registerCb("eose", () => {
+      // clear the auto abortion timer when actual EOSE arrives
+      if (this.#abortSubTimer !== undefined) {
+        clearTimeout(this.#abortSubTimer);
+      }
+    });
+
     // register all callbacks that are registered before `req()`
     for (const cb of this.#onEvent) {
       this.registerCb("event", cb);
@@ -56,6 +71,7 @@ class ToolsSubAdapter implements Subscription {
   }
 
   public close(): void {
+    this.#onEoseAdapted.clear();
     this.#sub?.unsub();
   }
 
@@ -118,6 +134,7 @@ class ToolsSubAdapter implements Subscription {
 
       case "eose": {
         // adapt callbacks for `eose` events
+        // adapted callback should be called when actual EOSE is received, so it should just call the original callback with { aborted: false }.
         const adapted = () => (cb as SubEoseCb)({ aborted: false });
         this.#onEoseAdapted.set(cb as SubEoseCb, adapted);
         this.#sub.on("eose", adapted);
@@ -148,6 +165,17 @@ class ToolsSubAdapter implements Subscription {
         break;
       }
     }
+  }
+
+  private resetAbortSubTimer() {
+    if (this.#abortSubTimer !== undefined) {
+      clearTimeout(this.#abortSubTimer);
+      this.#abortSubTimer = undefined;
+    }
+
+    this.#abortSubTimer = setTimeout(() => {
+      Array.from(this.#onEoseAdapted.keys()).forEach((cb) => cb({ aborted: true }));
+    }, this.#options.abortSubBeforeEoseTimeoutMs);
   }
 }
 
@@ -180,20 +208,64 @@ class ToolsRelayAdapter implements RelayHandle {
   }
 }
 
+// attach timeout to the `promise`
+const withTimeout = async <T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  msgOnTimeout: string
+): Promise<T> => {
+  const timeoutAborter = new AbortController();
+  const timeout = new Promise<T>((_, reject) => {
+    setTimeout(() => reject(Error(msgOnTimeout)), timeoutMs);
+    timeoutAborter.signal.addEventListener("abort", () => reject());
+  });
+
+  const t = await Promise.race([promise, timeout]);
+  timeoutAborter.abort();
+  return t;
+};
+
+type AdapterOptions = {
+  enableDebugLog?: boolean;
+};
+
+const defaultAdapterOptions: Required<AdapterOptions> = {
+  enableDebugLog: false,
+};
+
 class SimplePoolAdapter implements RelayPoolHandle {
   #simplePool: SimplePool;
 
-  constructor(sp: SimplePool) {
+  #logForDebug: typeof console.log | undefined;
+
+  constructor(sp: SimplePool, options: Required<AdapterOptions>) {
     this.#simplePool = sp;
+    if (options.enableDebugLog) {
+      this.#logForDebug = console.log;
+    }
   }
 
-  public async ensureRelays(relayUrls: string[], _: RelayOptions): Promise<RelayHandle[]> {
+  public async ensureRelays(
+    relayUrls: string[],
+    { connectTimeoutMs }: RelayOptions
+  ): Promise<RelayHandle[]> {
     const normalizedUrls = normalizeRelayUrls(relayUrls);
 
-    // TODO: respect `connectTimeoutMs`
     const ensureResults = await Promise.allSettled(
       normalizedUrls.map((url) =>
-        this.#simplePool.ensureRelay(url).then((r) => new ToolsRelayAdapter(url, r))
+        withTimeout(
+          this.#simplePool.ensureRelay(url).then((r) => {
+            // setup debug log
+            r.on("disconnect", () => this.#logForDebug?.(`[${url}] disconnected`));
+            r.on("error", () => this.#logForDebug?.(`[${url}] WebSocket error`));
+            r.on("notice", (notice) => this.#logForDebug?.(`[${url}] NOTICE: ${notice}`));
+            r.on("auth", () => this.#logForDebug?.(`[${url} received AUTH challange (ignoring)`));
+
+            return new ToolsRelayAdapter(url, r);
+          }),
+          connectTimeoutMs,
+          `attempt to connect to the relay ${url} timed out`
+        )
       )
     );
 
@@ -219,10 +291,11 @@ class SimplePoolAdapter implements RelayPoolHandle {
 
 /**
  * Wraps a nostr-tools' `SimplePool`, allowing it to interoperate with nostr-fetch.
- *
- * Limitations: if you use this adapter, some fetch options will be ignored (for now):
- *
- * - `connectTimeoutMs`
- * - `abortSubBeforeEoseTimeoutMs`
  */
-export const simplePoolAdapter = (sp: SimplePool): RelayPoolHandle => new SimplePoolAdapter(sp);
+export const simplePoolAdapter = (
+  sp: SimplePool,
+  options: AdapterOptions = {}
+): RelayPoolHandle => {
+  const finalOpts = { ...defaultAdapterOptions, ...options };
+  return new SimplePoolAdapter(sp, finalOpts);
+};
