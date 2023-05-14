@@ -34,7 +34,7 @@
     "build": "npm-run-all tsc -p build:*",
     "build:modules": "node build.js",
     "build:types": "tsc -p tsconfig.build.json",
-    "build:copy-doc": "cp ../../README.md ."
+    "build:copy-doc": "copy-file ../../README.md ./README.md"
   },
   "dependencies": {
     "@noble/hashes": "^1.2.0",

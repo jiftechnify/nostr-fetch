@@ -1288,7 +1288,7 @@ chalk@^4.0.0, chalk@^4.1.0:
     ansi-styles "^4.1.0"
     supports-color "^7.1.0"
 
-chalk@^5.2.0:
+chalk@^5.2.0, chalk@~5.2:
   version "5.2.0"
   resolved "https://registry.yarnpkg.com/chalk/-/chalk-5.2.0.tgz#249623b7d66869c673699fb66d65723e54dfcfb3"
   integrity sha512-ree3Gqw/nazQAPuJJEy+avdl7QfZMcUvmHIKgEZkGL+xOBzRvup5Hxo6LHuMceSxOabuJLJm5Yp/92R9eMmMvA==
@@ -1317,6 +1317,11 @@ clean-stack@^2.0.0:
   version "2.2.0"
   resolved "https://registry.yarnpkg.com/clean-stack/-/clean-stack-2.2.0.tgz#ee8472dbb129e727b31e8a10a427dee9dfe4008b"
   integrity sha512-4diC9HaTE+KRAMWhDhrGOECgWZxoevMc5TlkObMqNSsVU62PYzXZ/SMTjzyGAFF1YusgxGcSWTEXBhp0CPwQ1A==
+
+cli-argv-util@~1.0:
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/cli-argv-util/-/cli-argv-util-1.0.1.tgz#c49261cfcd263c3a0e737338d37ebb7b11feb294"
+  integrity sha512-bWNFiWkGAymyAWGcEGWv9WP+8S1cGTJWphsL0MCbPsl5O0X8b4gFazZ8Lm9iaJ2fzASHf0RLqXBhK93B0q3eNg==
 
 cli-cursor@^3.1.0:
   version "3.1.0"
@@ -1627,6 +1632,17 @@ conventional-recommended-bump@^6.1.0:
     meow "^8.0.0"
     q "^1.5.1"
 
+copy-file-util@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/copy-file-util/-/copy-file-util-1.0.0.tgz#4a9d040b4aff5d92cfe17c623e0c0e7130ab9e7e"
+  integrity sha512-upgYj9xXh2lxNwEqf3LJrc4ex4AxPLd5/rXZL3bk0LP7u7WGrPrPnIw0jiz4u8dzL1vAK4pTLZrkg/7h4tcSlw==
+  dependencies:
+    chalk "~5.2"
+    cli-argv-util "~1.0"
+    dna-engine "~2.3"
+    fancy-log "~2.0"
+    slash "~5.0"
+
 core-util-is@~1.0.0:
   version "1.0.3"
   resolved "https://registry.yarnpkg.com/core-util-is/-/core-util-is-1.0.3.tgz#a6042d3634c2b27e9328f837b965fac83808db85"
@@ -1780,6 +1796,11 @@ dir-glob@^3.0.1:
   integrity sha512-WkrWp9GR4KXfKGYzOLmTuGVi1UWFfws377n9cc55/tb6DuqyF6pcQ5AbiHEshaDpY9v6oaSr2XCDidGmMwdzIA==
   dependencies:
     path-type "^4.0.0"
+
+dna-engine@~2.3:
+  version "2.3.4"
+  resolved "https://registry.yarnpkg.com/dna-engine/-/dna-engine-2.3.4.tgz#8689de330a79579bd387bad816bf20b94978e15d"
+  integrity sha512-WAzebVrXlhOiz/DlCn8PQnnWtS+oT3/a+sexsoLqw5D5MPtp1UED9iHPDG5rbFNS0tHJmTs8sKYDb96qCb3oRg==
 
 doctrine@^3.0.0:
   version "3.0.0"
@@ -2138,6 +2159,13 @@ external-editor@^3.0.3:
     chardet "^0.7.0"
     iconv-lite "^0.4.24"
     tmp "^0.0.33"
+
+fancy-log@~2.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/fancy-log/-/fancy-log-2.0.0.tgz#cad207b8396d69ae4796d74d17dff5f68b2f7343"
+  integrity sha512-9CzxZbACXMUXW13tS0tI8XsGGmxWzO2DmYrGuBJOJ8k8q2K7hwfJA5qHjuPPe8wtsco33YR9wc+Rlr5wYFvhSA==
+  dependencies:
+    color-support "^1.1.3"
 
 fast-deep-equal@^3.1.1, fast-deep-equal@^3.1.3:
   version "3.1.3"
@@ -4527,6 +4555,11 @@ slash@^5.0.1:
   version "5.1.0"
   resolved "https://registry.yarnpkg.com/slash/-/slash-5.1.0.tgz#be3adddcdf09ac38eebe8dcdc7b1a57a75b095ce"
   integrity sha512-ZA6oR3T/pEyuqwMgAKT0/hAv8oAXckzbkmR0UkUosQ+Mc4RxGoJkRmwHgHufaenlyAgE1Mxgpdcrf75y6XcnDg==
+
+slash@~5.0:
+  version "5.0.1"
+  resolved "https://registry.yarnpkg.com/slash/-/slash-5.0.1.tgz#c354c3a49c0d3b4da1cb0bbeb15a85c2a6defa71"
+  integrity sha512-ywNzUOiXwetmLvTUiCBZpLi+vxqN3i+zDqjs2HHfUSV3wN4UJxVVKWrS1JZDeiJIeBFNgB5pmioC2g0IUTL+rQ==
 
 slice-ansi@^5.0.0:
   version "5.0.0"
