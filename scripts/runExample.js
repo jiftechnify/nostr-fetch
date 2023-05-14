@@ -1,7 +1,7 @@
 import * as cp from "child_process";
 
 if (process.argv.length <= 2) {
-  console.error("usage: yarn example <EXAMPLE-NAME> [EXAMPLE-ARGS]...");
+  console.error("usage: npm run example <EXAMPLE-NAME> [EXAMPLE-ARGS]...");
   process.exit(1);
 }
 

@@ -34,6 +34,7 @@ const postIter = await fetcher.allEventsIterator(
         { kinds: [ eventKind.text ] }
     ],
     /* time range filter (since, until) */
+    // it is merged into each filter in the array of normal filters above.
     { since: nHoursAgo(24) },
     /* fetch options (optional) */
     { skipVerification: true }
@@ -57,8 +58,9 @@ const allPosts = await fetcher.fetchAllEvents(
 
 // fetches latest 100 text events
 // internally: 
-// fetch latest 100 events from each relay ->
-// merge lists of events -> take latest 100 events
+// 1. fetch latest 100 events from each relay
+// 2. merge lists of events
+// 3. take latest 100 events
 const latestPosts = await fetcher.fetchLatestEvents(
     relayUrls,
     /* filters */
@@ -71,7 +73,8 @@ const latestPosts = await fetcher.fetchLatestEvents(
 
 // fetches the last metadata event published by pubkey "deadbeef..."
 // internally:
-// fetch the last event from each relay -> take the latest one
+// 1. fetch the last event from each relay
+// 2. take the latest one
 const lastMetadata = await fetcher.fetchLastEvent(
     relayUrls,
     /* filters */
@@ -80,7 +83,7 @@ const lastMetadata = await fetcher.fetchLastEvent(
     ],
 )
 ```
-### Working with `nostr-tools`
+### Working with [nostr-tools](https://github.com/nbd-wtf/nostr-tools)
 
 First, install the adapter package.
 
