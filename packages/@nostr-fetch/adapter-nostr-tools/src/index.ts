@@ -17,7 +17,7 @@ class ToolsSubAdapter implements Subscription {
   #relay: ToolsRelay;
   #subId: string;
   #filters: Filter[];
-  #options: SubscriptionOptions; // TODO: respect `abortSubBeforeEoseTimeoutMs`
+  #options: SubscriptionOptions;
 
   #sub: ToolsSub | undefined;
 
@@ -27,6 +27,9 @@ class ToolsSubAdapter implements Subscription {
 
   // associates adapted `eose` callbacks with original callbacks
   #onEoseAdapted: Map<SubEoseCb, () => void> = new Map();
+
+  // subscription auto abortion timer
+  #abortSubTimer: NodeJS.Timeout | undefined;
 
   constructor(relay: ToolsRelay, subId: string, filters: Filter[], options: SubscriptionOptions) {
     this.#relay = relay;
@@ -46,6 +49,18 @@ class ToolsSubAdapter implements Subscription {
       id: this.#subId,
     });
 
+    // register callbacks which control subscription auto abortion
+    this.registerCb("event", () => {
+      // reset the auto abortion timer every time a new event arrives
+      this.resetAbortSubTimer();
+    });
+    this.registerCb("eose", () => {
+      // clear the auto abortion timer when actual EOSE arrives
+      if (this.#abortSubTimer !== undefined) {
+        clearTimeout(this.#abortSubTimer);
+      }
+    });
+
     // register all callbacks that are registered before `req()`
     for (const cb of this.#onEvent) {
       this.registerCb("event", cb);
@@ -56,6 +71,7 @@ class ToolsSubAdapter implements Subscription {
   }
 
   public close(): void {
+    this.#onEoseAdapted.clear();
     this.#sub?.unsub();
   }
 
@@ -118,6 +134,7 @@ class ToolsSubAdapter implements Subscription {
 
       case "eose": {
         // adapt callbacks for `eose` events
+        // adapted callback should be called when actual EOSE is received, so it should just call the original callback with { aborted: false }.
         const adapted = () => (cb as SubEoseCb)({ aborted: false });
         this.#onEoseAdapted.set(cb as SubEoseCb, adapted);
         this.#sub.on("eose", adapted);
@@ -148,6 +165,17 @@ class ToolsSubAdapter implements Subscription {
         break;
       }
     }
+  }
+
+  private resetAbortSubTimer() {
+    if (this.#abortSubTimer !== undefined) {
+      clearTimeout(this.#abortSubTimer);
+      this.#abortSubTimer = undefined;
+    }
+
+    this.#abortSubTimer = setTimeout(() => {
+      Array.from(this.#onEoseAdapted.keys()).forEach((cb) => cb({ aborted: true }));
+    }, this.#options.abortSubBeforeEoseTimeoutMs);
   }
 }
 
