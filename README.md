@@ -21,7 +21,7 @@ pnpm add nostr-fetch
 import { eventKind, NostrFetcher } from "nostr-fetch";
 
 const nHoursAgo = (hrs: number): number =>
-  Math.floor(new Date(Date.now() - hrs * 60 * 60 * 1000).getTime() / 1000);
+  Math.floor((Date.now() - hrs * 60 * 60 * 1000) / 1000);
 
 const fetcher = NostrFetcher.init();
 const relayUrls = [/* relay URLs */];
