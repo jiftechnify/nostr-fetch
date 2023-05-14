@@ -270,10 +270,5 @@ class SimplePoolAdapter implements RelayPoolHandle {
 
 /**
  * Wraps a nostr-tools' `SimplePool`, allowing it to interoperate with nostr-fetch.
- *
- * Limitations: if you use this adapter, some fetch options will be ignored (for now):
- *
- * - `connectTimeoutMs`
- * - `abortSubBeforeEoseTimeoutMs`
  */
 export const simplePoolAdapter = (sp: SimplePool): RelayPoolHandle => new SimplePoolAdapter(sp);
