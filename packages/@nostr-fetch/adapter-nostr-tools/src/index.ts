@@ -225,11 +225,24 @@ const withTimeout = async <T>(
   return t;
 };
 
+type AdapterOptions = {
+  enableDebugLog?: boolean;
+};
+
+const defaultAdapterOptions: Required<AdapterOptions> = {
+  enableDebugLog: false,
+};
+
 class SimplePoolAdapter implements RelayPoolHandle {
   #simplePool: SimplePool;
 
-  constructor(sp: SimplePool) {
+  #logForDebug: typeof console.log | undefined;
+
+  constructor(sp: SimplePool, options: Required<AdapterOptions>) {
     this.#simplePool = sp;
+    if (options.enableDebugLog) {
+      this.#logForDebug = console.log;
+    }
   }
 
   public async ensureRelays(
@@ -241,7 +254,15 @@ class SimplePoolAdapter implements RelayPoolHandle {
     const ensureResults = await Promise.allSettled(
       normalizedUrls.map((url) =>
         withTimeout(
-          this.#simplePool.ensureRelay(url).then((r) => new ToolsRelayAdapter(url, r)),
+          this.#simplePool.ensureRelay(url).then((r) => {
+            // setup debug log
+            r.on("disconnect", () => this.#logForDebug?.(`[${url}] disconnected`));
+            r.on("error", () => this.#logForDebug?.(`[${url}] WebSocket error`));
+            r.on("notice", (notice) => this.#logForDebug?.(`[${url}] NOTICE: ${notice}`));
+            r.on("auth", () => this.#logForDebug?.(`[${url} received AUTH challange (ignoring)`));
+
+            return new ToolsRelayAdapter(url, r);
+          }),
           connectTimeoutMs,
           `attempt to connect to the relay ${url} timed out`
         )
@@ -271,4 +292,10 @@ class SimplePoolAdapter implements RelayPoolHandle {
 /**
  * Wraps a nostr-tools' `SimplePool`, allowing it to interoperate with nostr-fetch.
  */
-export const simplePoolAdapter = (sp: SimplePool): RelayPoolHandle => new SimplePoolAdapter(sp);
+export const simplePoolAdapter = (
+  sp: SimplePool,
+  options: AdapterOptions = {}
+): RelayPoolHandle => {
+  const finalOpts = { ...defaultAdapterOptions, ...options };
+  return new SimplePoolAdapter(sp, finalOpts);
+};
