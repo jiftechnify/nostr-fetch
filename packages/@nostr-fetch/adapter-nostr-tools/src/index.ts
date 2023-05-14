@@ -180,6 +180,23 @@ class ToolsRelayAdapter implements RelayHandle {
   }
 }
 
+// attach timeout to the `promise`
+const withTimeout = async <T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  msgOnTimeout: string
+): Promise<T> => {
+  const timeoutAborter = new AbortController();
+  const timeout = new Promise<T>((_, reject) => {
+    setTimeout(() => reject(Error(msgOnTimeout)), timeoutMs);
+    timeoutAborter.signal.addEventListener("abort", () => reject());
+  });
+
+  const t = await Promise.race([promise, timeout]);
+  timeoutAborter.abort();
+  return t;
+};
+
 class SimplePoolAdapter implements RelayPoolHandle {
   #simplePool: SimplePool;
 
@@ -187,13 +204,19 @@ class SimplePoolAdapter implements RelayPoolHandle {
     this.#simplePool = sp;
   }
 
-  public async ensureRelays(relayUrls: string[], _: RelayOptions): Promise<RelayHandle[]> {
+  public async ensureRelays(
+    relayUrls: string[],
+    { connectTimeoutMs }: RelayOptions
+  ): Promise<RelayHandle[]> {
     const normalizedUrls = normalizeRelayUrls(relayUrls);
 
-    // TODO: respect `connectTimeoutMs`
     const ensureResults = await Promise.allSettled(
       normalizedUrls.map((url) =>
-        this.#simplePool.ensureRelay(url).then((r) => new ToolsRelayAdapter(url, r))
+        withTimeout(
+          this.#simplePool.ensureRelay(url).then((r) => new ToolsRelayAdapter(url, r)),
+          connectTimeoutMs,
+          `attempt to connect to the relay ${url} timed out`
+        )
       )
     );
 
