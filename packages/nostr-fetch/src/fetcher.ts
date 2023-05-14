@@ -409,7 +409,9 @@ export class NostrFetcher {
     });
     sub.on("eose", ({ aborted }) => {
       if (aborted) {
-        this.#logForDebug?.(`subscription (id: ${sub.subId}) aborted before EOSE due to timeout`);
+        this.#logForDebug?.(
+          `[${relay.url}] subscription (id: ${sub.subId}) aborted before EOSE due to timeout`
+        );
       }
 
       sub.close();
@@ -419,7 +421,9 @@ export class NostrFetcher {
 
     // handle abortion
     signal?.addEventListener("abort", () => {
-      this.#logForDebug?.(`subscription (id: ${sub.subId}) aborted via AbortController`);
+      this.#logForDebug?.(
+        `[${relay.url}] subscription (id: ${sub.subId}) aborted via AbortController`
+      );
 
       sub.close();
       tx.close();
