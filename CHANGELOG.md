@@ -11,7 +11,3 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 * **adapter-nostr-tools:** minimize nostr-tools version as peer dep ([68ed56f](https://github.com/jiftechnify/nostr-fetch/commit/68ed56fc3f513761088e8da625e9f8fd907e9443))
 * **adapter-nostr-tools:** subs from SimplePoolAdatper now support auto abortion ([06e8110](https://github.com/jiftechnify/nostr-fetch/commit/06e8110bd69ae93951b47bbeb533cedfb6155a6f))
 * SimplePoolAdapter now respects conenctTimeoutMs ([15034c8](https://github.com/jiftechnify/nostr-fetch/commit/15034c84ec139d6f72a18e1cc884afb53695078e))
-
-## [0.5.1](https://github.com/jiftechnify/nostr-fetch/compare/v0.5.0...v0.5.1) (2023-05-11)
-
-**Note:** Version bump only for package @nostr-fetch/adapter-nostr-tools
