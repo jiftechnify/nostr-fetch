@@ -19,7 +19,7 @@
     "test-gha": "turbo test --cache-dir .turbo",
     "build-gha": "turbo build --cache-dir .turbo",
     "lint-examples-gha": "turbo lint-examples --cache-dir .turbo",
-    "bump-version": "lerna version --conventional-commits",
+    "bump-version": "lerna version --conventional-commits --allow-peer-dependencies-update",
     "release": "lerna publish from-package",
     "example": "node scripts/runExample.js"
   },
