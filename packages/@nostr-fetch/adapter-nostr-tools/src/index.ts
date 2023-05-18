@@ -49,6 +49,9 @@ class ToolsSubAdapter implements Subscription {
       id: this.#subId,
     });
 
+    // initiate subscription auto abortion timer
+    this.resetAbortSubTimer();
+
     // register callbacks which control subscription auto abortion
     this.registerCb("event", () => {
       // reset the auto abortion timer every time a new event arrives
