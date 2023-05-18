@@ -5,4 +5,5 @@ export const defaultRelays = [
   "wss://relay-jp.nostr.wirednet.jp",
   "wss://nostr.h3z.jp",
   "wss://nostr.holybea.com",
+  "wss://nostr-relay.nokotaro.com",
 ];
