@@ -123,7 +123,7 @@ class ToolsSubAdapter implements Subscription {
     }
   }
 
-  // transfers a callback registration to the inner `Sub`
+  // forwards a callback registration to the inner `Sub`
   private registerCb<E extends keyof SubEventCbTypes>(type: E, cb: SubEventCbTypes[E]): void {
     if (this.#sub === undefined) {
       console.error("ToolsSubAdapter: inner Sub is undefined");
@@ -137,7 +137,7 @@ class ToolsSubAdapter implements Subscription {
 
       case "eose": {
         // adapt callbacks for `eose` events
-        // adapted callback should be called when actual EOSE is received, so it should just call the original callback with { aborted: false }.
+        // adapted callback will be called when actual EOSE is received, so it should just call the original callback with { aborted: false }.
         const adapted = () => (cb as SubEoseCb)({ aborted: false });
         this.#onEoseAdapted.set(cb as SubEoseCb, adapted);
         this.#sub.on("eose", adapted);
@@ -146,7 +146,7 @@ class ToolsSubAdapter implements Subscription {
     }
   }
 
-  // transfers a callback unregistration to the inner `Sub`
+  // forwards a callback unregistration to the inner `Sub`
   private unregisterCb<E extends keyof SubEventCbTypes>(type: E, cb: SubEventCbTypes[E]): void {
     if (this.#sub === undefined) {
       console.error("ToolsSubAdapter: inner Sub is undefined");
@@ -262,7 +262,7 @@ class SimplePoolAdapter implements RelayPoolHandle {
             r.on("disconnect", () => this.#logForDebug?.(`[${url}] disconnected`));
             r.on("error", () => this.#logForDebug?.(`[${url}] WebSocket error`));
             r.on("notice", (notice) => this.#logForDebug?.(`[${url}] NOTICE: ${notice}`));
-            r.on("auth", () => this.#logForDebug?.(`[${url} received AUTH challange (ignoring)`));
+            r.on("auth", () => this.#logForDebug?.(`[${url}] received AUTH challange (ignoring)`));
 
             return new ToolsRelayAdapter(url, r);
           }),
