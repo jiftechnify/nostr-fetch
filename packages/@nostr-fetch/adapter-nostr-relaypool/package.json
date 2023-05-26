@@ -1,0 +1,46 @@
+{
+  "name": "@nostr-fetch/adapter-nostr-relaypool",
+  "version": "0.5.3",
+  "description": "The adapter for nostr-relaypool's RelayPool that make it interoperable with nostr-fetch",
+  "author": "jiftechnify <jiftech.stlfy@gmail.com>",
+  "repository": "https://github.com/jiftechnify/nostr-fetch",
+  "homepage": "https://github.com/jiftechnify/nostr-fetch#readme",
+  "bugs": {
+    "url": "https://github.com/jiftechnify/nostr-fetch/issues"
+  },
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "prepack": "yarn build",
+    "tsc": "tsc",
+    "lint": "run-p tsc lint:*",
+    "lint:format": "prettier --check --loglevel warn src/**/*.ts",
+    "lint:js": "eslint --max-warnings 0 src/",
+    "fix": "run-s fix:*",
+    "fix:format": "prettier --write --loglevel warn src/**/*.ts",
+    "fix:js": "eslint --fix src/",
+    "build": "npm-run-all tsc -p build:*",
+    "build:modules": "node build.js",
+    "build:types": "tsc -p tsconfig.build.json"
+  },
+  "peerDependencies": {
+    "nostr-fetch": "^0.5.2",
+    "nostr-relaypool": "^0.6.27"
+  },
+  "volta": {
+    "node": "18.14.2"
+  },
+  "dependencies": {
+    "nostr-relaypool": "^0.6.28"
+  }
+}
