@@ -14,6 +14,7 @@ import { currUnixtimeMilli, normalizeRelayUrls } from "./utils";
 
 export interface RelayPool extends RelayPoolHandle {
   ensureRelays(relayUrls: string[], relayOpts: RelayOptions): Promise<Relay[]>;
+  getRelayIfConnected(relayUrl: string): Relay | undefined;
   closeAll(): void;
 
   // prepareSub(
@@ -134,6 +135,17 @@ class RelayPoolImpl implements RelayPool {
       }
     }
     return res;
+  }
+
+  public getRelayIfConnected(relayUrl: string): Relay | undefined {
+    const r = this.#relays.get(relayUrl);
+    if (r === undefined) {
+      return undefined;
+    }
+    if (r.state !== "alive") {
+      return undefined;
+    }
+    return r.relay;
   }
 
   public async prepareSub(

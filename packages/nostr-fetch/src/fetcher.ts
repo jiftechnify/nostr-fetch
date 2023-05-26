@@ -1,8 +1,12 @@
 import { Channel } from "./channel";
 import { verifyEventSig } from "./crypto";
+import {
+  DefaultFetcherBase,
+  type FetchTillEoseOptions,
+  type NostrFetcherBase,
+} from "./fetcherBase";
 import type { Filter, NostrEvent } from "./nostr";
-import { initRelayPool } from "./relayPool";
-import type { RelayHandle, RelayPoolHandle, SubscriptionOptions } from "./relayTypes";
+import { emptyAsyncGen } from "./utils";
 
 export type FetchFilter = Omit<Filter, "limit" | "since" | "until">;
 export type FetchTimeRangeFilter = Pick<Filter, "since" | "until">;
@@ -51,17 +55,13 @@ const defaultFetchLatestOptions: Required<FetchLatestOptions> = {
   reduceVerification: true,
 };
 
-// eslint-disable-next-line require-yield
-async function* emptyAsyncGen() {
-  return;
-}
-
 export class NostrFetcher {
-  #relayPool: RelayPoolHandle;
+  // #relayPool: RelayPoolHandle;
+  #fetcherBase: NostrFetcherBase;
   #logForDebug: typeof console.log | undefined;
 
-  private constructor(relayPool: RelayPoolHandle, initOpts: Required<FetcherInitOptions>) {
-    this.#relayPool = relayPool;
+  private constructor(fetcherBase: NostrFetcherBase, initOpts: Required<FetcherInitOptions>) {
+    this.#fetcherBase = fetcherBase;
 
     if (initOpts.enableDebugLog) {
       this.#logForDebug = console.log;
@@ -73,21 +73,23 @@ export class NostrFetcher {
    */
   public static init(initOpts: FetcherInitOptions = {}) {
     const finalOpts = { ...defaultFetcherInitOptions, ...initOpts };
-    const rp = initRelayPool(finalOpts);
-    return new NostrFetcher(rp, finalOpts);
+    const base = new DefaultFetcherBase(finalOpts);
+    return new NostrFetcher(base, finalOpts);
   }
 
   /**
-   * Initializes `NostrFetcher` with the given relay pool implementation.
+   * Initializes `NostrFetcher` with the given custom relay pool implementation.
    *
+   *
+   * @example
    * ```ts
    * const pool = new SimplePool();
    * const fetcher = NostrFetcher.withRelayPool(simplePoolAdapter(pool));
    * ```
    */
-  public static withRelayPool(relayPool: RelayPoolHandle, initOpts: FetcherInitOptions = {}) {
+  public static withCustomPool(base: NostrFetcherBase, initOpts: FetcherInitOptions = {}) {
     const finalOpts = { ...defaultFetcherInitOptions, ...initOpts };
-    return new NostrFetcher(relayPool, finalOpts);
+    return new NostrFetcher(base, finalOpts);
   }
 
   /**
@@ -123,14 +125,14 @@ export class NostrFetcher {
       return emptyAsyncGen();
     }
 
-    const relays = await this.#relayPool.ensureRelays(relayUrls, finalOpts);
+    await this.#fetcherBase.ensureRelays(relayUrls, finalOpts);
 
     const [tx, chIter] = Channel.make<NostrEvent>();
     const globalSeenEventIds = new Set<string>();
     const initialUntil = timeRangeFilter.until ?? Math.floor(Date.now() / 1000);
 
     Promise.all(
-      relays.map(async (r) => {
+      relayUrls.map(async (rurl) => {
         let nextUntil = initialUntil;
         const localSeenEventIds = new Set<string>();
         while (true) {
@@ -148,12 +150,7 @@ export class NostrFetcher {
           let numNewEvents = 0;
           let oldestCreatedAt = Number.MAX_SAFE_INTEGER;
 
-          for await (const e of this.fetchEventsTillEose(
-            r,
-            refinedFilters,
-            finalOpts,
-            finalOpts.abortSignal
-          )) {
+          for await (const e of this.#fetcherBase.fetchTillEose(rurl, refinedFilters, finalOpts)) {
             // eliminate duplicated events
             if (!localSeenEventIds.has(e.id)) {
               numNewEvents++;
@@ -170,11 +167,11 @@ export class NostrFetcher {
           }
 
           if (finalOpts.abortSignal?.aborted) {
-            this.#logForDebug?.(`[${r.url}] aborted`);
+            this.#logForDebug?.(`[${rurl}] aborted`);
             break;
           }
           if (numNewEvents === 0) {
-            this.#logForDebug?.(`[${r.url}] got ${localSeenEventIds.size} events`);
+            this.#logForDebug?.(`[${rurl}] got ${localSeenEventIds.size} events`);
             break;
           }
           // set next `until` to `created_at` of the oldest event returned in this time.
@@ -253,12 +250,12 @@ export class NostrFetcher {
       return [];
     }
 
-    const relays = await this.#relayPool.ensureRelays(relayUrls, finalOpts);
+    await this.#fetcherBase.ensureRelays(relayUrls, finalOpts);
 
     const [tx, chIter] = Channel.make<NostrEvent>();
     const globalSeenEventIds = new Set<string>();
     const initialUntil = Math.floor(Date.now() / 1000);
-    const subOpts: SubscriptionOptions = {
+    const subOpts: FetchTillEoseOptions = {
       ...finalOpts,
       // skip "full" verification if `reduceVerification` is enabled
       skipVerification: finalOpts.skipVerification || finalOpts.reduceVerification,
@@ -266,7 +263,7 @@ export class NostrFetcher {
 
     // fetch at most `limit` events from each relay
     Promise.all(
-      relays.map(async (r) => {
+      relayUrls.map(async (rurl) => {
         let nextUntil = initialUntil;
         let remainingLimit = limit;
 
@@ -286,12 +283,7 @@ export class NostrFetcher {
           let numNewEvents = 0;
           let oldestCreatedAt = Number.MAX_SAFE_INTEGER;
 
-          for await (const e of this.fetchEventsTillEose(
-            r,
-            refinedFilters,
-            subOpts,
-            finalOpts.abortSignal
-          )) {
+          for await (const e of this.#fetcherBase.fetchTillEose(rurl, refinedFilters, subOpts)) {
             // eliminate duplicated events
             if (!localSeenEventIds.has(e.id)) {
               numNewEvents++;
@@ -308,13 +300,13 @@ export class NostrFetcher {
           }
 
           if (finalOpts.abortSignal?.aborted) {
-            this.#logForDebug?.(`[${r.url}] aborted`);
+            this.#logForDebug?.(`[${rurl}] aborted`);
             break;
           }
 
           remainingLimit -= numNewEvents;
           if (numNewEvents === 0 || remainingLimit <= 0) {
-            this.#logForDebug?.(`[${r.url}] got ${localSeenEventIds.size} events`);
+            this.#logForDebug?.(`[${rurl}] got ${localSeenEventIds.size} events`);
             break;
           }
 
@@ -376,67 +368,10 @@ export class NostrFetcher {
     return latest1[0];
   }
 
-  private fetchEventsTillEose(
-    relay: RelayHandle,
-    filters: Filter[],
-    subOpts: SubscriptionOptions,
-    signal: AbortSignal | undefined
-  ): AsyncIterable<NostrEvent> {
-    const [tx, chIter] = Channel.make<NostrEvent>();
-
-    const onNotice = (n: unknown) => {
-      tx.error(Error(`NOTICE: ${JSON.stringify(n)}`));
-      removeRelayListeners();
-    };
-    const onError = () => {
-      tx.error(Error("ERROR"));
-      removeRelayListeners();
-    };
-    const removeRelayListeners = () => {
-      relay.off("notice", onNotice);
-      relay.off("error", onError);
-    };
-
-    relay.on("notice", onNotice);
-    relay.on("error", onError);
-
-    // prepare a subscription
-    const sub = relay.prepareSub(filters, subOpts);
-
-    // handle subscription events
-    sub.on("event", (ev: NostrEvent) => {
-      tx.send(ev);
-    });
-    sub.on("eose", ({ aborted }) => {
-      if (aborted) {
-        this.#logForDebug?.(
-          `[${relay.url}] subscription (id: ${sub.subId}) aborted before EOSE due to timeout`
-        );
-      }
-
-      sub.close();
-      tx.close();
-      removeRelayListeners();
-    });
-
-    // handle abortion
-    signal?.addEventListener("abort", () => {
-      this.#logForDebug?.(
-        `[${relay.url}] subscription (id: ${sub.subId}) aborted via AbortController`
-      );
-
-      sub.close();
-      tx.close();
-      removeRelayListeners();
-    });
-
-    // start the subscription
-    sub.req();
-
-    return chIter;
-  }
-
+  /**
+   * Closes all the connections to relays and clean up the internal relay pool.
+   */
   public shutdown() {
-    this.#relayPool.closeAll();
+    this.#fetcherBase.closeAll();
   }
 }
