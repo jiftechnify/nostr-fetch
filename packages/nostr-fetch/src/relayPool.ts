@@ -10,7 +10,7 @@ import type {
   Subscription,
   SubscriptionOptions,
 } from "./relayTypes";
-import { currUnixtimeMilli, normalizeRelayUrls } from "./utils";
+import { currUnixtimeMilli, normalizeRelayUrl, normalizeRelayUrls } from "./utils";
 
 export interface RelayPool extends RelayPoolHandle {
   ensureRelays(relayUrls: string[], relayOpts: RelayOptions): Promise<Relay[]>;
@@ -57,6 +57,7 @@ type DisconnectedRelay = {
 type ManagedRelay = AliveRelay | ConnectingRelay | ConnectFailedRelay | DisconnectedRelay;
 
 class RelayPoolImpl implements RelayPool {
+  // keys are **normalized** relay URLs
   #relays: Map<string, ManagedRelay> = new Map();
   #logForDebug: typeof console.log | undefined;
 
@@ -138,7 +139,7 @@ class RelayPoolImpl implements RelayPool {
   }
 
   public getRelayIfConnected(relayUrl: string): Relay | undefined {
-    const r = this.#relays.get(relayUrl);
+    const r = this.#relays.get(normalizeRelayUrl(relayUrl));
     if (r === undefined) {
       return undefined;
     }
