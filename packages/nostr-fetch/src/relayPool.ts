@@ -2,7 +2,6 @@ import { Filter, generateSubId, NostrEvent } from "./nostr";
 import { initRelay, Relay } from "./relay";
 import type {
   RelayOptions,
-  RelayPoolHandle,
   SubEoseCb,
   SubEventCb,
   SubEventCbTypes,
@@ -12,7 +11,7 @@ import type {
 } from "./relayTypes";
 import { currUnixtimeMilli, normalizeRelayUrl, normalizeRelayUrls } from "./utils";
 
-export interface RelayPool extends RelayPoolHandle {
+export interface RelayPool {
   ensureRelays(relayUrls: string[], relayOpts: RelayOptions): Promise<Relay[]>;
   getRelayIfConnected(relayUrl: string): Relay | undefined;
   closeAll(): void;

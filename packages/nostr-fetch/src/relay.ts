@@ -7,7 +7,6 @@ import type {
   RelayErrorCb,
   RelayEventCbTypes,
   RelayEventTypes,
-  RelayHandle,
   RelayNoticeCb,
   RelayOptions,
   SubEoseCb,
@@ -18,7 +17,7 @@ import type {
   SubscriptionOptions,
 } from "./relayTypes";
 
-export interface Relay extends RelayHandle {
+export interface Relay {
   url: string;
   connect(): Promise<Relay>;
   close(): void;

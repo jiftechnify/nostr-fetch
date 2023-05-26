@@ -1,4 +1,4 @@
-import type { Filter, NostrEvent } from "./nostr";
+import type { NostrEvent } from "./nostr";
 
 type Callback<E> = E extends void ? () => void : (ev: E) => void;
 
@@ -47,17 +47,3 @@ export interface SubscriptionOptions {
   skipVerification: boolean;
   abortSubBeforeEoseTimeoutMs: number;
 }
-
-// minimum APIs for relay handles that is required to fetch events.
-export type RelayHandle = {
-  url: string;
-  prepareSub(filters: Filter[], options: SubscriptionOptions): Subscription;
-  on<E extends RelayEventTypes>(type: E, cb: RelayEventCbTypes[E]): void;
-  off<E extends RelayEventTypes>(type: E, cb: RelayEventCbTypes[E]): void;
-};
-
-// minimum APIs for relay pool handles that is required to fetch events.
-export type RelayPoolHandle = {
-  ensureRelays(relayUrls: string[], relayOpts: RelayOptions): Promise<RelayHandle[]>;
-  closeAll(): void;
-};
