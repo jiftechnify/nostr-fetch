@@ -99,7 +99,7 @@ import { SimplePool } from "nostr-tools";
 const pool = new SimplePool();
 
 // wrap SimplePool with simplePoolAdapter to make it interoperable with nostr-fetch
-const fetcher = NostrFetcher.withRelayPool(simplePoolAdapter(pool));
+const fetcher = NostrFetcher.withCustomPool(simplePoolAdapter(pool));
 
 // now, you can use any fetch methods described above!
 ```
@@ -161,7 +161,7 @@ You should instantiate it with following initializers instead of the constructor
 
 Initializes a `NostrFetcher` instance based on the default relay pool implementation.
 
-#### `NostrFetcher.withRelayPool()`
+#### `NostrFetcher.withCustomPool()`
 
 Initializes a `NostrFetcher` instance based on a custom relay pool implementation passed as an argument.
 

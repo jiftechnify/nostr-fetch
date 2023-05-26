@@ -84,7 +84,7 @@ export class NostrFetcher {
    * @example
    * ```ts
    * const pool = new SimplePool();
-   * const fetcher = NostrFetcher.withRelayPool(simplePoolAdapter(pool));
+   * const fetcher = NostrFetcher.withCustomPool(simplePoolAdapter(pool));
    * ```
    */
   public static withCustomPool(base: NostrFetcherBase, initOpts: FetcherInitOptions = {}) {
