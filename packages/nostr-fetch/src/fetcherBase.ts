@@ -4,7 +4,7 @@ import type { RelayPoolOptions } from "./relayPool";
 import { RelayPool, initRelayPool } from "./relayPool";
 import { emptyAsyncGen } from "./utils";
 
-type EnsureRelaysOptions = {
+export type EnsureRelaysOptions = {
   connectTimeoutMs: number;
 };
 
@@ -28,7 +28,7 @@ export interface NostrFetcherBase {
   ensureRelays: (relayUrls: string[], options: EnsureRelaysOptions) => Promise<void>;
 
   /**
-   * Closes all connections to relays.
+   * Closes all the connections to relays and clean up the internal relay pool.
    */
   closeAll: () => void;
 
