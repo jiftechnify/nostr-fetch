@@ -7,7 +7,7 @@ const main = async () => {
   const fetcher = NostrFetcher.init();
   const abortCtrl = new AbortController();
 
-  // fetch all text events (kind: 1) posted in last 24 hours from the relays
+  // fetch all text events (kind: 1) posted in the last hour from the relays
   const evIter = await fetcher.allEventsIterator(
     defaultRelays,
     [
@@ -16,7 +16,7 @@ const main = async () => {
       },
     ],
     {
-      since: nHoursAgo(24),
+      since: nHoursAgo(1),
     },
     { abortSignal: abortCtrl.signal } // pass `AbortController.signal` to enable abortion
   );
