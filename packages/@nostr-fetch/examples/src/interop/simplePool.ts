@@ -8,9 +8,9 @@ import { defaultRelays, nHoursAgo } from "../utils";
 const main = async () => {
   // initialize fetcher based on nostr-tools `SimplePool`
   const pool = new SimplePool();
-  const fetcher = NostrFetcher.withRelayPool(simplePoolAdapter(pool));
+  const fetcher = NostrFetcher.withCustomPool(simplePoolAdapter(pool));
 
-  // fetch all text events (kind: 1) posted in last 24 hours from the relays
+  // fetch all text events (kind: 1) posted in the last hour from the relays
   const eventsIter = await fetcher.allEventsIterator(
     defaultRelays,
     [
@@ -19,7 +19,7 @@ const main = async () => {
       },
     ],
     {
-      since: nHoursAgo(24),
+      since: nHoursAgo(1),
     },
     {
       skipVerification: true,
