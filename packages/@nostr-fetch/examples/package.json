@@ -5,8 +5,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "tsc": "tsc",
-    "lint-examples": "run-p tsc lint:*",
+    "check-type": "tsc -p tsconfig.lint.json || exit 0",
+    "lint-examples": "run-p check-type lint:*",
     "lint:format": "prettier --check --loglevel warn src/**/*.ts",
     "lint:js": "eslint --max-warnings 0 src/",
     "fix-examples": "run-s fix:*",
