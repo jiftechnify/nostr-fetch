@@ -186,7 +186,7 @@ class NRTPoolAdapter implements NostrFetcherBase {
     const unsub = this.#pool.subscribe(
       relayedFilters,
       // relays
-      undefined,
+      [],
       // onEvent
       (ev) => {
         tx.send(ev);
@@ -251,7 +251,7 @@ class NRTPoolAdapter implements NostrFetcherBase {
  */
 export const relayPoolAdapter = (
   pool: RelayPool,
-  options: NRTPoolAdapterOptions
+  options: NRTPoolAdapterOptions = {}
 ): NostrFetcherBase => {
   const finalOpts = { ...defaultOptions, ...options };
   return new NRTPoolAdapter(pool, finalOpts);

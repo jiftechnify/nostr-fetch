@@ -385,6 +385,5 @@ export const simplePoolAdapter = (
   options: SimplePoolExtOptions = {}
 ): NostrFetcherBase => {
   const finalOpts = { ...defaultExtOptions, ...options };
-  console.log(finalOpts);
   return new SimplePoolExt(sp, finalOpts);
 };
