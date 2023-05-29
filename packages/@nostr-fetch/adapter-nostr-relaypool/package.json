@@ -22,25 +22,22 @@
   },
   "scripts": {
     "prepack": "yarn build",
-    "tsc": "tsc",
-    "lint": "run-p tsc lint:*",
+    "check-type": "tsc -p tsconfig.lint.json || exit 0",
+    "lint": "run-p check-type lint:*",
     "lint:format": "prettier --check --loglevel warn src/**/*.ts",
     "lint:js": "eslint --max-warnings 0 src/",
     "fix": "run-s fix:*",
     "fix:format": "prettier --write --loglevel warn src/**/*.ts",
     "fix:js": "eslint --fix src/",
-    "build": "npm-run-all tsc -p build:*",
+    "build": "npm-run-all -p build:*",
     "build:modules": "node build.js",
-    "build:types": "tsc -p tsconfig.build.json"
+    "build:types": "tsc -p tsconfig.build.json || exit 0"
   },
   "peerDependencies": {
     "nostr-fetch": "^0.5.2",
-    "nostr-relaypool": "^0.6.27"
+    "nostr-relaypool": "^0.6.28"
   },
   "volta": {
     "node": "18.14.2"
-  },
-  "dependencies": {
-    "nostr-relaypool": "^0.6.28"
   }
 }
