@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "module": "esnext",
+    "target": "esnext",
+    "lib": ["dom", "dom.iterable", "esnext", "webworker", "scripthost"],
+    "declaration": true,
+    "declarationDir": "./dist",
+    "declarationMap": true,
+    "strict": true,
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "emitDeclarationOnly": true,
+  },
+  "exclude": ["src/**/*.spec.ts"]
+}

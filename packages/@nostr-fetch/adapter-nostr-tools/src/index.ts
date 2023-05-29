@@ -379,12 +379,21 @@ class SimplePoolExt implements NostrFetcherBase {
 
 /**
  * Wraps a nostr-tools' `SimplePool`, allowing it to interoperate with nostr-fetch.
+ *
+ * @example
+ * ```
+ * import { SimplePool } from 'nostr-tools';
+ * import { NostrFetcher } from 'nostr-fetch';
+ * import { simplePoolAdapter } from '@nostr-fetch/adapter-nostr-tools'
+ *
+ * const pool = new SimplePool();
+ * const fetcher = NostrFetcher.withCustomPool(simplePoolAdapter(pool));
+ * ```
  */
 export const simplePoolAdapter = (
-  sp: SimplePool,
+  pool: SimplePool,
   options: SimplePoolExtOptions = {}
 ): NostrFetcherBase => {
   const finalOpts = { ...defaultExtOptions, ...options };
-  console.log(finalOpts);
-  return new SimplePoolExt(sp, finalOpts);
+  return new SimplePoolExt(pool, finalOpts);
 };

@@ -83,14 +83,16 @@ const lastMetadata = await fetcher.fetchLastEvent(
     ],
 )
 ```
-### Working with [nostr-tools](https://github.com/nbd-wtf/nostr-tools)
+### Working with custom relay pool implementations
 
-First, install the adapter package.
+First, install the adapter package for the relay pool implementaion you want to use.
+For example, if you want to use nostr-fetch with nostr-tools' `SimplePool` :
 
 ```bash
 npm install @nostr-fetch/adapter-nostr-tools
 ```
 
+Then, wrap your relay pool instance with the adapter and pass it to the initializer `NostrFetcher.withCustomPool()`.
 ```ts
 import { eventKind, NostrFetcher } from "nostr-fetch";
 import { simplePoolAdapter } from "@nostr-fetch/adapter-nostr-tools";
@@ -103,6 +105,13 @@ const fetcher = NostrFetcher.withCustomPool(simplePoolAdapter(pool));
 
 // now, you can use any fetch methods described above!
 ```
+
+#### Table of Available Adapters
+
+| Package         | Relay Pool Impl. | Adapter Package                        | Adapter             |
+|-----------------|------------------|----------------------------------------|---------------------|
+| [`nostr-tools`](https://github.com/nbd-wtf/nostr-tools)     | `SimplePool`     | `@nostr-fetch/adapter-nostr-tools`     | `simplePoolAdapter` |
+| [`nostr-relaypool`](https://github.com/adamritter/nostr-relaypool-ts) | `RelayPool`      | `@nostr-fetch/adapter-nostr-relaypool` | `relayPoolAdapter`  |
 
 ### Aborting
 
