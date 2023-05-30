@@ -1,6 +1,6 @@
 {
   "name": "nostr-fetch",
-  "version": "0.5.2",
+  "version": "0.5.4",
   "description": "A utility library that allows JS/TS apps to effortlessly fetch past events from Nostr relays",
   "keywords": [
     "nostr"
