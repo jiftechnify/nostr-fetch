@@ -1,6 +1,6 @@
 {
   "name": "@nostr-fetch/kernel",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "description": "Kernel of nostr-fetch",
   "keywords": [
     "nostr"
