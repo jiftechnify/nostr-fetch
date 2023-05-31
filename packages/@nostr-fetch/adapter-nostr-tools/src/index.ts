@@ -1,21 +1,20 @@
-import type { Filter } from "@nostr-fetch/kernel/nostr";
-import { generateSubId } from "@nostr-fetch/kernel/nostr";
+import { Channel } from "@nostr-fetch/kernel/channel";
+import type { FetchTillEoseOptions, NostrFetcherBase } from "@nostr-fetch/kernel/fetcherBase";
+import { NostrEvent, generateSubId, type Filter } from "@nostr-fetch/kernel/nostr";
 import type {
   RelayEventCbTypes,
-  RelayHandle,
   RelayOptions,
-  RelayPoolHandle,
   SubEoseCb,
   SubEventCb,
   SubEventCbTypes,
   Subscription,
   SubscriptionOptions,
 } from "@nostr-fetch/kernel/relayTypes";
-import { normalizeRelayUrls } from "@nostr-fetch/kernel/utils";
+import { emptyAsyncGen, normalizeRelayUrl, normalizeRelayUrls } from "@nostr-fetch/kernel/utils";
 
 import type { SimplePool, Relay as ToolsRelay, Sub as ToolsSub } from "nostr-tools";
 
-class ToolsSubAdapter implements Subscription {
+class ToolsSubExt {
   #relay: ToolsRelay;
   #subId: string;
   #filters: Filter[];
@@ -125,7 +124,7 @@ class ToolsSubAdapter implements Subscription {
     }
   }
 
-  // transfers a callback registration to the inner `Sub`
+  // forwards a callback registration to the inner `Sub`
   private registerCb<E extends keyof SubEventCbTypes>(type: E, cb: SubEventCbTypes[E]): void {
     if (this.#sub === undefined) {
       console.error("ToolsSubAdapter: inner Sub is undefined");
@@ -139,7 +138,7 @@ class ToolsSubAdapter implements Subscription {
 
       case "eose": {
         // adapt callbacks for `eose` events
-        // adapted callback should be called when actual EOSE is received, so it should just call the original callback with { aborted: false }.
+        // adapted callback will be called when actual EOSE is received, so it should just call the original callback with { aborted: false }.
         const adapted = () => (cb as SubEoseCb)({ aborted: false });
         this.#onEoseAdapted.set(cb as SubEoseCb, adapted);
         this.#sub.on("eose", adapted);
@@ -148,7 +147,7 @@ class ToolsSubAdapter implements Subscription {
     }
   }
 
-  // transfers a callback unregistration to the inner `Sub`
+  // forwards a callback unregistration to the inner `Sub`
   private unregisterCb<E extends keyof SubEventCbTypes>(type: E, cb: SubEventCbTypes[E]): void {
     if (this.#sub === undefined) {
       console.error("ToolsSubAdapter: inner Sub is undefined");
@@ -184,7 +183,7 @@ class ToolsSubAdapter implements Subscription {
   }
 }
 
-class ToolsRelayAdapter implements RelayHandle {
+class ToolsRelayExt {
   #relayUrl: string;
   #toolsRelay: ToolsRelay;
 
@@ -199,7 +198,7 @@ class ToolsRelayAdapter implements RelayHandle {
 
   public prepareSub(filters: Filter[], options: SubscriptionOptions): Subscription {
     const subId = options.subId ?? generateSubId();
-    return new ToolsSubAdapter(this.#toolsRelay, subId, filters, options);
+    return new ToolsSubExt(this.#toolsRelay, subId, filters, options);
   }
 
   public on<E extends keyof RelayEventCbTypes>(type: E, cb: RelayEventCbTypes[E]): void {
@@ -230,77 +229,172 @@ const withTimeout = async <T>(
   return t;
 };
 
-type AdapterOptions = {
+type SimplePoolExtOptions = {
   enableDebugLog?: boolean;
 };
 
-const defaultAdapterOptions: Required<AdapterOptions> = {
+const defaultExtOptions: Required<SimplePoolExtOptions> = {
   enableDebugLog: false,
 };
 
-class SimplePoolAdapter implements RelayPoolHandle {
+class SimplePoolExt implements NostrFetcherBase {
   #simplePool: SimplePool;
+
+  // storing refs to `ToolsRelayExt`s to allow to take out them synchronously.
+  // keys are **normalized** relay URLs.
+  #relays: Map<string, ToolsRelayExt> = new Map();
 
   #logForDebug: typeof console.log | undefined;
 
-  constructor(sp: SimplePool, options: Required<AdapterOptions>) {
+  constructor(sp: SimplePool, options: Required<SimplePoolExtOptions>) {
     this.#simplePool = sp;
     if (options.enableDebugLog) {
       this.#logForDebug = console.log;
     }
   }
 
+  /**
+   * Ensures connections to the relays prior to an event subscription.
+   */
   public async ensureRelays(
     relayUrls: string[],
     { connectTimeoutMs }: RelayOptions
-  ): Promise<RelayHandle[]> {
+  ): Promise<void> {
     const normalizedUrls = normalizeRelayUrls(relayUrls);
 
-    const ensureResults = await Promise.allSettled(
-      normalizedUrls.map((url) =>
-        withTimeout(
-          this.#simplePool.ensureRelay(url).then((r) => {
-            // setup debug log
-            r.on("disconnect", () => this.#logForDebug?.(`[${url}] disconnected`));
-            r.on("error", () => this.#logForDebug?.(`[${url}] WebSocket error`));
-            r.on("notice", (notice) => this.#logForDebug?.(`[${url}] NOTICE: ${notice}`));
-            r.on("auth", () => this.#logForDebug?.(`[${url} received AUTH challange (ignoring)`));
+    await Promise.all(
+      normalizedUrls.map(async (url) => {
+        const ensure = async () => this.#simplePool.ensureRelay(url);
 
-            return new ToolsRelayAdapter(url, r);
-          }),
-          connectTimeoutMs,
-          `attempt to connect to the relay ${url} timed out`
-        )
-      )
+        try {
+          const r = await withTimeout(
+            ensure(),
+            connectTimeoutMs,
+            `attempt to connect to the relay ${url} timed out`
+          );
+
+          // setup debug log
+          r.on("disconnect", () => this.#logForDebug?.(`[${url}] disconnected`));
+          r.on("error", () => this.#logForDebug?.(`[${url}] WebSocket error`));
+          r.on("notice", (notice) => this.#logForDebug?.(`[${url}] NOTICE: ${notice}`));
+          r.on("auth", () => this.#logForDebug?.(`[${url}] received AUTH challange (ignoring)`));
+
+          this.#relays.set(url, new ToolsRelayExt(url, r));
+        } catch (err) {
+          this.#relays.delete(url);
+          console.error(err);
+        }
+      })
     );
-
-    const relays: RelayHandle[] = [];
-    for (const res of ensureResults) {
-      switch (res.status) {
-        case "fulfilled":
-          relays.push(res.value);
-          break;
-        case "rejected":
-          console.error(res.reason);
-          break;
-      }
-    }
-
-    return relays;
   }
 
+  private getRelayExtIfConnected(relayUrl: string): ToolsRelayExt | undefined {
+    return this.#relays.get(normalizeRelayUrl(relayUrl));
+  }
+
+  /**
+   * Cleans up the internal relay pool.
+   *
+   * It actually doesn't close any connections to relays, because other codes may reuse them.
+   */
   public closeAll(): void {
-    // closes nothing: connections to relays can be used in other places
+    // just clear extra refs to `RelayExt`s
+    this.#relays.clear();
+  }
+
+  /**
+   * Fetches Nostr events matching `filters` from the relay specified by `relayUrl` until EOSE.
+   *
+   * The result is an `AsyncIterable` of Nostr events.
+   * You can think that it's an asynchronous channel which conveys events.
+   * The channel will be closed once EOSE is reached.
+   *
+   * If no connection to the specified relay has been established at the time this function is called, it will return an empty channel.
+   */
+  // TODO: eliminate duplicated code (most of codes overlap with impl of DefaultFetcherBase)
+  public fetchTillEose(
+    relayUrl: string,
+    filters: Filter[],
+    options: FetchTillEoseOptions
+  ): AsyncIterable<NostrEvent> {
+    const [tx, chIter] = Channel.make<NostrEvent>();
+
+    const relay = this.getRelayExtIfConnected(relayUrl);
+    if (relay === undefined) {
+      return emptyAsyncGen();
+    }
+
+    // error handlings
+    const onNotice = (n: unknown) => {
+      tx.error(Error(`NOTICE: ${JSON.stringify(n)}`));
+      removeRelayListeners();
+    };
+    const onError = () => {
+      tx.error(Error("ERROR"));
+      removeRelayListeners();
+    };
+    const removeRelayListeners = () => {
+      relay.off("notice", onNotice);
+      relay.off("error", onError);
+    };
+
+    relay.on("notice", onNotice);
+    relay.on("error", onError);
+
+    // prepare a subscription
+    const sub = relay.prepareSub(filters, options);
+
+    // handle subscription events
+    sub.on("event", (ev: NostrEvent) => {
+      tx.send(ev);
+    });
+    sub.on("eose", ({ aborted }) => {
+      if (aborted) {
+        this.#logForDebug?.(
+          `[${relay.url}] subscription (id: ${sub.subId}) aborted before EOSE due to timeout`
+        );
+      }
+
+      sub.close();
+      tx.close();
+      removeRelayListeners();
+    });
+
+    // handle abortion
+    options.abortSignal?.addEventListener("abort", () => {
+      this.#logForDebug?.(
+        `[${relay.url}] subscription (id: ${sub.subId}) aborted via AbortController`
+      );
+
+      sub.close();
+      tx.close();
+      removeRelayListeners();
+    });
+
+    // start the subscription
+    sub.req();
+
+    return chIter;
   }
 }
 
 /**
  * Wraps a nostr-tools' `SimplePool`, allowing it to interoperate with nostr-fetch.
+ *
+ * @example
+ * ```
+ * import { SimplePool } from 'nostr-tools';
+ * import { NostrFetcher } from 'nostr-fetch';
+ * import { simplePoolAdapter } from '@nostr-fetch/adapter-nostr-tools'
+ *
+ * const pool = new SimplePool();
+ * const fetcher = NostrFetcher.withCustomPool(simplePoolAdapter(pool));
+ * ```
  */
 export const simplePoolAdapter = (
-  sp: SimplePool,
-  options: AdapterOptions = {}
-): RelayPoolHandle => {
-  const finalOpts = { ...defaultAdapterOptions, ...options };
-  return new SimplePoolAdapter(sp, finalOpts);
+  pool: SimplePool,
+  options: SimplePoolExtOptions = {}
+): NostrFetcherBase => {
+  const finalOpts = { ...defaultExtOptions, ...options };
+  return new SimplePoolExt(pool, finalOpts);
 };

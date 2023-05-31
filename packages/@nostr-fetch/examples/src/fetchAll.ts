@@ -6,7 +6,7 @@ import { defaultRelays, nHoursAgo } from "./utils";
 const main = async () => {
   const fetcher = NostrFetcher.init();
 
-  // fetch all text events (kind: 1) posted in last 24 hours from the relays
+  // fetch all text events (kind: 1) posted in last hour from the relays
   const events = await fetcher.fetchAllEvents(
     defaultRelays,
     [
@@ -15,7 +15,7 @@ const main = async () => {
       },
     ],
     {
-      since: nHoursAgo(24),
+      since: nHoursAgo(1),
     },
     { sort: true }
   );

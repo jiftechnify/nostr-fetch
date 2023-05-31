@@ -1,14 +1,13 @@
-import { simplePoolAdapter } from "@nostr-fetch/adapter-nostr-tools";
-import { eventKind, NostrFetcher } from "nostr-fetch";
-import { SimplePool } from "nostr-tools";
-import "websocket-polyfill";
+import { relayPoolAdapter } from "@nostr-fetch/adapter-nostr-relaypool";
+import { NostrFetcher, eventKind } from "nostr-fetch";
+import { RelayPool } from "nostr-relaypool";
 
 import { defaultRelays, nHoursAgo } from "../utils";
 
 const main = async () => {
-  // initialize fetcher based on nostr-tools `SimplePool`
-  const pool = new SimplePool();
-  const fetcher = NostrFetcher.withCustomPool(simplePoolAdapter(pool));
+  // initialize fetcher based on nostr-relaypool's `RelayPool`
+  const pool = new RelayPool();
+  const fetcher = NostrFetcher.withCustomPool(relayPoolAdapter(pool));
 
   // fetch all text events (kind: 1) posted in the last hour from the relays
   const eventsIter = await fetcher.allEventsIterator(

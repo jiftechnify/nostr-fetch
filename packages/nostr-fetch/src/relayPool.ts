@@ -2,7 +2,6 @@ import type { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
 import { generateSubId } from "@nostr-fetch/kernel/nostr";
 import type {
   RelayOptions,
-  RelayPoolHandle,
   SubEoseCb,
   SubEventCb,
   SubEventCbTypes,
@@ -10,12 +9,17 @@ import type {
   Subscription,
   SubscriptionOptions,
 } from "@nostr-fetch/kernel/relayTypes";
-import { currUnixtimeMilli, normalizeRelayUrls } from "@nostr-fetch/kernel/utils";
+import {
+  currUnixtimeMilli,
+  normalizeRelayUrl,
+  normalizeRelayUrls,
+} from "@nostr-fetch/kernel/utils";
 
 import { Relay, initRelay } from "./relay";
 
-export interface RelayPool extends RelayPoolHandle {
+export interface RelayPool {
   ensureRelays(relayUrls: string[], relayOpts: RelayOptions): Promise<Relay[]>;
+  getRelayIfConnected(relayUrl: string): Relay | undefined;
   closeAll(): void;
 
   // prepareSub(
@@ -58,6 +62,7 @@ type DisconnectedRelay = {
 type ManagedRelay = AliveRelay | ConnectingRelay | ConnectFailedRelay | DisconnectedRelay;
 
 class RelayPoolImpl implements RelayPool {
+  // keys are **normalized** relay URLs
   #relays: Map<string, ManagedRelay> = new Map();
   #logForDebug: typeof console.log | undefined;
 
@@ -136,6 +141,17 @@ class RelayPoolImpl implements RelayPool {
       }
     }
     return res;
+  }
+
+  public getRelayIfConnected(relayUrl: string): Relay | undefined {
+    const r = this.#relays.get(normalizeRelayUrl(relayUrl));
+    if (r === undefined) {
+      return undefined;
+    }
+    if (r.state !== "alive") {
+      return undefined;
+    }
+    return r.relay;
   }
 
   public async prepareSub(

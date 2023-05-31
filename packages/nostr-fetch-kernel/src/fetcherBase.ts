@@ -1,0 +1,48 @@
+import type { Filter, NostrEvent } from "./nostr";
+
+export type EnsureRelaysOptions = {
+  connectTimeoutMs: number;
+};
+
+export type FetchTillEoseOptions = {
+  subId?: string;
+  skipVerification: boolean;
+  connectTimeoutMs: number;
+  abortSubBeforeEoseTimeoutMs: number;
+  abortSignal: AbortSignal | undefined;
+};
+
+/**
+ * Set of APIs to fetch past events from nostr relays.
+ *
+ * `NostrFetcher` implements its functions on top of this.
+ */
+export interface NostrFetcherBase {
+  /**
+   * Ensures connections to the relays prior to an event subscription.
+   */
+  ensureRelays: (relayUrls: string[], options: EnsureRelaysOptions) => Promise<void>;
+
+  /**
+   * Closes all the connections to relays and clean up the internal relay pool.
+   */
+  closeAll: () => void;
+
+  /**
+   * Fetches Nostr events matching `filters` from the relay specified by `relayUrl` until EOSE.
+   *
+   * The result is an `AsyncIterable` of Nostr events.
+   * You can think that it's an asynchronous channel which conveys events.
+   * The channel will be closed once EOSE is reached.
+   *
+   * If no connection to the specified relay has been established at the time this function is called, it will return an empty channel.
+   *
+   * Hint:
+   * You can make use of a `Channel` to convert "push" style code (bunch of event listers) to `AsyncIterable`.
+   */
+  fetchTillEose: (
+    relayUrl: string,
+    filters: Filter[],
+    options: FetchTillEoseOptions
+  ) => AsyncIterable<NostrEvent>;
+}

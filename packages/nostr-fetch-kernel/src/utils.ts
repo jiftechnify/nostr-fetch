@@ -29,3 +29,9 @@ const dedup = <T>(items: T[]): T[] => {
 export const normalizeRelayUrls = (relayUrls: string[]): string[] => {
   return dedup(relayUrls.map((u) => normalizeRelayUrl(u)));
 };
+
+// empty AsyncGenerator
+// eslint-disable-next-line require-yield
+export async function* emptyAsyncGen() {
+  return;
+}
