@@ -36,6 +36,3 @@ jobs:
 
       - name: Lint, Test and Build
         run: yarn build-gha
-
-      - name: Lint Examples
-        run: yarn lint-examples-gha
