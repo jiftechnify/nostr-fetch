@@ -10,7 +10,7 @@ npm install && npm run build
 
 
 # then, execute example
-# the command executes packages/@nostr-fetch/examples/src/fetchAll.ts
+# the command executes packages/examples/src/fetchAll.ts
 npm run example fetchAll
 
 # "getProfiles" takes a hex pubkey as an argument

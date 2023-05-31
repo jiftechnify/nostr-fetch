@@ -5,9 +5,7 @@
   "license": "MIT",
   "type": "module",
   "workspaces": [
-    "packages/nostr-fetch",
-    "packages/nostr-fetch-kernel",
-    "packages/@nostr-fetch/*"
+    "packages/*"
   ],
   "scripts": {
     "lint": "turbo lint",

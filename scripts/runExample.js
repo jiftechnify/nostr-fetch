@@ -6,7 +6,7 @@ if (process.argv.length <= 2) {
 }
 
 const target = process.argv[2];
-const targetScriptPath = `packages/@nostr-fetch/examples/src/${target}.ts`;
+const targetScriptPath = `packages/examples/src/${target}.ts`;
 
 const exampleArgs = process.argv.slice(3);
 
