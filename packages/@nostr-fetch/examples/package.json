@@ -15,8 +15,8 @@
     "exec-ts": "node --loader esbuild-register/loader -r esbuild-register"
   },
   "dependencies": {
-    "@nostr-fetch/adapter-nostr-tools": "^0.5.4",
-    "nostr-fetch": "^0.5.4",
+    "@nostr-fetch/adapter-nostr-tools": "^0.5.3",
+    "nostr-fetch": "^0.5.3",
     "nostr-tools": "^1.10.1",
     "websocket-polyfill": "^0.0.3"
   },

@@ -41,7 +41,7 @@
     "build:copy-doc": "copy-file ../../README.md ./README.md"
   },
   "dependencies": {
-    "@nostr-fetch/kernel": "^0.5.4"
+    "@nostr-fetch/kernel": "^0.5.3"
   },
   "volta": {
     "node": "18.14.2"
