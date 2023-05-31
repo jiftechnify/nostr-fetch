@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.6.1](https://github.com/jiftechnify/nostr-fetch/compare/v0.6.0...v0.6.1) (2023-05-31)
+
+### Bug Fixes
+
+* **adapter-nostr-relaypool:** add kernel as dependency ([ae22ff2](https://github.com/jiftechnify/nostr-fetch/commit/ae22ff2bf6ec7e74a111912fda2369eddbc24894))
+* **adapter-nostr-relaypool:** configure exports in package.json ([43b02d7](https://github.com/jiftechnify/nostr-fetch/commit/43b02d7aadfe65e42d2398a6906b3c396985dfa7))
+
 # [0.6.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.5.4...v0.6.0) (2023-05-31)
 
 ### Bug Fixes
