@@ -1,12 +1,12 @@
-import type { NostrEvent } from "nostr-fetch";
-import { Channel } from "nostr-fetch/src/channel";
+import { Channel } from "@nostr-fetch/kernel/channel";
 import type {
   EnsureRelaysOptions,
   FetchTillEoseOptions,
   NostrFetcherBase,
-} from "nostr-fetch/src/fetcherBase";
-import type { Filter } from "nostr-fetch/src/nostr";
-import { normalizeRelayUrls } from "nostr-fetch/src/utils";
+} from "@nostr-fetch/kernel/fetcherBase";
+import type { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
+import { normalizeRelayUrls } from "@nostr-fetch/kernel/utils";
+
 import type { RelayPool } from "nostr-relaypool";
 import { withTimeout } from "./utils";
 

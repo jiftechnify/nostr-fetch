@@ -1,6 +1,6 @@
-import { Channel } from "nostr-fetch/src/channel";
-import type { FetchTillEoseOptions, NostrFetcherBase } from "nostr-fetch/src/fetcherBase";
-import { Filter, NostrEvent, generateSubId } from "nostr-fetch/src/nostr";
+import { Channel } from "@nostr-fetch/kernel/channel";
+import type { FetchTillEoseOptions, NostrFetcherBase } from "@nostr-fetch/kernel/fetcherBase";
+import { NostrEvent, generateSubId, type Filter } from "@nostr-fetch/kernel/nostr";
 import type {
   RelayEventCbTypes,
   RelayOptions,
@@ -9,8 +9,9 @@ import type {
   SubEventCbTypes,
   Subscription,
   SubscriptionOptions,
-} from "nostr-fetch/src/relayTypes";
-import { emptyAsyncGen, normalizeRelayUrl, normalizeRelayUrls } from "nostr-fetch/src/utils";
+} from "@nostr-fetch/kernel/relayTypes";
+import { emptyAsyncGen, normalizeRelayUrl, normalizeRelayUrls } from "@nostr-fetch/kernel/utils";
+
 import type { SimplePool, Relay as ToolsRelay, Sub as ToolsSub } from "nostr-tools";
 
 class ToolsSubExt {

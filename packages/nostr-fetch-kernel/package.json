@@ -1,7 +1,7 @@
 {
-  "name": "nostr-fetch",
+  "name": "@nostr-fetch/kernel",
   "version": "0.5.4",
-  "description": "A utility library that allows JS/TS apps to effortlessly fetch past events from Nostr relays",
+  "description": "Kernel of nostr-fetch",
   "keywords": [
     "nostr"
   ],
@@ -13,14 +13,21 @@
   },
   "license": "MIT",
   "type": "module",
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.mjs",
+  "main": "./src/index.ts",
   "types": "./dist/index.d.ts",
   "exports": {
-    "module": "./dist/index.mjs",
-    "import": "./dist/index.mjs",
-    "require": "./dist/index.cjs",
-    "types": "./dist/index.d.ts"
+    "./*": {
+      "module": "./src/*.ts",
+      "import": "./src/*.ts",
+      "types": "./dist/*.d.ts"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "./dist/*.d.ts"
+      ]
+    }
   },
   "files": [
     "dist",
@@ -28,6 +35,8 @@
   ],
   "scripts": {
     "prepack": "yarn build",
+    "test": "vitest run",
+    "testw": "vitest",
     "tsc": "tsc",
     "lint": "run-p tsc lint:*",
     "lint:format": "prettier --check --loglevel warn src/**/*.ts",
@@ -35,13 +44,11 @@
     "fix": "run-s fix:*",
     "fix:format": "prettier --write --loglevel warn src/**/*.ts",
     "fix:js": "eslint --fix src/",
-    "build": "npm-run-all tsc -p build:*",
-    "build:modules": "node build.js",
-    "build:types": "tsc -p tsconfig.build.json",
-    "build:copy-doc": "copy-file ../../README.md ./README.md"
+    "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
-    "@nostr-fetch/kernel": "^0.5.4"
+    "@noble/hashes": "^1.2.0",
+    "@noble/secp256k1": "^1.7.1"
   },
   "volta": {
     "node": "18.14.2"

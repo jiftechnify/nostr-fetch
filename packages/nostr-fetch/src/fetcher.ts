@@ -1,12 +1,10 @@
-import { Channel } from "./channel";
-import { verifyEventSig } from "./crypto";
-import {
-  DefaultFetcherBase,
-  type FetchTillEoseOptions,
-  type NostrFetcherBase,
-} from "./fetcherBase";
-import type { Filter, NostrEvent } from "./nostr";
-import { emptyAsyncGen } from "./utils";
+import { Channel } from "@nostr-fetch/kernel/channel";
+import { verifyEventSig } from "@nostr-fetch/kernel/crypto";
+import type { FetchTillEoseOptions, NostrFetcherBase } from "@nostr-fetch/kernel/fetcherBase";
+import type { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
+import { emptyAsyncGen } from "@nostr-fetch/kernel/utils";
+
+import { DefaultFetcherBase } from "./fetcherBase";
 
 export type FetchFilter = Omit<Filter, "limit" | "since" | "until">;
 export type FetchTimeRangeFilter = Pick<Filter, "since" | "until">;
