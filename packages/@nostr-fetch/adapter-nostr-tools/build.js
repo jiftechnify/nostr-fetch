@@ -8,9 +8,8 @@ const sharedBuildOptions = {
   entryPoints: ["src/index.ts"],
   outdir: DIST_DIR,
   bundle: true,
-  // packages: "external",
-  minify: false,
-  sourcemap: "external",
+  minify: true,
+  sourcemap: "linked",
 };
 
 const buildCJS = async () =>

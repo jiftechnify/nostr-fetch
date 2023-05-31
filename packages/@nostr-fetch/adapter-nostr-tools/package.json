@@ -1,6 +1,6 @@
 {
   "name": "@nostr-fetch/adapter-nostr-tools",
-  "version": "0.5.4",
+  "version": "0.5.3",
   "description": "The adapter for nostr-tools' SimplePool that make it interoperable with nostr-fetch",
   "author": "jiftechnify <jiftech.stlfy@gmail.com>",
   "repository": "https://github.com/jiftechnify/nostr-fetch",
@@ -38,6 +38,9 @@
     "build": "npm-run-all tsc -p build:*",
     "build:modules": "node build.js",
     "build:types": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@nostr-fetch/kernel": "^0.5.4"
   },
   "peerDependencies": {
     "nostr-fetch": "^0.5.4",

@@ -1,15 +1,15 @@
 {
   "name": "@nostr-fetch/examples",
-  "version": "0.5.4",
+  "version": "0.5.3",
   "description": "nostr-fetch examples",
   "type": "module",
   "private": true,
   "scripts": {
     "tsc": "tsc",
-    "lint-examples": "run-p tsc lint:*",
+    "lint": "run-p tsc lint:*",
     "lint:format": "prettier --check --loglevel warn src/**/*.ts",
     "lint:js": "eslint --max-warnings 0 src/",
-    "fix-examples": "run-s fix:*",
+    "fix": "run-s fix:*",
     "fix:format": "prettier --write --loglevel warn src/**/*.ts",
     "fix:js": "eslint --fix src/",
     "exec-ts": "node --loader esbuild-register/loader -r esbuild-register"

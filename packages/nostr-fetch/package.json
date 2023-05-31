@@ -1,6 +1,6 @@
 {
   "name": "nostr-fetch",
-  "version": "0.5.4",
+  "version": "0.5.3",
   "description": "A utility library that allows JS/TS apps to effortlessly fetch past events from Nostr relays",
   "keywords": [
     "nostr"
@@ -28,8 +28,6 @@
   ],
   "scripts": {
     "prepack": "yarn build",
-    "test": "vitest run",
-    "testw": "vitest",
     "tsc": "tsc",
     "lint": "run-p tsc lint:*",
     "lint:format": "prettier --check --loglevel warn src/**/*.ts",
@@ -43,8 +41,7 @@
     "build:copy-doc": "copy-file ../../README.md ./README.md"
   },
   "dependencies": {
-    "@noble/hashes": "^1.2.0",
-    "@noble/secp256k1": "^1.7.1"
+    "@nostr-fetch/kernel": "^0.5.4"
   },
   "volta": {
     "node": "18.14.2"
