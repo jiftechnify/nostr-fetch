@@ -6,6 +6,7 @@
   "type": "module",
   "workspaces": [
     "packages/nostr-fetch",
+    "packages/nostr-fetch-kernel",
     "packages/@nostr-fetch/*"
   ],
   "scripts": {
@@ -13,12 +14,9 @@
     "fix": "turbo fix",
     "test": "turbo test",
     "build": "turbo build",
-    "lint-examples": "turbo lint-examples",
-    "fix-examples": "turbo fix-examples",
     "lint-gha": "turbo lint --cache-dir .turbo",
     "test-gha": "turbo test --cache-dir .turbo",
     "build-gha": "turbo build --cache-dir .turbo",
-    "lint-examples-gha": "turbo lint-examples --cache-dir .turbo",
     "bump-version": "lerna version --conventional-commits --allow-peer-dependencies-update",
     "release": "lerna publish from-package",
     "example": "node scripts/runExample.js"

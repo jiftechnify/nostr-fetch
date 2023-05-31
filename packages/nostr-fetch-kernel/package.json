@@ -1,0 +1,56 @@
+{
+  "name": "@nostr-fetch/kernel",
+  "version": "0.5.3",
+  "description": "Kernel of nostr-fetch",
+  "keywords": [
+    "nostr"
+  ],
+  "author": "jiftechnify <jiftech.stlfy@gmail.com>",
+  "repository": "https://github.com/jiftechnify/nostr-fetch",
+  "homepage": "https://github.com/jiftechnify/nostr-fetch#readme",
+  "bugs": {
+    "url": "https://github.com/jiftechnify/nostr-fetch/issues"
+  },
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    "./*": {
+      "module": "./src/*.ts",
+      "import": "./src/*.ts",
+      "types": "./dist/*.d.ts"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "./dist/*.d.ts"
+      ]
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "prepack": "yarn build",
+    "test": "vitest run",
+    "testw": "vitest",
+    "tsc": "tsc",
+    "lint": "run-p tsc lint:*",
+    "lint:format": "prettier --check --loglevel warn src/**/*.ts",
+    "lint:js": "eslint --max-warnings 0 src/",
+    "fix": "run-s fix:*",
+    "fix:format": "prettier --write --loglevel warn src/**/*.ts",
+    "fix:js": "eslint --fix src/",
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@noble/hashes": "^1.2.0",
+    "@noble/secp256k1": "^1.7.1"
+  },
+  "volta": {
+    "node": "18.14.2"
+  }
+}

@@ -1,5 +1,5 @@
-import { Filter, generateSubId, NostrEvent } from "./nostr";
-import { initRelay, Relay } from "./relay";
+import type { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
+import { generateSubId } from "@nostr-fetch/kernel/nostr";
 import type {
   RelayOptions,
   RelayPoolHandle,
@@ -9,8 +9,10 @@ import type {
   SubEventTypes,
   Subscription,
   SubscriptionOptions,
-} from "./relayTypes";
-import { currUnixtimeMilli, normalizeRelayUrls } from "./utils";
+} from "@nostr-fetch/kernel/relayTypes";
+import { currUnixtimeMilli, normalizeRelayUrls } from "@nostr-fetch/kernel/utils";
+
+import { Relay, initRelay } from "./relay";
 
 export interface RelayPool extends RelayPoolHandle {
   ensureRelays(relayUrls: string[], relayOpts: RelayOptions): Promise<Relay[]>;

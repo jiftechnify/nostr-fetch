@@ -1,4 +1,5 @@
-import { Filter, generateSubId } from "nostr-fetch/src/nostr";
+import type { Filter } from "@nostr-fetch/kernel/nostr";
+import { generateSubId } from "@nostr-fetch/kernel/nostr";
 import type {
   RelayEventCbTypes,
   RelayHandle,
@@ -9,8 +10,9 @@ import type {
   SubEventCbTypes,
   Subscription,
   SubscriptionOptions,
-} from "nostr-fetch/src/relayTypes";
-import { normalizeRelayUrls } from "nostr-fetch/src/utils";
+} from "@nostr-fetch/kernel/relayTypes";
+import { normalizeRelayUrls } from "@nostr-fetch/kernel/utils";
+
 import type { SimplePool, Relay as ToolsRelay, Sub as ToolsSub } from "nostr-tools";
 
 class ToolsSubAdapter implements Subscription {

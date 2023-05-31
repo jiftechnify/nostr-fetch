@@ -1,8 +1,13 @@
-import { Channel } from "./channel";
-import { verifyEventSig } from "./crypto";
-import type { Filter, NostrEvent } from "./nostr";
+import { Channel } from "@nostr-fetch/kernel/channel";
+import { verifyEventSig } from "@nostr-fetch/kernel/crypto";
+import type { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
+import type {
+  RelayHandle,
+  RelayPoolHandle,
+  SubscriptionOptions,
+} from "@nostr-fetch/kernel/relayTypes";
+
 import { initRelayPool } from "./relayPool";
-import type { RelayHandle, RelayPoolHandle, SubscriptionOptions } from "./relayTypes";
 
 export type FetchFilter = Omit<Filter, "limit" | "since" | "until">;
 export type FetchTimeRangeFilter = Pick<Filter, "since" | "until">;
