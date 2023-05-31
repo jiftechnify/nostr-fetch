@@ -223,6 +223,7 @@ class NRTPoolAdapter implements NostrFetcherBase {
         abortSub(`[${relayUrl}] subscription aborted before EOSE due to timeout`);
       }, options.abortSubBeforeEoseTimeoutMs);
     };
+    resetAutoAbortTimer(); // initiate subscription auto abortion timer
 
     // handle abortion by AbortController
     if (options.abortSignal?.aborted) {
