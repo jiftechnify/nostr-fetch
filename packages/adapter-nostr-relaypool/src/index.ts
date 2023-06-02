@@ -87,51 +87,66 @@ class NRTPoolAdapter implements NostrFetcherBase {
 
   /**
    * Ensures connections to the relays prior to an event subscription.
+   *
+   * Returns URLs of relays *successfully connected to*.
+   *
+   * It should *normalize* the passed `relayUrls` before establishing connections to relays.
    */
   public async ensureRelays(
     relayUrls: string[],
     { connectTimeoutMs }: EnsureRelaysOptions
-  ): Promise<void> {
+  ): Promise<string[]> {
     const normalizedUrls = normalizeRelayUrls(relayUrls);
 
     const ensure = (rurl: string) =>
-      new Promise<void>((resolve, reject) => {
+      new Promise<string>((resolve, reject) => {
         const r = this.#pool.addOrGetRelay(rurl);
+
         r.on("connect", () => {
-          resolve();
+          // setup debug log
+          // listener for notice/error will be overwritten in fetchTillEose
+          this.addListener(rurl, "disconnect", (msg) =>
+            this.#logForDebug?.(`[${rurl}] disconnected: ${msg}`)
+          );
+          this.addListener(rurl, "error", (msg) => {
+            this.#logForDebug?.(`[${rurl}] Websocket error: ${msg}`);
+          });
+          this.addListener(rurl, "notice", (msg) => {
+            this.#logForDebug?.(`[${rurl}] NOTICE: ${msg}`);
+          });
+          this.addListener(rurl, "auth", () =>
+            this.#logForDebug?.(`[${rurl}] received AUTH challange (ignoring)`)
+          );
+          resolve(rurl);
         });
+
         r.on("error", () => {
           reject(Error(`failed to connect to relay '${rurl}'`));
         });
       });
 
-    normalizedUrls.map(async (rurl) => {
-      try {
-        // ensure connection to the relay with timeout
-        await withTimeout(
+    const ensureResults = await Promise.allSettled(
+      normalizedUrls.map(async (rurl) => {
+        return withTimeout(
           ensure(rurl),
           connectTimeoutMs,
           `attempt to connect to the relay ${rurl} timed out`
         );
+      })
+    );
 
-        // setup debug log
-        // listener for notice/error will be overwritten in fetchTillEose
-        this.addListener(rurl, "disconnect", (msg) =>
-          this.#logForDebug?.(`[${rurl}] disconnected: ${msg}`)
-        );
-        this.addListener(rurl, "error", (msg) => {
-          this.#logForDebug?.(`[${rurl}] Websocket error: ${msg}`);
-        });
-        this.addListener(rurl, "notice", (msg) => {
-          this.#logForDebug?.(`[${rurl}] NOTICE: ${msg}`);
-        });
-        this.addListener(rurl, "auth", () =>
-          this.#logForDebug?.(`[${rurl}] received AUTH challange (ignoring)`)
-        );
-      } catch (err) {
-        console.error(err);
+    const connectedRelays = [];
+    for (const r of ensureResults) {
+      switch (r.status) {
+        case "fulfilled":
+          connectedRelays.push(r.value);
+          break;
+        case "rejected":
+          console.error(r.reason);
+          break;
       }
-    });
+    }
+    return connectedRelays;
   }
 
   /**

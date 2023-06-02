@@ -55,13 +55,22 @@ const allPosts = await fetcher.fetchAllEvents(
     /* fetch options (optional) */
     { sort: true }
 )
+```
 
-// fetches latest 100 text events
+### Various Fetch Methods
+
+```ts
+import { eventKind, NostrFetcher } from "nostr-fetch";
+
+const fetcher = NostrFetcher.init();
+const relayUrls = [/* relay URLs */];
+
+// fetches latest 100 text posts
 // internally: 
 // 1. fetch latest 100 events from each relay
 // 2. merge lists of events
 // 3. take latest 100 events
-const latestPosts = await fetcher.fetchLatestEvents(
+const latestPosts: NostrEvent[] = await fetcher.fetchLatestEvents(
     relayUrls,
     /* filters */
     [
@@ -75,14 +84,48 @@ const latestPosts = await fetcher.fetchLatestEvents(
 // internally:
 // 1. fetch the last event from each relay
 // 2. take the latest one
-const lastMetadata = await fetcher.fetchLastEvent(
+const lastMetadata: NostrEvent | undefined = await fetcher.fetchLastEvent(
     relayUrls,
     /* filters */
     [
         { kinds: [ eventKind.metadata ], authors: [ "deadbeef..." ] }
     ],
-)
+);
+
+// fetches latest 10 text posts from each author in `authors`
+const postsPerAuthor = await fetcher.fetchLatestEventsPerAuthor(
+    relayUrls,
+    /* authors */
+    ["deadbeef...", "abcdef01...", ...],
+    /* filters */
+    [
+        { kinds: [ eventKind.text ] }
+    ],
+    /* number of events to fetch for each author */
+    10,
+);
+for await (const { author, events } of postsPerAuthor) {
+    console.log(`posts from ${author}:`);
+    for (const ev of events) {
+        console.log(ev.content);
+    }
+}
+
+// fetches the last metadata event from each author in `authors`
+const metadataPerAuthor = await fetcher.fetchLastEventPerAuthor(
+    relayUrls,
+    /* authors */
+    ["deadbeef...", "abcdef01...", ...],
+    /* filters */
+    [
+        { kinds: [ eventKind.metadata ] }
+    ],
+);
+for await (const { author, event } of metadataPerAuthor ) {
+    console.log(`${author}: ${event.content ?? "not found"}`);
+}
 ```
+
 ### Working with custom relay pool implementations
 
 First, install the adapter package for the relay pool implementaion you want to use.
@@ -153,11 +196,26 @@ npm install && npm run build
 # the command executes packages/examples/src/fetchAll.ts
 npm run example fetchAll
 
-# "getProfiles" takes a hex pubkey as an argument
-npm run example getProfiles <your hex pubkey>
+# some exaples takes a hex pubkey as an argument
+npm run example fetchLastPerAuthor <your hex pubkey>
 ```
 
 ## API
+
+- [class `NostrFetcher`](#class-nostrfetcher)
+- Initializers and Finilizers
+    + [`NostrFetcher.init`](#nostrfetcherinit)
+    + [`NostrFetcher.withCustomPool`](#nostrfetcherwithcustompool)
+    + [`NostrFetcher#shutdown`](#nostrfetchershutdown)
+- Fetch Methods
+    + [`allEventsIterator`](#alleventsiterator)
+    + [`fetchAllEvents`](#fetchallevents)
+    + [`fetchLatestEvents`](#fetchlatestevents)
+    + [`fetchLastEvent`](#fetchlastevent)
+    + [`fetchLatestEventsPerAuthor`](#fetchlatesteventsperauthor)
+    + [`fetchLastEventPerAuthor`](#fetchlasteventperauthor)
+
+
 ### class `NostrFetcher`
 
 The entry point of Nostr events fetching. 
@@ -166,19 +224,31 @@ It manages connections to Nostr relays under the hood. It is recommended to reus
 
 You should instantiate it with following initializers instead of the constructor.
 
-#### `NostrFetcher.init()`
+---
+
+### Initializers and Finalizers
+
+#### `NostrFetcher.init`
 
 Initializes a `NostrFetcher` instance based on the default relay pool implementation.
 
-#### `NostrFetcher.withCustomPool()`
+#### `NostrFetcher.withCustomPool`
 
 Initializes a `NostrFetcher` instance based on a custom relay pool implementation passed as an argument.
 
 This opens up interoperability with other relay pool implementations such as [nostr-tools](https://github.com/nbd-wtf/nostr-tools)' `SimplePool`.
 
+#### `NostrFetcher#shutdown`
+
+Closes all the connections to relays and clean up the internal relay pool.
+
 ---
 
-### `NostrFetcher#allEventsIterator()`
+### Fetch Methods
+
+All methods are instance methods of `NostrFetcher`.
+
+#### `allEventsIterator`
 
 ```ts
 public async allEventsIterator(
@@ -207,7 +277,7 @@ for await (const ev of events) {
 
 ---
 
-### `NostrFetcher#fetchAllEvents()`
+#### `fetchAllEvents`
 
 ```ts
 public async fetchAllEvents(
@@ -228,7 +298,7 @@ If `sort: true` is specified in `options`, events in the resulting array will be
 
 ---
 
-### `NostrFetcher#fetchLatestEvents()`
+#### `fetchLatestEvents`
 
 ```ts
 public async fetchLatestEvents(
@@ -245,7 +315,7 @@ Events in the result will be sorted in "newest to oldest" order.
 
 ---
 
-### `NostrFetcher#fetchLastEvent()`
+#### `fetchLastEvent`
 
 ```ts
 public async fetchLastEvent(
@@ -261,10 +331,39 @@ Returns `undefined` if no event matching the filters exists in any relay.
 
 ---
 
-### `NostrFetcher#shutdown()`
+#### `fetchLatestEventsPerAuthor`
 
 ```ts
-public shutdown(): void
+public async fetchLatestEventsPerAuthor(
+    relayUrls: string[],
+    authors: string[],
+    otherFilters: Omit<FetchFilter, "authors">[],
+    limit: number,
+    options: FetchLatestOptions = {}
+): Promise<AsyncIterable<{ author: string; events: NostrEvent[] }>>
+```
+Fetches latest up to `limit` events **for each author in `authors`** matching the filters, from Nostr relays.
+
+Result is an async iterable of `{ author (pubkey), events (from that author) }` pairs.
+
+Each array of events in the result are sorted in "newest to oldest" order.
+
+---
+
+#### `fetchLastEventPerAuthor`
+
+```ts
+public async fetchLastEventPerAuthor(
+    relayUrls: string[],
+    authors: string[],
+    otherFilters: Omit<FetchFilter, "authors">[],
+    options: FetchLatestOptions = {}
+): Promise<AsyncIterable<{ author: string; event: NostrEvent | undefined }>>
 ```
 
-Closes all the connections to relays and clean up the internal relay pool.
+Fetches the last event matching the filters **for each author in `authors`** from Nostr relays.
+
+Result is an async iterable of `{ author (pubkey), event }` pairs.
+
+`event` in result will be `undefined` if no event matching the filters for the author exists in any relay.
+
