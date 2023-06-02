@@ -380,8 +380,11 @@ export class NostrFetcher {
   ): Promise<NostrEvent | undefined> {
     const finalOpts: FetchLatestOptions & { abortSubBeforeEoseTimeoutMs: number } = {
       ...defaultFetchLatestOptions,
-      // override default value of `abortSubBeforeEoseTimeoutMs` (10000 -> 1000)
-      abortSubBeforeEoseTimeoutMs: options.abortSubBeforeEoseTimeoutMs ?? 1000,
+      ...{
+        // override default value of `abortSubBeforeEoseTimeoutMs` (10000 -> 1000)
+        abortSubBeforeEoseTimeoutMs: 1000,
+        ...options,
+      },
     };
     const latest1 = await this.fetchLatestEvents(relayUrls, filters, 1, finalOpts);
     return latest1[0];
