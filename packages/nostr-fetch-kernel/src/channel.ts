@@ -1,9 +1,9 @@
-interface Deferred<T> {
+export interface Deferred<T> {
   resolve(v: T | PromiseLike<T>): void;
   reject(e?: unknown): void;
 }
 
-class Deferred<T> {
+export class Deferred<T> {
   promise: Promise<T>;
   constructor() {
     this.promise = new Promise((resolve, reject) => {

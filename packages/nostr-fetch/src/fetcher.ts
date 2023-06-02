@@ -1,8 +1,8 @@
-import { Channel } from "@nostr-fetch/kernel/channel";
+import { Channel, Deferred } from "@nostr-fetch/kernel/channel";
 import { verifyEventSig } from "@nostr-fetch/kernel/crypto";
 import type { FetchTillEoseOptions, NostrFetcherBase } from "@nostr-fetch/kernel/fetcherBase";
 import type { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
-import { emptyAsyncGen } from "@nostr-fetch/kernel/utils";
+import { currUnixtimeSec, normalizeRelayUrls } from "@nostr-fetch/kernel/utils";
 
 import { DefaultFetcherBase } from "./fetcherBase";
 
@@ -69,7 +69,7 @@ export class NostrFetcher {
   /**
    * Initializes `NostrFetcher` with the default relay pool implementation.
    */
-  public static init(initOpts: FetcherInitOptions = {}) {
+  public static init(initOpts: FetcherInitOptions = {}): NostrFetcher {
     const finalOpts = { ...defaultFetcherInitOptions, ...initOpts };
     const base = new DefaultFetcherBase(finalOpts);
     return new NostrFetcher(base, finalOpts);
@@ -85,7 +85,10 @@ export class NostrFetcher {
    * const fetcher = NostrFetcher.withCustomPool(simplePoolAdapter(pool));
    * ```
    */
-  public static withCustomPool(base: NostrFetcherBase, initOpts: FetcherInitOptions = {}) {
+  public static withCustomPool(
+    base: NostrFetcherBase,
+    initOpts: FetcherInitOptions = {}
+  ): NostrFetcher {
     const finalOpts = { ...defaultFetcherInitOptions, ...initOpts };
     return new NostrFetcher(base, finalOpts);
   }
@@ -367,9 +370,357 @@ export class NostrFetcher {
   }
 
   /**
+   * Fetches latest up to `limit` events **for each author in `authors`** matching the filters, from Nostr relays.
+   *
+   * Result is an async iterable of `{ author (pubkey), events (from that author) }` pairs.
+   *
+   * Each array of events in the result are sorted in "newest to oldest" order.
+   *
+   * Throws {@linkcode NostrFetchError} if any of `relayUrls`, `authors` and `othreFilters` is empty or `limit` is negative.
+   *
+   * @param relayUrls
+   * @param authors
+   * @param otherFilters
+   * @param limit
+   * @param options
+   * @returns
+   */
+  public async fetchLatestEventsPerAuthor(
+    relayUrls: string[],
+    authors: string[],
+    otherFilters: Omit<FetchFilter, "authors">[],
+    limit: number,
+    options: FetchLatestOptions = {}
+  ): Promise<AsyncIterable<{ author: string; events: NostrEvent[] }>> {
+    // assertion
+    validateReq({ relayUrls, authors, otherFilters, limit }, [
+      checkIfNonEmpty((r) => r.relayUrls, "Specify at least 1 relay URL"),
+      checkIfNonEmpty((r) => r.authors, "Specify at least 1 author (pubkey)"),
+      checkIfNonEmpty((r) => r.otherFilters, "Specify at least 1 filter"),
+      (r) => (r.limit <= 0 ? '"limit" should be positive number' : undefined),
+    ]);
+
+    const finalOpts = {
+      ...defaultFetchLatestOptions,
+      ...options,
+    };
+
+    const relayUrlsNormalized = normalizeRelayUrls(relayUrls);
+
+    await this.#fetcherBase.ensureRelays(relayUrlsNormalized, finalOpts);
+
+    const initialUntil = currUnixtimeSec();
+    const subOpts: FetchTillEoseOptions = {
+      ...finalOpts,
+      // skip "full" verification if `reduceVerification` is enabled
+      skipVerification: finalOpts.skipVerification || finalOpts.reduceVerification,
+    };
+    this.#logForDebug?.(finalOpts, subOpts);
+
+    const [tx, chIter] = Channel.make<{ author: string; events: NostrEvent[] }>();
+
+    // for each pair of author and relay URL, create a Promise so that the "merger" can wait for a subscription to complete
+    const deferreds = new KeyRelayMatrix(
+      authors,
+      relayUrlsNormalized,
+      () => new Deferred<NostrEvent[]>()
+    );
+
+    // the "fetcher" fetches events from each relay
+    Promise.all(
+      relayUrlsNormalized.map(async (rurl) => {
+        // repeat subscription until one of the following conditions is met:
+        // 1. have fetched required number of events for all authors
+        // 2. the relay didn't return new event
+        // 3. aborted by AbortController
+
+        let nextUntil = initialUntil;
+        const evBucketsPerAuthor = new EventBuckets(authors, limit);
+        const localSeenEventIds = new Set<string>();
+
+        // procedure to complete the subscription in the middle on early return, resolving all remaining Promises.
+        // resolve() is called even if a Promise is already resolved, but it's not a problem.
+        const resolveAllOnEarlyReturn = () => {
+          for (const pk of authors) {
+            this.#logForDebug?.(`[${rurl}] resolving bucket on early return: author=${pk}`);
+            deferreds.get(pk, rurl)?.resolve(evBucketsPerAuthor.getBucket(pk) ?? []);
+          }
+        };
+
+        while (true) {
+          this.#logForDebug?.(`[${rurl}] nextUntil=${nextUntil}`);
+
+          const { keys: nextAuthors, limit: nextLimit } =
+            evBucketsPerAuthor.calcKeysAndLimitForNextReq();
+          this.#logForDebug?.(
+            `[${rurl}] calcKeysAndLimitForNextReq result: authors=${nextAuthors}, limit=${nextLimit}`
+          );
+
+          if (nextAuthors.length === 0) {
+            // termination condition 1
+            this.#logForDebug?.(`[${rurl}] fulfilled buckets for all authors`);
+            break;
+          }
+
+          const refinedFilters = otherFilters.map((filter) => {
+            return {
+              ...filter,
+              authors: nextAuthors,
+              until: nextUntil,
+              limit: Math.min(nextLimit, MAX_LIMIT_PER_REQ),
+            };
+          });
+          this.#logForDebug?.(`[${rurl}] refinedFilters=%O`, refinedFilters);
+
+          let gotNewEvent = false;
+          let oldestCreatedAt = Number.MAX_SAFE_INTEGER;
+
+          for await (const e of this.#fetcherBase.fetchTillEose(rurl, refinedFilters, subOpts)) {
+            if (!localSeenEventIds.has(e.id)) {
+              gotNewEvent = true;
+              localSeenEventIds.add(e.id);
+
+              if (e.created_at < oldestCreatedAt) {
+                oldestCreatedAt = e.created_at;
+              }
+
+              // add the event to the bucket for the author(pubkey)
+              const addRes = evBucketsPerAuthor.add(e.pubkey, e);
+              if (addRes.state === "fulfilled") {
+                // notify that event fetching is completed for the author at this relay
+                // by resolveing the Promise corresponds to the author and the relay
+                deferreds.get(e.pubkey, rurl)?.resolve(addRes.events);
+                this.#logForDebug?.(`[${rurl}] fulfilled a bucket. author=${e.pubkey}`);
+              }
+            }
+          }
+
+          if (!gotNewEvent) {
+            // termination condition 2
+            this.#logForDebug?.(`[${rurl}] got ${localSeenEventIds.size} events`);
+            resolveAllOnEarlyReturn();
+            break;
+          }
+          if (finalOpts.abortSignal?.aborted) {
+            // termination condition 3
+            this.#logForDebug?.(`[${rurl}]`);
+            resolveAllOnEarlyReturn();
+            break;
+          }
+
+          nextUntil = oldestCreatedAt + 1;
+        }
+      })
+    );
+
+    // the "merger".
+    // merges result from relays, sorts events, takes latest events and sends it to the result channel on all event fetching for a author is completed
+    Promise.all(
+      authors.map(async (pubkey) => {
+        // wait for all the buckets for the author to fulfilled
+        const evsPerRelay = await Promise.all(
+          deferreds.itemsByKey(pubkey)?.map((d) => d.promise) ?? []
+        );
+        this.#logForDebug?.(`[${pubkey}] fulfilled all buckets for author`);
+
+        // merge and sort
+        const evsDeduped = (() => {
+          const res = [];
+          const seenIds = new Set();
+
+          for (const evs of evsPerRelay) {
+            for (const ev of evs) {
+              if (!seenIds.has(ev.id)) {
+                res.push(ev);
+                seenIds.add(ev.id);
+              }
+            }
+          }
+          return res;
+        })();
+        evsDeduped.sort(createdAtDesc);
+
+        const res = (() => {
+          if (finalOpts.skipVerification || !finalOpts.reduceVerification) {
+            return evsDeduped.slice(0, limit);
+          } else {
+            // reduced verification
+            const verified = [];
+            for (const ev of evsDeduped) {
+              if (verifyEventSig(ev)) {
+                verified.push(ev);
+                if (verified.length >= limit) {
+                  break;
+                }
+              }
+            }
+            return verified;
+          }
+        })();
+        tx.send({ author: pubkey, events: res });
+      })
+    ).then(() => {
+      tx.close();
+    });
+
+    return chIter;
+  }
+
+  /**
+   * Fetches the last event matching the filters **for each author in `authors`** from Nostr relays.
+   *
+   * Result is an async iterable of `{ author (pubkey), event }` pairs.
+   *
+   * `event` in result will be `undefined` if no event matching the filters for the author exists in any relay.
+   *
+   * Throws {@linkcode NostrFetchError} if any of `relayUrls`, `authors` and `othreFilters` is empty.
+   *
+   * @param relayUrls
+   * @param authors
+   * @param otherFilters
+   * @param options
+   * @returns
+   */
+  public async fetchLastEventPerAuthor(
+    relayUrls: string[],
+    authors: string[],
+    otherFilters: Omit<FetchFilter, "authors">[],
+    options: FetchLatestOptions = {}
+  ): Promise<AsyncIterable<{ author: string; event: NostrEvent | undefined }>> {
+    const finalOpts: FetchLatestOptions & { abortSubBeforeEoseTimeoutMs: number } = {
+      ...defaultFetchLatestOptions,
+      ...{
+        // override default value of `abortSubBeforeEoseTimeoutMs` (10000 -> 1000)
+        abortSubBeforeEoseTimeoutMs: 1000,
+        ...options,
+      },
+    };
+
+    const latest1Iter = await this.fetchLatestEventsPerAuthor(
+      relayUrls,
+      authors,
+      otherFilters,
+      1,
+      finalOpts
+    );
+    const mapped = async function* () {
+      for await (const { author, events } of latest1Iter) {
+        yield { author, event: events[0] };
+      }
+    };
+    return mapped();
+  }
+
+  /**
    * Closes all the connections to relays and clean up the internal relay pool.
    */
   public shutdown() {
     this.#fetcherBase.closeAll();
+  }
+}
+
+// type of a result of EventBuckets#add
+type EventBucketAddResult =
+  | { state: "open" }
+  | { state: "fulfilled"; events: NostrEvent[] }
+  | { state: "dropped" };
+
+/**
+ * Set of event buckets for each `key`, with limit on the number of events.
+ */
+class EventBuckets<K> {
+  #buckets: Map<K, NostrEvent[]>;
+  #limitPerKey: number;
+
+  constructor(keys: K[], limit: number) {
+    this.#buckets = new Map(keys.map((k) => [k, []]));
+    this.#limitPerKey = limit;
+  }
+
+  public getBucket(key: K): NostrEvent[] | undefined {
+    return this.#buckets.get(key);
+  }
+
+  /**
+   * Adds an event (`ev`) to the bucket for `key` if there is space.
+   *
+   * Returns a result with `state: "fulfilled"` and events if the bucket is just fulfilled by the addition, otherwise returns `state: "open"`.
+   *
+   * If the bucket is already full, drops the event and returns `state: "dropped"`.
+   */
+  public add(key: K, ev: NostrEvent): EventBucketAddResult {
+    const bucket = this.#buckets.get(key);
+    if (bucket === undefined) {
+      console.error(`bucket not found for key: ${key}`);
+      return { state: "dropped" };
+    }
+
+    if (bucket.length >= this.#limitPerKey) {
+      // bucket is already full
+      return { state: "dropped" };
+    }
+
+    // adding event
+    bucket.push(ev);
+    if (bucket.length === this.#limitPerKey) {
+      // just fulfilled!
+      return { state: "fulfilled", events: bucket };
+    }
+    return { state: "open" };
+  }
+
+  /**
+   * Calculates keys and limit for next request to a relay.
+   *
+   * * `keys`: (all keys) - (keys correspond to a full bucket)
+   * * `limit`: SUM( #(limit per key) - #(events in bucket) )
+   */
+  public calcKeysAndLimitForNextReq(): { keys: K[]; limit: number } {
+    return [...this.#buckets.entries()].reduce(
+      ({ keys, limit }, [key, bucket]) => {
+        const numEvents = bucket.length;
+        return {
+          keys: numEvents < this.#limitPerKey ? [...keys, key] : keys,
+          limit: limit + (this.#limitPerKey - numEvents),
+        };
+      },
+      { keys: [] as K[], limit: 0 }
+    );
+  }
+}
+
+/**
+ * Map from all combinations of `keys` and  `relayUrls` to a value of type `V`.
+ *
+ * This has additional mapping from `key` in `keys` to array of values.
+ */
+class KeyRelayMatrix<K extends string | number, V> {
+  #matrix: Map<string, V>;
+  #byKey: Map<K, V[]>;
+
+  constructor(keys: K[], relayUrls: string[], initVal: () => V) {
+    this.#matrix = new Map();
+    this.#byKey = new Map(keys.map((k) => [k, []]));
+
+    for (const k of keys) {
+      for (const r of relayUrls) {
+        const v = initVal();
+
+        this.#matrix.set(this.#getKey(k, r), v);
+        this.#byKey.get(k)!.push(v); // eslint-disable-line @typescript-eslint/no-non-null-assertion
+      }
+    }
+  }
+
+  #getKey(key: K, relayUrl: string): string {
+    return `${key}|${relayUrl}`;
+  }
+
+  public get(key: K, relayUrl: string): V | undefined {
+    return this.#matrix.get(this.#getKey(key, relayUrl));
+  }
+
+  public itemsByKey(key: K): V[] | undefined {
+    return this.#byKey.get(key);
   }
 }
