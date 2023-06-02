@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.7.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.6.1...v0.7.0) (2023-06-02)
+
+### Features
+
+* add new fetchers ([32baa5b](https://github.com/jiftechnify/nostr-fetch/commit/32baa5b7e01f94659c3bebf681a40f313cdd181c))
+
 ## [0.6.1](https://github.com/jiftechnify/nostr-fetch/compare/v0.6.0...v0.6.1) (2023-05-31)
 
 **Note:** Version bump only for package @nostr-fetch/examples

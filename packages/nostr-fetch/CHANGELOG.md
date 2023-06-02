@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.7.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.6.1...v0.7.0) (2023-06-02)
+
+### Bug Fixes
+
+* move responsibility of relay URL normalization to `ensureRelays` ([c0e747d](https://github.com/jiftechnify/nostr-fetch/commit/c0e747d106425eaf6ba290c683a9a57409a7049c))
+* options for fetchLastEvent is now reflected properly ([2009e2a](https://github.com/jiftechnify/nostr-fetch/commit/2009e2aa065f66c0b4c2c616c9e56b6ac7149417))
+
+### Features
+
+* add new fetchers ([32baa5b](https://github.com/jiftechnify/nostr-fetch/commit/32baa5b7e01f94659c3bebf681a40f313cdd181c))
+* validate parameters for fetchers and throw if invalid ([ca4e49d](https://github.com/jiftechnify/nostr-fetch/commit/ca4e49df1cf20a64d63c727bfb493aa3e53ef5dd))
+
 # [0.6.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.5.4...v0.6.0) (2023-05-31)
 
 ### Bug Fixes

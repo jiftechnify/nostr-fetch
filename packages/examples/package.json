@@ -1,6 +1,6 @@
 {
   "name": "@nostr-fetch/examples",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "nostr-fetch examples",
   "type": "module",
   "private": true,
@@ -15,9 +15,9 @@
     "exec-ts": "node --loader esbuild-register/loader -r esbuild-register"
   },
   "dependencies": {
-    "@nostr-fetch/adapter-nostr-relaypool": "^0.6.1",
-    "@nostr-fetch/adapter-nostr-tools": "^0.6.0",
-    "nostr-fetch": "^0.6.0",
+    "@nostr-fetch/adapter-nostr-relaypool": "^0.7.0",
+    "@nostr-fetch/adapter-nostr-tools": "^0.7.0",
+    "nostr-fetch": "^0.7.0",
     "nostr-relaypool": "^0.6.28",
     "nostr-tools": "^1.10.1",
     "websocket-polyfill": "^0.0.3",
