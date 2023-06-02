@@ -130,7 +130,7 @@ export class NostrFetcher {
 
     const [tx, chIter] = Channel.make<NostrEvent>();
     const globalSeenEventIds = new Set<string>();
-    const initialUntil = timeRangeFilter.until ?? Math.floor(Date.now() / 1000);
+    const initialUntil = timeRangeFilter.until ?? currUnixtimeSec();
 
     Promise.all(
       relayUrls.map(async (rurl) => {
@@ -255,7 +255,7 @@ export class NostrFetcher {
 
     const [tx, chIter] = Channel.make<NostrEvent>();
     const globalSeenEventIds = new Set<string>();
-    const initialUntil = Math.floor(Date.now() / 1000);
+    const initialUntil = currUnixtimeSec();
     const subOpts: FetchTillEoseOptions = {
       ...finalOpts,
       // skip "full" verification if `reduceVerification` is enabled
