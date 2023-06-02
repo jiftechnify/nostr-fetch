@@ -53,6 +53,15 @@ const defaultFetchLatestOptions: Required<FetchLatestOptions> = {
   reduceVerification: true,
 };
 
+/**
+ * Type of errors that can be thrown from methods of `NostrFetcher`.
+ */
+export class NostrFetchError extends Error {
+  static {
+    this.prototype.name = "NostrFetchError";
+  }
+}
+
 export class NostrFetcher {
   // #relayPool: RelayPoolHandle;
   #fetcherBase: NostrFetcherBase;
@@ -100,6 +109,8 @@ export class NostrFetcher {
    *
    * Note: there are no guarantees about the order of returned events.
    *
+   * Throws {@linkcode NostrFetchError} if any of `relayUrls` and `filters` is empty.
+   *
    * @param relayUrls
    * @param filters
    * @param timeRangeFilter
@@ -112,19 +123,16 @@ export class NostrFetcher {
     timeRangeFilter: FetchTimeRangeFilter,
     options: FetchOptions = {}
   ): Promise<AsyncIterable<NostrEvent>> {
+    // assertion
+    validateReq({ relayUrls, filters }, [
+      checkIfNonEmpty((r) => r.relayUrls, "Specify at least 1 relay URL"),
+      checkIfNonEmpty((r) => r.filters, "Specify at least 1 filter"),
+    ]);
+
     const finalOpts: Required<FetchOptions> = {
       ...defaultFetchOptions,
       ...options,
     };
-
-    if (relayUrls.length === 0) {
-      console.error("you must specify at least one relay URL");
-      return emptyAsyncGen();
-    }
-    if (filters.length === 0) {
-      console.error("you must specify at least one filter");
-      return emptyAsyncGen();
-    }
 
     await this.#fetcherBase.ensureRelays(relayUrls, finalOpts);
 
@@ -192,6 +200,8 @@ export class NostrFetcher {
    *
    * Note: there are no guarantees about the order of returned events if `sort` options is not specified.
    *
+   * Throws {@linkcode NostrFetchError} if any of `relayUrls` and `filters` is empty.
+   *
    * @param relayUrls
    * @param filters
    * @param timeRangeFilter
@@ -204,6 +214,12 @@ export class NostrFetcher {
     timeRangeFilter: FetchTimeRangeFilter,
     options: FetchAllOptions = {}
   ): Promise<NostrEvent[]> {
+    // assertion
+    validateReq({ relayUrls, filters }, [
+      checkIfNonEmpty((r) => r.relayUrls, "Specify at least 1 relay URL"),
+      checkIfNonEmpty((r) => r.filters, "Specify at least 1 filter"),
+    ]);
+
     const finalOpts = { ...defaultFetchAllOptions, ...options };
 
     const res: NostrEvent[] = [];
@@ -225,6 +241,8 @@ export class NostrFetcher {
    *
    * Events are sorted in "newest to oldest" order.
    *
+   * Throws {@linkcode NostrFetchError} if any of `relayUrls` and `filters` is empty or `limit` is negative.
+   *
    * @param relayUrls
    * @param filters
    * @param limit
@@ -237,19 +255,17 @@ export class NostrFetcher {
     limit: number,
     options: FetchLatestOptions = {}
   ): Promise<NostrEvent[]> {
+    // assertion
+    validateReq({ relayUrls, filters, limit }, [
+      checkIfNonEmpty((r) => r.relayUrls, "Specify at least 1 relay URL"),
+      checkIfNonEmpty((r) => r.filters, "Specify at least 1 filter"),
+      (r) => (r.limit <= 0 ? '"limit" should be positive number' : undefined),
+    ]);
+
     const finalOpts: Required<FetchLatestOptions> = {
       ...defaultFetchLatestOptions,
       ...options,
     };
-
-    if (relayUrls.length === 0) {
-      console.error("you must specify at least one relay URL");
-      return [];
-    }
-    if (filters.length === 0) {
-      console.error("you must specify at least one filter");
-      return [];
-    }
 
     await this.#fetcherBase.ensureRelays(relayUrls, finalOpts);
 
@@ -349,6 +365,8 @@ export class NostrFetcher {
    * Fetches the last event matching the filters from Nostr relays specified by the array of URLs.
    *
    * Returns `undefined` if no event matching the filters exists in any relay.
+   *
+   * Throws {@linkcode NostrFetchError} if any of `relayUrls` and `filters` is empty.
    *
    * @param relayUrls
    * @param filters
@@ -619,6 +637,31 @@ export class NostrFetcher {
   }
 }
 
+/**
+ * Validates `req` by `validators`.
+ *
+ * If there are something wrong, throws error that includes all error messages from validators.
+ */
+const validateReq = <T>(req: T, validators: ((req: T) => string | undefined)[]): void => {
+  const errors = [];
+  for (const validate of validators) {
+    const err = validate(req);
+    if (err) {
+      errors.push(err);
+    }
+  }
+  if (errors.length > 0) {
+    const lines = errors.map((e) => `- ${e}`).join("\n");
+    throw new NostrFetchError(`Invalid request!\n${lines}`);
+  }
+};
+
+function checkIfNonEmpty<T, U>(
+  getArray: (req: T) => U[],
+  msg: string
+): (req: T) => string | undefined {
+  return (req: T): string | undefined => (getArray(req).length === 0 ? msg : undefined);
+}
 
 /**
  * comparator represents descending order by `created_at` of events (a.k.a. "newest to oldest" order)
