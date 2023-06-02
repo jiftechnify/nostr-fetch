@@ -215,7 +215,7 @@ export class NostrFetcher {
 
     // sort events in "newest to oldest" order if `sort` options is specified
     if (finalOpts.sort) {
-      res.sort((a, b) => b.created_at - a.created_at);
+      res.sort(createdAtDesc);
     }
     return res;
   }
@@ -325,7 +325,7 @@ export class NostrFetcher {
     for await (const ev of chIter) {
       evs.push(ev);
     }
-    evs.sort((a, b) => b.created_at - a.created_at);
+    evs.sort(createdAtDesc);
 
     // return latest `limit` events if not "reduced verification mode"
     if (finalOpts.skipVerification || !finalOpts.reduceVerification) {
@@ -618,6 +618,12 @@ export class NostrFetcher {
     this.#fetcherBase.closeAll();
   }
 }
+
+
+/**
+ * comparator represents descending order by `created_at` of events (a.k.a. "newest to oldest" order)
+ */
+const createdAtDesc = (a: NostrEvent, b: NostrEvent): number => b.created_at - a.created_at;
 
 // type of a result of EventBuckets#add
 type EventBucketAddResult =
