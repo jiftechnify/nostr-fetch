@@ -122,7 +122,7 @@ const metadataPerAuthor = await fetcher.fetchLastEventPerAuthor(
     ],
 );
 for await (const { author, event } of metadataPerAuthor ) {
-    console.log(`${author}: ${event.content ?? "not found"}`);
+    console.log(`${author}: ${event?.content ?? "not found"}`);
 }
 ```
 
