@@ -20,13 +20,21 @@ export type FetchTillEoseOptions = {
 export interface NostrFetcherBase {
   /**
    * Ensures connections to the relays prior to an event subscription.
+   *
+   * Returns URLs of relays *successfully connected to*.
+   *
+   * It should *normalize* the passed `relayUrls` before establishing connections to relays.
+   *
+   * Hint:
+   * You should make use of the function `normalizeRelayUrls` from `@nostr-fetch/kernel/utils` to normalize relay URLs.
+   *
    */
-  ensureRelays: (relayUrls: string[], options: EnsureRelaysOptions) => Promise<void>;
+  ensureRelays(relayUrls: string[], options: EnsureRelaysOptions): Promise<string[]>;
 
   /**
    * Closes all the connections to relays and clean up the internal relay pool.
    */
-  closeAll: () => void;
+  closeAll(): void;
 
   /**
    * Fetches Nostr events matching `filters` from the relay specified by `relayUrl` until EOSE.
@@ -40,9 +48,9 @@ export interface NostrFetcherBase {
    * Hint:
    * You can make use of a `Channel` to convert "push" style code (bunch of event listers) to `AsyncIterable`.
    */
-  fetchTillEose: (
+  fetchTillEose(
     relayUrl: string,
     filters: Filter[],
     options: FetchTillEoseOptions
-  ) => AsyncIterable<NostrEvent>;
+  ): AsyncIterable<NostrEvent>;
 }

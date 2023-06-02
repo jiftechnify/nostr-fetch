@@ -24,14 +24,34 @@ export class DefaultFetcherBase implements NostrFetcherBase {
     }
   }
 
-  public async ensureRelays(relayUrls: string[], options: EnsureRelaysOptions): Promise<void> {
-    await this.#relayPool.ensureRelays(relayUrls, options);
+  /**
+   * Ensures connections to the relays prior to an event subscription.
+   *
+   * Returns URLs of relays *successfully connected to*.
+   *
+   * It should *normalize* the passed `relayUrls` before establishing connections to relays.
+   */
+  public async ensureRelays(relayUrls: string[], options: EnsureRelaysOptions): Promise<string[]> {
+    const relays = await this.#relayPool.ensureRelays(relayUrls, options);
+    return relays.map((r) => r.url);
   }
 
+  /**
+   * Closes all the connections to relays and clean up the internal relay pool.
+   */
   public closeAll(): void {
     this.#relayPool.closeAll();
   }
 
+  /**
+   * Fetches Nostr events matching `filters` from the relay specified by `relayUrl` until EOSE.
+   *
+   * The result is an `AsyncIterable` of Nostr events.
+   * You can think that it's an asynchronous channel which conveys events.
+   * The channel will be closed once EOSE is reached.
+   *
+   * If no connection to the specified relay has been established at the time this function is called, it will return an empty channel.
+   */
   public fetchTillEose(
     relayUrl: string,
     filters: Filter[],

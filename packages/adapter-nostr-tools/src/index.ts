@@ -255,37 +255,48 @@ class SimplePoolExt implements NostrFetcherBase {
 
   /**
    * Ensures connections to the relays prior to an event subscription.
+   *
+   * Returns URLs of relays *successfully connected to*.
+   *
+   * It should *normalize* the passed `relayUrls` before establishing connections to relays.
    */
   public async ensureRelays(
     relayUrls: string[],
     { connectTimeoutMs }: RelayOptions
-  ): Promise<void> {
+  ): Promise<string[]> {
     const normalizedUrls = normalizeRelayUrls(relayUrls);
 
-    await Promise.all(
-      normalizedUrls.map(async (url) => {
-        const ensure = async () => this.#simplePool.ensureRelay(url);
+    const ensure = async (rurl: string) => {
+      const r = await this.#simplePool.ensureRelay(rurl);
 
+      // setup debug log
+      r.on("disconnect", () => this.#logForDebug?.(`[${rurl}] disconnected`));
+      r.on("error", () => this.#logForDebug?.(`[${rurl}] WebSocket error`));
+      r.on("notice", (notice) => this.#logForDebug?.(`[${rurl}] NOTICE: ${notice}`));
+      r.on("auth", () => this.#logForDebug?.(`[${rurl}] received AUTH challange (ignoring)`));
+
+      return new ToolsRelayExt(rurl, r);
+    };
+
+    const connectedRelays: string[] = [];
+    await Promise.all(
+      normalizedUrls.map(async (rurl) => {
         try {
           const r = await withTimeout(
-            ensure(),
+            ensure(rurl),
             connectTimeoutMs,
-            `attempt to connect to the relay ${url} timed out`
+            `attempt to connect to the relay ${rurl} timed out`
           );
 
-          // setup debug log
-          r.on("disconnect", () => this.#logForDebug?.(`[${url}] disconnected`));
-          r.on("error", () => this.#logForDebug?.(`[${url}] WebSocket error`));
-          r.on("notice", (notice) => this.#logForDebug?.(`[${url}] NOTICE: ${notice}`));
-          r.on("auth", () => this.#logForDebug?.(`[${url}] received AUTH challange (ignoring)`));
-
-          this.#relays.set(url, new ToolsRelayExt(url, r));
+          connectedRelays.push(rurl);
+          this.#relays.set(rurl, r);
         } catch (err) {
-          this.#relays.delete(url);
           console.error(err);
+          this.#relays.delete(rurl);
         }
       })
     );
+    return connectedRelays;
   }
 
   private getRelayExtIfConnected(relayUrl: string): ToolsRelayExt | undefined {

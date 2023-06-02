@@ -2,7 +2,7 @@ import { Channel, Deferred } from "@nostr-fetch/kernel/channel";
 import { verifyEventSig } from "@nostr-fetch/kernel/crypto";
 import type { FetchTillEoseOptions, NostrFetcherBase } from "@nostr-fetch/kernel/fetcherBase";
 import type { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
-import { currUnixtimeSec, normalizeRelayUrls } from "@nostr-fetch/kernel/utils";
+import { currUnixtimeSec } from "@nostr-fetch/kernel/utils";
 
 import { DefaultFetcherBase } from "./fetcherBase";
 
@@ -134,14 +134,14 @@ export class NostrFetcher {
       ...options,
     };
 
-    await this.#fetcherBase.ensureRelays(relayUrls, finalOpts);
+    const connectedRelayUrls = await this.#fetcherBase.ensureRelays(relayUrls, finalOpts);
 
     const [tx, chIter] = Channel.make<NostrEvent>();
     const globalSeenEventIds = new Set<string>();
     const initialUntil = timeRangeFilter.until ?? currUnixtimeSec();
 
     Promise.all(
-      relayUrls.map(async (rurl) => {
+      connectedRelayUrls.map(async (rurl) => {
         let nextUntil = initialUntil;
         const localSeenEventIds = new Set<string>();
         while (true) {
@@ -267,7 +267,7 @@ export class NostrFetcher {
       ...options,
     };
 
-    await this.#fetcherBase.ensureRelays(relayUrls, finalOpts);
+    const connectedRelayUrls = await this.#fetcherBase.ensureRelays(relayUrls, finalOpts);
 
     const [tx, chIter] = Channel.make<NostrEvent>();
     const globalSeenEventIds = new Set<string>();
@@ -280,7 +280,7 @@ export class NostrFetcher {
 
     // fetch at most `limit` events from each relay
     Promise.all(
-      relayUrls.map(async (rurl) => {
+      connectedRelayUrls.map(async (rurl) => {
         let nextUntil = initialUntil;
         let remainingLimit = limit;
 
@@ -426,9 +426,7 @@ export class NostrFetcher {
       ...options,
     };
 
-    const relayUrlsNormalized = normalizeRelayUrls(relayUrls);
-
-    await this.#fetcherBase.ensureRelays(relayUrlsNormalized, finalOpts);
+    const connectedRelayUrls = await this.#fetcherBase.ensureRelays(relayUrls, finalOpts);
 
     const initialUntil = currUnixtimeSec();
     const subOpts: FetchTillEoseOptions = {
@@ -443,13 +441,13 @@ export class NostrFetcher {
     // for each pair of author and relay URL, create a Promise so that the "merger" can wait for a subscription to complete
     const deferreds = new KeyRelayMatrix(
       authors,
-      relayUrlsNormalized,
+      connectedRelayUrls,
       () => new Deferred<NostrEvent[]>()
     );
 
     // the "fetcher" fetches events from each relay
     Promise.all(
-      relayUrlsNormalized.map(async (rurl) => {
+      connectedRelayUrls.map(async (rurl) => {
         // repeat subscription until one of the following conditions is met:
         // 1. have fetched required number of events for all authors
         // 2. the relay didn't return new event
