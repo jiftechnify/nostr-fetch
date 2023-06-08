@@ -20,7 +20,7 @@ import { Relay, initRelay } from "./relay";
 export interface RelayPool {
   ensureRelays(relayUrls: string[], relayOpts: RelayOptions): Promise<Relay[]>;
   getRelayIfConnected(relayUrl: string): Relay | undefined;
-  closeAll(): void;
+  shutdown(): void;
 
   // prepareSub(
   //   relayUrls: string[],
@@ -180,7 +180,12 @@ class RelayPoolImpl implements RelayPool {
     return new RelayPoolSubscription(subId, subs);
   }
 
-  public closeAll() {
+  /**
+   * Cleans up all the internal states of the fetcher.
+   *
+   * It also closes all the connections to the relays.
+   */
+  public shutdown() {
     for (const [, r] of this.#relays) {
       if (r.state === "alive") {
         r.relay.close();

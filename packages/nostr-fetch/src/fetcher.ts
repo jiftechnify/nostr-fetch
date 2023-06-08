@@ -631,10 +631,10 @@ export class NostrFetcher {
   }
 
   /**
-   * Closes all the connections to relays and clean up the internal relay pool.
+   * Cleans up all the internal states of the fetcher.
    */
   public shutdown() {
-    this.#fetcherBase.closeAll();
+    this.#fetcherBase.shutdown();
   }
 }
 

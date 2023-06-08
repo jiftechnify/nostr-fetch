@@ -32,9 +32,9 @@ export interface NostrFetcherBase {
   ensureRelays(relayUrls: string[], options: EnsureRelaysOptions): Promise<string[]>;
 
   /**
-   * Closes all the connections to relays and clean up the internal relay pool.
+   * Cleans up all the internal states of the fetcher.
    */
-  closeAll(): void;
+  shutdown(): void;
 
   /**
    * Fetches Nostr events matching `filters` from the relay specified by `relayUrl` until EOSE.
