@@ -39,8 +39,8 @@ export class DefaultFetcherBase implements NostrFetcherBase {
   /**
    * Closes all the connections to relays and clean up the internal relay pool.
    */
-  public closeAll(): void {
-    this.#relayPool.closeAll();
+  public shutdown(): void {
+    this.#relayPool.shutdown();
   }
 
   /**

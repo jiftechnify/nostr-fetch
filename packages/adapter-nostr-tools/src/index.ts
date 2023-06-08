@@ -304,11 +304,11 @@ class SimplePoolExt implements NostrFetcherBase {
   }
 
   /**
-   * Cleans up the internal relay pool.
+   * Cleans up all the internal states of the fetcher.
    *
-   * It actually doesn't close any connections to relays, because other codes may reuse them.
+   * It doesn't close any connections to relays, because other codes may reuse them.
    */
-  public closeAll(): void {
+  public shutdown(): void {
     // just clear extra refs to `RelayExt`s
     this.#relays.clear();
   }
