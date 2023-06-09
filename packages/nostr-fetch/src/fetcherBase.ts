@@ -7,6 +7,7 @@ import type {
 import type { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
 import { emptyAsyncGen } from "@nostr-fetch/kernel/utils";
 
+import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
 import type { RelayPoolOptions } from "./relayPool";
 import { RelayPool, initRelayPool } from "./relayPool";
 
@@ -15,12 +16,12 @@ import { RelayPool, initRelayPool } from "./relayPool";
  */
 export class DefaultFetcherBase implements NostrFetcherBase {
   #relayPool: RelayPool;
-  #logForDebug: typeof console.log | undefined;
+  #debugLogger: DebugLogger | undefined;
 
   public constructor(options: RelayPoolOptions) {
     this.#relayPool = initRelayPool(options);
-    if (options.enableDebugLog) {
-      this.#logForDebug = console.log;
+    if (options.minLogLevel === "none") {
+      this.#debugLogger = new DebugLogger(options.minLogLevel);
     }
   }
 
@@ -90,7 +91,8 @@ export class DefaultFetcherBase implements NostrFetcherBase {
     });
     sub.on("eose", ({ aborted }) => {
       if (aborted) {
-        this.#logForDebug?.(
+        this.#debugLogger?.log(
+          "info",
           `[${relay.url}] subscription (id: ${sub.subId}) aborted before EOSE due to timeout`
         );
       }
@@ -102,7 +104,8 @@ export class DefaultFetcherBase implements NostrFetcherBase {
 
     // handle abortion
     options.abortSignal?.addEventListener("abort", () => {
-      this.#logForDebug?.(
+      this.#debugLogger?.log(
+        "info",
         `[${relay.url}] subscription (id: ${sub.subId}) aborted via AbortController`
       );
 

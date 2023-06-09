@@ -1,4 +1,5 @@
 import { Channel } from "@nostr-fetch/kernel/channel";
+import { DebugLogger, LogLevel } from "@nostr-fetch/kernel/debugLogger";
 import type { FetchTillEoseOptions, NostrFetcherBase } from "@nostr-fetch/kernel/fetcherBase";
 import { NostrEvent, generateSubId, type Filter } from "@nostr-fetch/kernel/nostr";
 import type {
@@ -230,11 +231,11 @@ const withTimeout = async <T>(
 };
 
 type SimplePoolExtOptions = {
-  enableDebugLog?: boolean;
+  minLogLevel?: LogLevel;
 };
 
 const defaultExtOptions: Required<SimplePoolExtOptions> = {
-  enableDebugLog: false,
+  minLogLevel: "none",
 };
 
 class SimplePoolExt implements NostrFetcherBase {
@@ -244,12 +245,12 @@ class SimplePoolExt implements NostrFetcherBase {
   // keys are **normalized** relay URLs.
   #relays: Map<string, ToolsRelayExt> = new Map();
 
-  #logForDebug: typeof console.log | undefined;
+  #debugLogger: DebugLogger | undefined;
 
   constructor(sp: SimplePool, options: Required<SimplePoolExtOptions>) {
     this.#simplePool = sp;
-    if (options.enableDebugLog) {
-      this.#logForDebug = console.log;
+    if (options.minLogLevel !== "none") {
+      this.#debugLogger = new DebugLogger(options.minLogLevel);
     }
   }
 
@@ -270,10 +271,12 @@ class SimplePoolExt implements NostrFetcherBase {
       const r = await this.#simplePool.ensureRelay(rurl);
 
       // setup debug log
-      r.on("disconnect", () => this.#logForDebug?.(`[${rurl}] disconnected`));
-      r.on("error", () => this.#logForDebug?.(`[${rurl}] WebSocket error`));
-      r.on("notice", (notice) => this.#logForDebug?.(`[${rurl}] NOTICE: ${notice}`));
-      r.on("auth", () => this.#logForDebug?.(`[${rurl}] received AUTH challange (ignoring)`));
+      r.on("disconnect", () => this.#debugLogger?.log("info", `[${rurl}] disconnected`));
+      r.on("error", () => this.#debugLogger?.log("error", `[${rurl}] WebSocket error`));
+      r.on("notice", (notice) => this.#debugLogger?.log("warn", `[${rurl}] NOTICE: ${notice}`));
+      r.on("auth", () =>
+        this.#debugLogger?.log("warn", `[${rurl}] received AUTH challange (ignoring)`)
+      );
 
       return new ToolsRelayExt(rurl, r);
     };
@@ -361,7 +364,8 @@ class SimplePoolExt implements NostrFetcherBase {
     });
     sub.on("eose", ({ aborted }) => {
       if (aborted) {
-        this.#logForDebug?.(
+        this.#debugLogger?.log(
+          "info",
           `[${relay.url}] subscription (id: ${sub.subId}) aborted before EOSE due to timeout`
         );
       }
@@ -373,7 +377,8 @@ class SimplePoolExt implements NostrFetcherBase {
 
     // handle abortion
     options.abortSignal?.addEventListener("abort", () => {
-      this.#logForDebug?.(
+      this.#debugLogger?.log(
+        "info",
         `[${relay.url}] subscription (id: ${sub.subId}) aborted via AbortController`
       );
 

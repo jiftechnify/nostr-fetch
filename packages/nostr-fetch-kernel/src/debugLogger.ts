@@ -1,5 +1,5 @@
 type BasicLogLevel = "verbose" | "info" | "warn" | "error";
-type LogLevel = BasicLogLevel | "all" | "none";
+export type LogLevel = BasicLogLevel | "all" | "none";
 
 const scoreForlogLevel = {
   all: 0,

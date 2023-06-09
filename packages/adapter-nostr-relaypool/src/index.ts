@@ -1,4 +1,5 @@
 import { Channel } from "@nostr-fetch/kernel/channel";
+import { DebugLogger, LogLevel } from "@nostr-fetch/kernel/debugLogger";
 import type {
   EnsureRelaysOptions,
   FetchTillEoseOptions,
@@ -28,11 +29,11 @@ type NRTPoolListenersTable = {
 };
 
 type NRTPoolAdapterOptions = {
-  enableDebugLog?: boolean;
+  minLogLevel?: LogLevel;
 };
 
 const defaultOptions: Required<NRTPoolAdapterOptions> = {
-  enableDebugLog: false,
+  minLogLevel: "none",
 };
 
 class NRTPoolAdapter implements NostrFetcherBase {
@@ -47,7 +48,7 @@ class NRTPoolAdapter implements NostrFetcherBase {
     auth: new Map(),
   };
 
-  #logForDebug: typeof console.log | undefined;
+  #debugLogger: DebugLogger | undefined;
 
   constructor(pool: RelayPool, options: Required<NRTPoolAdapterOptions>) {
     // set listeners that dispatches events to "per-relay" listeners
@@ -66,8 +67,8 @@ class NRTPoolAdapter implements NostrFetcherBase {
 
     this.#pool = pool;
 
-    if (options.enableDebugLog) {
-      this.#logForDebug = console.log;
+    if (options.minLogLevel !== "none") {
+      this.#debugLogger = new DebugLogger(options.minLogLevel);
     }
   }
 
@@ -106,16 +107,16 @@ class NRTPoolAdapter implements NostrFetcherBase {
           // setup debug log
           // listener for notice/error will be overwritten in fetchTillEose
           this.addListener(rurl, "disconnect", (msg) =>
-            this.#logForDebug?.(`[${rurl}] disconnected: ${msg}`)
+            this.#debugLogger?.log("info", `[${rurl}] disconnected: ${msg}`)
           );
           this.addListener(rurl, "error", (msg) => {
-            this.#logForDebug?.(`[${rurl}] Websocket error: ${msg}`);
+            this.#debugLogger?.log("error", `[${rurl}] Websocket error: ${msg}`);
           });
           this.addListener(rurl, "notice", (msg) => {
-            this.#logForDebug?.(`[${rurl}] NOTICE: ${msg}`);
+            this.#debugLogger?.log("warn", `[${rurl}] NOTICE: ${msg}`);
           });
           this.addListener(rurl, "auth", () =>
-            this.#logForDebug?.(`[${rurl}] received AUTH challange (ignoring)`)
+            this.#debugLogger?.log("warn", `[${rurl}] received AUTH challange (ignoring)`)
           );
           resolve(rurl);
         });
@@ -221,7 +222,7 @@ class NRTPoolAdapter implements NostrFetcherBase {
 
     // common process for subscription abortion
     const abortSub = (debugMsg: string) => {
-      this.#logForDebug?.(debugMsg);
+      this.#debugLogger?.log("info", debugMsg);
       unsub();
       tx.close();
       removeRelayListeners();

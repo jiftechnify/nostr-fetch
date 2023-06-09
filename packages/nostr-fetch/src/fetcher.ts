@@ -1,5 +1,6 @@
 import { Channel, Deferred } from "@nostr-fetch/kernel/channel";
 import { verifyEventSig } from "@nostr-fetch/kernel/crypto";
+import { DebugLogger, LogLevel } from "@nostr-fetch/kernel/debugLogger";
 import type { FetchTillEoseOptions, NostrFetcherBase } from "@nostr-fetch/kernel/fetcherBase";
 import type { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
 import { currUnixtimeSec } from "@nostr-fetch/kernel/utils";
@@ -10,11 +11,11 @@ export type FetchFilter = Omit<Filter, "limit" | "since" | "until">;
 export type FetchTimeRangeFilter = Pick<Filter, "since" | "until">;
 
 export type FetcherInitOptions = {
-  enableDebugLog?: boolean;
+  minLogLevel?: LogLevel;
 };
 
 const defaultFetcherInitOptions: Required<FetcherInitOptions> = {
-  enableDebugLog: false,
+  minLogLevel: "none",
 };
 
 const MAX_LIMIT_PER_REQ = 5000;
@@ -65,13 +66,13 @@ export class NostrFetchError extends Error {
 export class NostrFetcher {
   // #relayPool: RelayPoolHandle;
   #fetcherBase: NostrFetcherBase;
-  #logForDebug: typeof console.log | undefined;
+  #debugLogger: DebugLogger | undefined;
 
   private constructor(fetcherBase: NostrFetcherBase, initOpts: Required<FetcherInitOptions>) {
     this.#fetcherBase = fetcherBase;
 
-    if (initOpts.enableDebugLog) {
-      this.#logForDebug = console.log;
+    if (initOpts.minLogLevel !== "none") {
+      this.#debugLogger = new DebugLogger(initOpts.minLogLevel);
     }
   }
 
@@ -176,11 +177,11 @@ export class NostrFetcher {
           }
 
           if (finalOpts.abortSignal?.aborted) {
-            this.#logForDebug?.(`[${rurl}] aborted`);
+            this.#debugLogger?.log("info", `[${rurl}] aborted`);
             break;
           }
           if (numNewEvents === 0) {
-            this.#logForDebug?.(`[${rurl}] got ${localSeenEventIds.size} events`);
+            this.#debugLogger?.log("info", `[${rurl}] got ${localSeenEventIds.size} events`);
             break;
           }
           // set next `until` to `created_at` of the oldest event returned in this time.
@@ -317,13 +318,13 @@ export class NostrFetcher {
           }
 
           if (finalOpts.abortSignal?.aborted) {
-            this.#logForDebug?.(`[${rurl}] aborted`);
+            this.#debugLogger?.log("info", `[${rurl}] aborted`);
             break;
           }
 
           remainingLimit -= numNewEvents;
           if (numNewEvents === 0 || remainingLimit <= 0) {
-            this.#logForDebug?.(`[${rurl}] got ${localSeenEventIds.size} events`);
+            this.#debugLogger?.log("info", `[${rurl}] got ${localSeenEventIds.size} events`);
             break;
           }
 
@@ -434,7 +435,6 @@ export class NostrFetcher {
       // skip "full" verification if `reduceVerification` is enabled
       skipVerification: finalOpts.skipVerification || finalOpts.reduceVerification,
     };
-    this.#logForDebug?.(finalOpts, subOpts);
 
     const [tx, chIter] = Channel.make<{ author: string; events: NostrEvent[] }>();
 
@@ -461,23 +461,27 @@ export class NostrFetcher {
         // resolve() is called even if a Promise is already resolved, but it's not a problem.
         const resolveAllOnEarlyReturn = () => {
           for (const pk of authors) {
-            this.#logForDebug?.(`[${rurl}] resolving bucket on early return: author=${pk}`);
+            this.#debugLogger?.log(
+              "verbose",
+              `[${rurl}] resolving bucket on early return: author=${pk}`
+            );
             deferreds.get(pk, rurl)?.resolve(evBucketsPerAuthor.getBucket(pk) ?? []);
           }
         };
 
         while (true) {
-          this.#logForDebug?.(`[${rurl}] nextUntil=${nextUntil}`);
+          this.#debugLogger?.log("verbose", `[${rurl}] nextUntil=${nextUntil}`);
 
           const { keys: nextAuthors, limit: nextLimit } =
             evBucketsPerAuthor.calcKeysAndLimitForNextReq();
-          this.#logForDebug?.(
+          this.#debugLogger?.log(
+            "verbose",
             `[${rurl}] calcKeysAndLimitForNextReq result: authors=${nextAuthors}, limit=${nextLimit}`
           );
 
           if (nextAuthors.length === 0) {
             // termination condition 1
-            this.#logForDebug?.(`[${rurl}] fulfilled buckets for all authors`);
+            this.#debugLogger?.log("verbose", `[${rurl}] fulfilled buckets for all authors`);
             break;
           }
 
@@ -489,7 +493,7 @@ export class NostrFetcher {
               limit: Math.min(nextLimit, MAX_LIMIT_PER_REQ),
             };
           });
-          this.#logForDebug?.(`[${rurl}] refinedFilters=%O`, refinedFilters);
+          this.#debugLogger?.log("verbose", `[${rurl}] refinedFilters=%O`, refinedFilters);
 
           let gotNewEvent = false;
           let oldestCreatedAt = Number.MAX_SAFE_INTEGER;
@@ -509,20 +513,23 @@ export class NostrFetcher {
                 // notify that event fetching is completed for the author at this relay
                 // by resolveing the Promise corresponds to the author and the relay
                 deferreds.get(e.pubkey, rurl)?.resolve(addRes.events);
-                this.#logForDebug?.(`[${rurl}] fulfilled a bucket. author=${e.pubkey}`);
+                this.#debugLogger?.log(
+                  "verbose",
+                  `[${rurl}] fulfilled a bucket. author=${e.pubkey}`
+                );
               }
             }
           }
 
           if (!gotNewEvent) {
             // termination condition 2
-            this.#logForDebug?.(`[${rurl}] got ${localSeenEventIds.size} events`);
+            this.#debugLogger?.log("info", `[${rurl}] got ${localSeenEventIds.size} events`);
             resolveAllOnEarlyReturn();
             break;
           }
           if (finalOpts.abortSignal?.aborted) {
             // termination condition 3
-            this.#logForDebug?.(`[${rurl}]`);
+            this.#debugLogger?.log("info", `[${rurl}] aborted`);
             resolveAllOnEarlyReturn();
             break;
           }
@@ -540,7 +547,7 @@ export class NostrFetcher {
         const evsPerRelay = await Promise.all(
           deferreds.itemsByKey(pubkey)?.map((d) => d.promise) ?? []
         );
-        this.#logForDebug?.(`[${pubkey}] fulfilled all buckets for author`);
+        this.#debugLogger?.log("verbose", `[${pubkey}] fulfilled all buckets for author`);
 
         // merge and sort
         const evsDeduped = (() => {
