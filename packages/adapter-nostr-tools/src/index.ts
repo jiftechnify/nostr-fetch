@@ -11,7 +11,12 @@ import type {
   Subscription,
   SubscriptionOptions,
 } from "@nostr-fetch/kernel/relayTypes";
-import { emptyAsyncGen, normalizeRelayUrl, normalizeRelayUrls } from "@nostr-fetch/kernel/utils";
+import {
+  emptyAsyncGen,
+  normalizeRelayUrl,
+  normalizeRelayUrls,
+  withTimeout,
+} from "@nostr-fetch/kernel/utils";
 
 import type { SimplePool, Relay as ToolsRelay, Sub as ToolsSub } from "nostr-tools";
 
@@ -212,23 +217,6 @@ class ToolsRelayExt {
     this.#toolsRelay.off(type, cb as any);
   }
 }
-
-// attach timeout to the `promise`
-const withTimeout = async <T>(
-  promise: Promise<T>,
-  timeoutMs: number,
-  msgOnTimeout: string
-): Promise<T> => {
-  const timeoutAborter = new AbortController();
-  const timeout = new Promise<T>((_, reject) => {
-    setTimeout(() => reject(Error(msgOnTimeout)), timeoutMs);
-    timeoutAborter.signal.addEventListener("abort", () => reject());
-  });
-
-  const t = await Promise.race([promise, timeout]);
-  timeoutAborter.abort();
-  return t;
-};
 
 type SimplePoolExtOptions = {
   minLogLevel?: LogLevel;

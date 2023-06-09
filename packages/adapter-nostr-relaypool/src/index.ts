@@ -6,10 +6,9 @@ import type {
   NostrFetcherBase,
 } from "@nostr-fetch/kernel/fetcherBase";
 import type { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
-import { normalizeRelayUrls } from "@nostr-fetch/kernel/utils";
+import { normalizeRelayUrls, withTimeout } from "@nostr-fetch/kernel/utils";
 
 import type { RelayPool } from "nostr-relaypool";
-import { withTimeout } from "./utils";
 
 type NRTPoolNoticeCb = (msg: string) => void;
 type NRTPoolErrorCb = (err: string) => void;

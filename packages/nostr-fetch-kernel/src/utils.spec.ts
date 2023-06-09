@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { abbreviate, normalizeRelayUrl, normalizeRelayUrls } from "./utils";
+import { abbreviate, normalizeRelayUrl, normalizeRelayUrls, withTimeout } from "./utils";
 
 describe("normalizeRelayUrl", () => {
   test("normalizes a relay url", () => {
@@ -58,5 +58,37 @@ describe("abbreviate", () => {
     for (const affixLen of cases) {
       expect(abbreviate("1234_abcd", affixLen)).toBe("1234_abcd");
     }
+  });
+});
+
+describe("withTimeout", () => {
+  test.concurrent("timeouts", () => {
+    const promise = new Promise((resolve) =>
+      setTimeout(() => {
+        resolve("ok");
+      }, 5000)
+    );
+    return expect(withTimeout(promise, 3000, "timed out!")).rejects.toThrow("timed out!");
+  });
+
+  test.concurrent(
+    "resolves with original value if original promise resolves before timeout",
+    () => {
+      const promise = new Promise((resolve) =>
+        setTimeout(() => {
+          resolve("ok");
+        }, 1000)
+      );
+      return expect(withTimeout(promise, 3000, "timed out!")).resolves.toBe("ok");
+    }
+  );
+
+  test.concurrent("rejects with original error if original promise rejects before timeout", () => {
+    const promise = new Promise((_, reject) =>
+      setTimeout(() => {
+        reject("err");
+      }, 1000)
+    );
+    return expect(withTimeout(promise, 3000, "timed out!")).rejects.toThrow("err");
   });
 });

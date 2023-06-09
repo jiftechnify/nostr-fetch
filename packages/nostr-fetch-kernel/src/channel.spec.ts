@@ -66,13 +66,13 @@ describe("channel", () => {
       n++;
     }, 0);
 
-    expect(async () => {
+    await expect(async () => {
       const res = [];
       for await (const d of chIter) {
         res.push(d);
       }
       return res;
-    }).rejects.toThrowError("rejects 5!");
+    }).rejects.toThrow("rejects 5!");
   });
 
   test.concurrent("can't be iterated multiple times", async () => {
@@ -95,8 +95,8 @@ describe("channel", () => {
         res.push(n);
       }
     };
-    expect(async () => {
+    await expect(async () => {
       await Promise.all([iterate(chIter), iterate(chIter)]);
-    }).rejects.toThrowError("Iterating a single channel in multiple location is not allowed");
+    }).rejects.toThrow("Iterating a single channel in multiple location is not allowed");
   });
 });

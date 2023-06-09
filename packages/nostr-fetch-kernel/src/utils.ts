@@ -62,3 +62,24 @@ export const abbreviate = (s: string, affixLen: number): string => {
   const len = s.length;
   return `${s.slice(0, affixLen)}:${s.slice(len - affixLen)}`;
 };
+
+/**
+ * Attaches timeout to the `promise`.
+ *
+ * If the `promise` is not settled by the time limit, returned promise rejects with the error which has the specified message.
+ */
+export const withTimeout = async <T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  msgOnTimeout: string
+): Promise<T> => {
+  const timeoutAborter = new AbortController();
+  const timeout = new Promise<T>((_, reject) => {
+    setTimeout(() => reject(Error(msgOnTimeout)), timeoutMs);
+    timeoutAborter.signal.addEventListener("abort", () => reject());
+  });
+
+  const t = await Promise.race([promise, timeout]);
+  timeoutAborter.abort();
+  return t;
+};
