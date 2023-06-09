@@ -62,7 +62,6 @@ const defaultFetchLatestOptions: Required<FetchLatestOptions> = {
 };
 
 export class NostrFetcher {
-  // #relayPool: RelayPoolHandle;
   #fetcherBase: NostrFetcherBase;
   #debugLogger: DebugLogger | undefined;
 

@@ -268,15 +268,15 @@ class SimplePoolExt implements NostrFetcherBase {
     const normalizedUrls = normalizeRelayUrls(relayUrls);
 
     const ensure = async (rurl: string) => {
+      const logger = this.#debugLogger?.subLogger(rurl);
+
       const r = await this.#simplePool.ensureRelay(rurl);
 
       // setup debug log
-      r.on("disconnect", () => this.#debugLogger?.log("info", `[${rurl}] disconnected`));
-      r.on("error", () => this.#debugLogger?.log("error", `[${rurl}] WebSocket error`));
-      r.on("notice", (notice) => this.#debugLogger?.log("warn", `[${rurl}] NOTICE: ${notice}`));
-      r.on("auth", () =>
-        this.#debugLogger?.log("warn", `[${rurl}] received AUTH challange (ignoring)`)
-      );
+      r.on("disconnect", () => logger?.log("info", `disconnected`));
+      r.on("error", () => logger?.log("error", `WebSocket error`));
+      r.on("notice", (notice) => logger?.log("warn", `NOTICE: ${notice}`));
+      r.on("auth", () => logger?.log("warn", `received AUTH challange (ignoring)`));
 
       return new ToolsRelayExt(rurl, r);
     };
@@ -331,10 +331,13 @@ class SimplePoolExt implements NostrFetcherBase {
     filters: Filter[],
     options: FetchTillEoseOptions
   ): AsyncIterable<NostrEvent> {
+    const logger = this.#debugLogger?.subLogger(relayUrl);
+
     const [tx, chIter] = Channel.make<NostrEvent>();
 
     const relay = this.getRelayExtIfConnected(relayUrl);
     if (relay === undefined) {
+      logger?.log("warn", "not connected");
       return emptyAsyncGen();
     }
 
@@ -364,12 +367,8 @@ class SimplePoolExt implements NostrFetcherBase {
     });
     sub.on("eose", ({ aborted }) => {
       if (aborted) {
-        this.#debugLogger?.log(
-          "info",
-          `[${relay.url}] subscription (id: ${sub.subId}) aborted before EOSE due to timeout`
-        );
+        logger?.log("info", `subscription (id: ${sub.subId}) aborted before EOSE due to timeout`);
       }
-
       sub.close();
       tx.close();
       removeRelayListeners();
@@ -377,10 +376,7 @@ class SimplePoolExt implements NostrFetcherBase {
 
     // handle abortion
     options.abortSignal?.addEventListener("abort", () => {
-      this.#debugLogger?.log(
-        "info",
-        `[${relay.url}] subscription (id: ${sub.subId}) aborted via AbortController`
-      );
+      logger?.log("info", `subscription (id: ${sub.subId}) aborted via AbortController`);
 
       sub.close();
       tx.close();

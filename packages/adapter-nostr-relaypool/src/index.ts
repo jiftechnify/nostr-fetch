@@ -101,22 +101,24 @@ class NRTPoolAdapter implements NostrFetcherBase {
 
     const ensure = (rurl: string) =>
       new Promise<string>((resolve, reject) => {
+        const logger = this.#debugLogger?.subLogger(rurl);
+
         const r = this.#pool.addOrGetRelay(rurl);
 
         r.on("connect", () => {
           // setup debug log
           // listener for notice/error will be overwritten in fetchTillEose
           this.addListener(rurl, "disconnect", (msg) =>
-            this.#debugLogger?.log("info", `[${rurl}] disconnected: ${msg}`)
+            logger?.log("info", `disconnected: ${msg}`)
           );
           this.addListener(rurl, "error", (msg) => {
-            this.#debugLogger?.log("error", `[${rurl}] Websocket error: ${msg}`);
+            logger?.log("error", `Websocket error: ${msg}`);
           });
           this.addListener(rurl, "notice", (msg) => {
-            this.#debugLogger?.log("warn", `[${rurl}] NOTICE: ${msg}`);
+            logger?.log("warn", `NOTICE: ${msg}`);
           });
           this.addListener(rurl, "auth", () =>
-            this.#debugLogger?.log("warn", `[${rurl}] received AUTH challange (ignoring)`)
+            logger?.log("warn", "received AUTH challange (ignoring)")
           );
           resolve(rurl);
         });
@@ -143,7 +145,7 @@ class NRTPoolAdapter implements NostrFetcherBase {
           connectedRelays.push(r.value);
           break;
         case "rejected":
-          console.error(r.reason);
+          this.#debugLogger?.log("error", r.reason);
           break;
       }
     }
@@ -176,6 +178,8 @@ class NRTPoolAdapter implements NostrFetcherBase {
     filters: Filter[],
     options: FetchTillEoseOptions
   ): AsyncIterable<NostrEvent> {
+    const logger = this.#debugLogger?.subLogger(relayUrl);
+
     const [tx, chIter] = Channel.make<NostrEvent>();
 
     // error handlings
@@ -222,7 +226,8 @@ class NRTPoolAdapter implements NostrFetcherBase {
 
     // common process for subscription abortion
     const abortSub = (debugMsg: string) => {
-      this.#debugLogger?.log("info", debugMsg);
+      logger?.log("info", debugMsg);
+
       unsub();
       tx.close();
       removeRelayListeners();
@@ -236,17 +241,17 @@ class NRTPoolAdapter implements NostrFetcherBase {
         subAutoAbortTimer = undefined;
       }
       subAutoAbortTimer = setTimeout(() => {
-        abortSub(`[${relayUrl}] subscription aborted before EOSE due to timeout`);
+        abortSub(`subscription aborted before EOSE due to timeout`);
       }, options.abortSubBeforeEoseTimeoutMs);
     };
     resetAutoAbortTimer(); // initiate subscription auto abortion timer
 
     // handle abortion by AbortController
     if (options.abortSignal?.aborted) {
-      abortSub(`[${relayUrl}] subscription aborted by AbortController`);
+      abortSub(`subscription aborted by AbortController`);
     }
     options.abortSignal?.addEventListener("abort", () => {
-      abortSub(`[${relayUrl}] subscription aborted by AbortController`);
+      abortSub(`subscription aborted by AbortController`);
     });
 
     return chIter;
