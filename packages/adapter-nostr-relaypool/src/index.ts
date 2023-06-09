@@ -184,26 +184,29 @@ class NRTPoolAdapter implements NostrFetcherBase {
     // error handlings
     const onNotice = (msg: string) => {
       tx.error(Error(`NOTICE: ${JSON.stringify(msg)}`));
+      removeRelayListeners();
     };
     const onError = (msg: string) => {
       tx.error(Error(`ERROR: ${msg}`));
+      removeRelayListeners();
     };
     const removeRelayListeners = () => {
       this.removeListener(relayUrl, "notice");
       this.removeListener(relayUrl, "error");
     };
+
     this.addListener(relayUrl, "notice", onNotice);
     this.addListener(relayUrl, "error", onError);
 
     // if "relay" is set, that filter will be requested only from that relay
     // it's the very behavior we want here!
-    const relayedFilters = filters.map((f) => {
+    const filtersWithRelay = filters.map((f) => {
       return { ...f, relay: relayUrl };
     });
 
     // subscribe
     const unsub = this.#pool.subscribe(
-      relayedFilters,
+      filtersWithRelay,
       // relays
       [],
       // onEvent

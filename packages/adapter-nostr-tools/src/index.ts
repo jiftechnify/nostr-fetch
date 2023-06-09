@@ -353,22 +353,29 @@ class SimplePoolExt implements NostrFetcherBase {
     sub.on("event", (ev: NostrEvent) => {
       tx.send(ev);
     });
+
+    // common process to close subscription
+    const closeSub = () => {
+      sub.close();
+      tx.close();
+      removeRelayListeners();
+    };
+
     sub.on("eose", ({ aborted }) => {
       if (aborted) {
         logger?.log("info", `subscription (id: ${sub.subId}) aborted before EOSE due to timeout`);
       }
-      sub.close();
-      tx.close();
-      removeRelayListeners();
+      closeSub();
     });
 
-    // handle abortion
+    // handle abortion by AbortController
+    if (options.abortSignal?.aborted) {
+      logger?.log("info", `subscription (id: ${sub.subId}) aborted by AbortController`);
+      closeSub();
+    }
     options.abortSignal?.addEventListener("abort", () => {
-      logger?.log("info", `subscription (id: ${sub.subId}) aborted via AbortController`);
-
-      sub.close();
-      tx.close();
-      removeRelayListeners();
+      logger?.log("info", `subscription (id: ${sub.subId}) aborted by AbortController`);
+      closeSub();
     });
 
     // start the subscription

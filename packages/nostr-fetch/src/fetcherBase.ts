@@ -58,6 +58,8 @@ export class DefaultFetcherBase implements NostrFetcherBase {
     filters: Filter[],
     options: FetchTillEoseOptions
   ): AsyncIterable<NostrEvent> {
+    const logger = this.#debugLogger?.subLogger(relayUrl);
+
     const [tx, chIter] = Channel.make<NostrEvent>();
 
     const relay = this.#relayPool.getRelayIfConnected(relayUrl);
@@ -89,29 +91,29 @@ export class DefaultFetcherBase implements NostrFetcherBase {
     sub.on("event", (ev: NostrEvent) => {
       tx.send(ev);
     });
-    sub.on("eose", ({ aborted }) => {
-      if (aborted) {
-        this.#debugLogger?.log(
-          "info",
-          `[${relay.url}] subscription (id: ${sub.subId}) aborted before EOSE due to timeout`
-        );
-      }
 
+    // common process to close subscription
+    const closeSub = () => {
       sub.close();
       tx.close();
       removeRelayListeners();
+    };
+
+    sub.on("eose", ({ aborted }) => {
+      if (aborted) {
+        logger?.log("info", `subscription (id: ${sub.subId}) aborted before EOSE due to timeout`);
+      }
+      closeSub();
     });
 
     // handle abortion
+    if (options.abortSignal?.aborted) {
+      logger?.log("info", `subscription (id: ${sub.subId}) aborted by AbortController`);
+      closeSub();
+    }
     options.abortSignal?.addEventListener("abort", () => {
-      this.#debugLogger?.log(
-        "info",
-        `[${relay.url}] subscription (id: ${sub.subId}) aborted via AbortController`
-      );
-
-      sub.close();
-      tx.close();
-      removeRelayListeners();
+      logger?.log("info", `subscription (id: ${sub.subId}) aborted by AbortController`);
+      closeSub();
     });
 
     // start the subscription
