@@ -48,3 +48,17 @@ export const normalizeRelayUrls = (relayUrls: string[]): string[] => {
 export async function* emptyAsyncGen() {
   return;
 }
+
+/**
+ * Abbreviates strings as:
+ * <first `affixLen` chars of `s`> + ":" + <last `affixLen` charas of `s`>
+ *
+ * if `s.length` is less than `affixLen * 2` or `affixLen` is not positive, just returns original string.
+ */
+export const abbreviate = (s: string, affixLen: number): string => {
+  if (s.length <= affixLen * 2 || affixLen <= 0) {
+    return s;
+  }
+  const len = s.length;
+  return `${s.slice(0, affixLen)}:${s.slice(len - affixLen)}`;
+};

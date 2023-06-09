@@ -3,7 +3,7 @@ import { verifyEventSig } from "@nostr-fetch/kernel/crypto";
 import { DebugLogger, LogLevel } from "@nostr-fetch/kernel/debugLogger";
 import type { FetchTillEoseOptions, NostrFetcherBase } from "@nostr-fetch/kernel/fetcherBase";
 import type { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
-import { currUnixtimeSec } from "@nostr-fetch/kernel/utils";
+import { abbreviate, currUnixtimeSec } from "@nostr-fetch/kernel/utils";
 
 import { DefaultFetcherBase } from "./fetcherBase";
 
@@ -134,6 +134,7 @@ export class NostrFetcher {
       ...defaultFetchOptions,
       ...options,
     };
+    this.#debugLogger?.log("verbose", "finalOpts: %O", finalOpts);
 
     const connectedRelayUrls = await this.#fetcherBase.ensureRelays(relayUrls, finalOpts);
 
@@ -141,10 +142,18 @@ export class NostrFetcher {
     const globalSeenEventIds = new Set<string>();
     const initialUntil = timeRangeFilter.until ?? currUnixtimeSec();
 
+    // fetch events from each relay
     Promise.all(
       connectedRelayUrls.map(async (rurl) => {
+        // repeat subscription until one of the following conditions is met:
+        // 1. the relay didn't return new event
+        // 2. aborted by AbortController
+
+        const logger = this.#debugLogger?.subLogger(rurl);
+
         let nextUntil = initialUntil;
         const localSeenEventIds = new Set<string>();
+
         while (true) {
           const refinedFilters = filters.map((filter) => {
             return {
@@ -156,14 +165,15 @@ export class NostrFetcher {
               limit: Math.min(finalOpts.limitPerReq, MAX_LIMIT_PER_REQ),
             };
           });
+          logger?.log("verbose", "refinedFilters: %O", refinedFilters);
 
-          let numNewEvents = 0;
+          let gotNewEvent = false;
           let oldestCreatedAt = Number.MAX_SAFE_INTEGER;
 
           for await (const e of this.#fetcherBase.fetchTillEose(rurl, refinedFilters, finalOpts)) {
             // eliminate duplicated events
             if (!localSeenEventIds.has(e.id)) {
-              numNewEvents++;
+              gotNewEvent = true;
               localSeenEventIds.add(e.id);
               if (e.created_at < oldestCreatedAt) {
                 oldestCreatedAt = e.created_at;
@@ -176,20 +186,24 @@ export class NostrFetcher {
             }
           }
 
-          if (finalOpts.abortSignal?.aborted) {
-            this.#debugLogger?.log("info", `[${rurl}] aborted`);
-            break;
-          }
-          if (numNewEvents === 0) {
+          if (!gotNewEvent) {
+            // termination contidion 1
             this.#debugLogger?.log("info", `[${rurl}] got ${localSeenEventIds.size} events`);
             break;
           }
+          if (finalOpts.abortSignal?.aborted) {
+            // termination contidion 2
+            this.#debugLogger?.log("info", `[${rurl}] aborted`);
+            break;
+          }
+
           // set next `until` to `created_at` of the oldest event returned in this time.
           // `+ 1` is needed to make it work collectly even if we used relays which has "exclusive" behaviour with respect to `until`.
           nextUntil = oldestCreatedAt + 1;
         }
       })
     ).then(() => {
+      // all subscription loops have been terminated
       tx.close();
     });
     return chIter;
@@ -267,24 +281,33 @@ export class NostrFetcher {
       ...defaultFetchLatestOptions,
       ...options,
     };
+    this.#debugLogger?.log("verbose", "finalOpts: %O", finalOpts);
 
-    const connectedRelayUrls = await this.#fetcherBase.ensureRelays(relayUrls, finalOpts);
-
-    const [tx, chIter] = Channel.make<NostrEvent>();
-    const globalSeenEventIds = new Set<string>();
-    const initialUntil = currUnixtimeSec();
+    // options for subscription
     const subOpts: FetchTillEoseOptions = {
       ...finalOpts,
       // skip "full" verification if `reduceVerification` is enabled
       skipVerification: finalOpts.skipVerification || finalOpts.reduceVerification,
     };
 
+    const connectedRelayUrls = await this.#fetcherBase.ensureRelays(relayUrls, finalOpts);
+
+    const [tx, chIter] = Channel.make<NostrEvent>();
+    const globalSeenEventIds = new Set<string>();
+    const initialUntil = currUnixtimeSec();
+
     // fetch at most `limit` events from each relay
     Promise.all(
       connectedRelayUrls.map(async (rurl) => {
+        // repeat subscription until one of the following conditions is met:
+        // 1. got enough amount of events
+        // 2. the relay didn't return new event
+        // 3. aborted by AbortController
+
+        const logger = this.#debugLogger?.subLogger(rurl);
+
         let nextUntil = initialUntil;
         let remainingLimit = limit;
-
         const localSeenEventIds = new Set<string>();
 
         while (true) {
@@ -297,6 +320,7 @@ export class NostrFetcher {
               limit: Math.min(remainingLimit, MAX_LIMIT_PER_REQ),
             };
           });
+          logger?.log("verbose", "refinedFilters: %O", refinedFilters);
 
           let numNewEvents = 0;
           let oldestCreatedAt = Number.MAX_SAFE_INTEGER;
@@ -317,14 +341,15 @@ export class NostrFetcher {
             }
           }
 
-          if (finalOpts.abortSignal?.aborted) {
-            this.#debugLogger?.log("info", `[${rurl}] aborted`);
-            break;
-          }
-
           remainingLimit -= numNewEvents;
           if (numNewEvents === 0 || remainingLimit <= 0) {
+            // termination condition 1, 2
             this.#debugLogger?.log("info", `[${rurl}] got ${localSeenEventIds.size} events`);
+            break;
+          }
+          if (finalOpts.abortSignal?.aborted) {
+            // termination condition 3
+            this.#debugLogger?.log("info", `[${rurl}] aborted`);
             break;
           }
 
@@ -334,10 +359,11 @@ export class NostrFetcher {
         }
       })
     ).then(() => {
+      // all subnscription loops have been terminated
       tx.close();
     });
 
-    // collect events from relays
+    // collect events from relays. events are already deduped
     const evs: NostrEvent[] = [];
     for await (const ev of chIter) {
       evs.push(ev);
@@ -348,18 +374,17 @@ export class NostrFetcher {
     if (finalOpts.skipVerification || !finalOpts.reduceVerification) {
       return evs.slice(0, limit);
     }
-
     // reduced verification: return latest `limit` events whose signature is valid
-    const res: NostrEvent[] = [];
+    const verified: NostrEvent[] = [];
     for (const ev of evs) {
       if (verifyEventSig(ev)) {
-        res.push(ev);
-        if (res.length >= limit) {
+        verified.push(ev);
+        if (verified.length >= limit) {
           break;
         }
       }
     }
-    return res;
+    return verified;
   }
 
   /**
@@ -426,20 +451,22 @@ export class NostrFetcher {
       ...defaultFetchLatestOptions,
       ...options,
     };
+    this.#debugLogger?.log("verbose", "finalOpts: %O", finalOpts);
 
-    const connectedRelayUrls = await this.#fetcherBase.ensureRelays(relayUrls, finalOpts);
-
-    const initialUntil = currUnixtimeSec();
+    // options for subscription
     const subOpts: FetchTillEoseOptions = {
       ...finalOpts,
       // skip "full" verification if `reduceVerification` is enabled
       skipVerification: finalOpts.skipVerification || finalOpts.reduceVerification,
     };
 
-    const [tx, chIter] = Channel.make<{ author: string; events: NostrEvent[] }>();
+    const connectedRelayUrls = await this.#fetcherBase.ensureRelays(relayUrls, finalOpts);
 
-    // for each pair of author and relay URL, create a Promise so that the "merger" can wait for a subscription to complete
-    const deferreds = new KeyRelayMatrix(
+    const [tx, chIter] = Channel.make<{ author: string; events: NostrEvent[] }>();
+    const initialUntil = currUnixtimeSec();
+
+    // for each pair of author and relay URL, create a promise that act as "latch", so that the "merger" can wait for a subscription to complete
+    const latches = new KeyRelayMatrix(
       authors,
       connectedRelayUrls,
       () => new Deferred<NostrEvent[]>()
@@ -453,35 +480,28 @@ export class NostrFetcher {
         // 2. the relay didn't return new event
         // 3. aborted by AbortController
 
+        const logger = this.#debugLogger?.subLogger(rurl);
+
         let nextUntil = initialUntil;
         const evBucketsPerAuthor = new EventBuckets(authors, limit);
         const localSeenEventIds = new Set<string>();
 
-        // procedure to complete the subscription in the middle on early return, resolving all remaining Promises.
+        // procedure to complete the subscription in the middle on early return, resolving all remaining promises.
         // resolve() is called even if a Promise is already resolved, but it's not a problem.
         const resolveAllOnEarlyReturn = () => {
           for (const pk of authors) {
-            this.#debugLogger?.log(
-              "verbose",
-              `[${rurl}] resolving bucket on early return: author=${pk}`
-            );
-            deferreds.get(pk, rurl)?.resolve(evBucketsPerAuthor.getBucket(pk) ?? []);
+            logger?.log("verbose", `resolving bucket on early return: author=${pk}`);
+            latches.get(pk, rurl)?.resolve(evBucketsPerAuthor.getBucket(pk) ?? []);
           }
         };
 
         while (true) {
-          this.#debugLogger?.log("verbose", `[${rurl}] nextUntil=${nextUntil}`);
-
           const { keys: nextAuthors, limit: nextLimit } =
             evBucketsPerAuthor.calcKeysAndLimitForNextReq();
-          this.#debugLogger?.log(
-            "verbose",
-            `[${rurl}] calcKeysAndLimitForNextReq result: authors=${nextAuthors}, limit=${nextLimit}`
-          );
 
           if (nextAuthors.length === 0) {
             // termination condition 1
-            this.#debugLogger?.log("verbose", `[${rurl}] fulfilled buckets for all authors`);
+            logger?.log("verbose", `fulfilled buckets for all authors`);
             break;
           }
 
@@ -493,7 +513,7 @@ export class NostrFetcher {
               limit: Math.min(nextLimit, MAX_LIMIT_PER_REQ),
             };
           });
-          this.#debugLogger?.log("verbose", `[${rurl}] refinedFilters=%O`, refinedFilters);
+          logger?.log("verbose", `refinedFilters=%O`, refinedFilters);
 
           let gotNewEvent = false;
           let oldestCreatedAt = Number.MAX_SAFE_INTEGER;
@@ -512,24 +532,21 @@ export class NostrFetcher {
               if (addRes.state === "fulfilled") {
                 // notify that event fetching is completed for the author at this relay
                 // by resolveing the Promise corresponds to the author and the relay
-                deferreds.get(e.pubkey, rurl)?.resolve(addRes.events);
-                this.#debugLogger?.log(
-                  "verbose",
-                  `[${rurl}] fulfilled a bucket. author=${e.pubkey}`
-                );
+                latches.get(e.pubkey, rurl)?.resolve(addRes.events);
+                logger?.log("verbose", `fulfilled a bucket for author=${e.pubkey}`);
               }
             }
           }
 
           if (!gotNewEvent) {
             // termination condition 2
-            this.#debugLogger?.log("info", `[${rurl}] got ${localSeenEventIds.size} events`);
+            logger?.log("info", `got ${localSeenEventIds.size} events`);
             resolveAllOnEarlyReturn();
             break;
           }
           if (finalOpts.abortSignal?.aborted) {
             // termination condition 3
-            this.#debugLogger?.log("info", `[${rurl}] aborted`);
+            logger?.log("info", `aborted`);
             resolveAllOnEarlyReturn();
             break;
           }
@@ -543,11 +560,13 @@ export class NostrFetcher {
     // merges result from relays, sorts events, takes latest events and sends it to the result channel on all event fetching for a author is completed
     Promise.all(
       authors.map(async (pubkey) => {
+        const logger = this.#debugLogger?.subLogger(abbreviate(pubkey, 6));
+
         // wait for all the buckets for the author to fulfilled
         const evsPerRelay = await Promise.all(
-          deferreds.itemsByKey(pubkey)?.map((d) => d.promise) ?? []
+          latches.itemsByKey(pubkey)?.map((d) => d.promise) ?? []
         );
-        this.#debugLogger?.log("verbose", `[${pubkey}] fulfilled all buckets for author`);
+        logger?.log("verbose", `fulfilled all buckets for this author`);
 
         // merge and sort
         const evsDeduped = (() => {
@@ -567,25 +586,27 @@ export class NostrFetcher {
         evsDeduped.sort(createdAtDesc);
 
         const res = (() => {
+          // return latest `limit` events if not "reduced verification mode"
           if (finalOpts.skipVerification || !finalOpts.reduceVerification) {
             return evsDeduped.slice(0, limit);
-          } else {
-            // reduced verification
-            const verified = [];
-            for (const ev of evsDeduped) {
-              if (verifyEventSig(ev)) {
-                verified.push(ev);
-                if (verified.length >= limit) {
-                  break;
-                }
+          }
+
+          // reduced verification: return latest `limit` events whose signature is valid
+          const verified = [];
+          for (const ev of evsDeduped) {
+            if (verifyEventSig(ev)) {
+              verified.push(ev);
+              if (verified.length >= limit) {
+                break;
               }
             }
-            return verified;
           }
+          return verified;
         })();
         tx.send({ author: pubkey, events: res });
       })
     ).then(() => {
+      // finished to fetch events for all authors
       tx.close();
     });
 
