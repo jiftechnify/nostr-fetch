@@ -62,22 +62,38 @@ type DisconnectedRelay = {
 };
 type ManagedRelay = AliveRelay | ConnectingRelay | ConnectFailedRelay | DisconnectedRelay;
 
+const WATCHDOG_INTERVAL = 15 * 1000;
+const WATCHDOG_CONN_TIMEOUT = 10 * 1000;
+
 class RelayPoolImpl implements RelayPool {
   // keys are **normalized** relay URLs
   #relays: Map<string, ManagedRelay> = new Map();
+
+  #watchdogTimer: NodeJS.Timer;
   #debugLogger: DebugLogger | undefined;
 
   constructor(options: Required<RelayPoolOptions>) {
     if (options.minLogLevel !== "none") {
       this.#debugLogger = new DebugLogger(options.minLogLevel);
     }
+
+    // initiate a watchdog timer for relay connections
+    this.#watchdogTimer = setInterval(() => {
+      this.#debugLogger?.log("info", "watchdog started");
+
+      const rurls = Array.from(this.#relays.keys());
+      this.addRelays(rurls, { connectTimeoutMs: WATCHDOG_CONN_TIMEOUT }).then(() => {
+        this.#debugLogger?.log("info", "watchdog completed");
+      });
+    }, WATCHDOG_INTERVAL);
   }
 
   private relayShouldBeReconnected(relay: ManagedRelay): boolean {
     return (
       // TODO: make the threshold configuarable
       (relay.state === "connectFailed" && currUnixtimeMilli() - relay.failedAt > 60 * 1000) ||
-      relay.state === "disconnected"
+      relay.state === "disconnected" ||
+      (relay.state === "alive" && relay.relay.wsReadyState === WebSocket.CLOSED) // is it possible?
     );
   }
 
@@ -189,6 +205,8 @@ class RelayPoolImpl implements RelayPool {
    * It also closes all the connections to the relays.
    */
   public shutdown() {
+    clearInterval(this.#watchdogTimer);
+
     for (const [, r] of this.#relays) {
       if (r.state === "alive") {
         r.relay.close();
