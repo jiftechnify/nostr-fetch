@@ -20,7 +20,7 @@ export class DefaultFetcherBase implements NostrFetcherBase {
 
   public constructor(options: RelayPoolOptions) {
     this.#relayPool = initRelayPool(options);
-    if (options.minLogLevel === "none") {
+    if (options.minLogLevel !== "none") {
       this.#debugLogger = new DebugLogger(options.minLogLevel);
     }
   }
@@ -60,12 +60,12 @@ export class DefaultFetcherBase implements NostrFetcherBase {
   ): AsyncIterable<NostrEvent> {
     const logger = this.#debugLogger?.subLogger(relayUrl);
 
-    const [tx, chIter] = Channel.make<NostrEvent>();
-
     const relay = this.#relayPool.getRelayIfConnected(relayUrl);
     if (relay === undefined) {
       return emptyAsyncGen();
     }
+
+    const [tx, chIter] = Channel.make<NostrEvent>();
 
     // error handlings
     const onNotice = (n: unknown) => {
@@ -97,6 +97,7 @@ export class DefaultFetcherBase implements NostrFetcherBase {
       sub.close();
       tx.close();
       removeRelayListeners();
+      logger?.log("verbose", `CLOSE: subId=${options.subId ?? "<auto>"}`);
     };
 
     sub.on("eose", ({ aborted }) => {
@@ -117,6 +118,7 @@ export class DefaultFetcherBase implements NostrFetcherBase {
     });
 
     // start the subscription
+    logger?.log("verbose", `REQ: subId=${options.subId ?? "<auto>"}, filters=%O`, filters);
     sub.req();
 
     return chIter;
