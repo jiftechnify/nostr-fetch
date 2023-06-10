@@ -1,3 +1,4 @@
+import { LogLevel } from "./debugLogger";
 import type { Filter, NostrEvent } from "./nostr";
 
 export type EnsureRelaysOptions = {
@@ -32,11 +33,6 @@ export interface NostrFetcherBase {
   ensureRelays(relayUrls: string[], options: EnsureRelaysOptions): Promise<string[]>;
 
   /**
-   * Cleans up all the internal states of the fetcher.
-   */
-  shutdown(): void;
-
-  /**
    * Fetches Nostr events matching `filters` from the relay specified by `relayUrl` until EOSE.
    *
    * The result is an `AsyncIterable` of Nostr events.
@@ -53,4 +49,32 @@ export interface NostrFetcherBase {
     filters: Filter[],
     options: FetchTillEoseOptions
   ): AsyncIterable<NostrEvent>;
+
+  /**
+   * Cleans up all the internal states of the fetcher.
+   */
+  shutdown(): void;
 }
+
+/**
+ * Common options for `NostrFetcher` and all `NostrFetcherBase` implementations.
+ */
+export type NostrFetcherCommonOptions = {
+  minLogLevel?: LogLevel;
+};
+
+/**
+ * Default values of `NostrFetcherCommonOptions`.
+ */
+export const defaultFetcherCommonOptions: Required<NostrFetcherCommonOptions> = {
+  minLogLevel: "warn",
+};
+
+/**
+ * Type of initializer functions of `NostrFetcherBase`s.  Takes `NostrFetcherCommonOptions` and initialize a `NostrFetcherBase` impl.
+ *
+ * A "relay pool adapter" should return initializer function of this type.
+ */
+export type NostrFetcherBaseInitializer = (
+  commonOpts: Required<NostrFetcherCommonOptions>
+) => NostrFetcherBase;

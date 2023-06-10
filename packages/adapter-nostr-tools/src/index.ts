@@ -1,6 +1,11 @@
 import { Channel } from "@nostr-fetch/kernel/channel";
-import { DebugLogger, LogLevel } from "@nostr-fetch/kernel/debugLogger";
-import type { FetchTillEoseOptions, NostrFetcherBase } from "@nostr-fetch/kernel/fetcherBase";
+import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
+import type {
+  FetchTillEoseOptions,
+  NostrFetcherBase,
+  NostrFetcherBaseInitializer,
+  NostrFetcherCommonOptions,
+} from "@nostr-fetch/kernel/fetcherBase";
 import { NostrEvent, generateSubId, type Filter } from "@nostr-fetch/kernel/nostr";
 import type {
   RelayEventCbTypes,
@@ -218,14 +223,6 @@ class ToolsRelayExt {
   }
 }
 
-type SimplePoolExtOptions = {
-  minLogLevel?: LogLevel;
-};
-
-const defaultExtOptions: Required<SimplePoolExtOptions> = {
-  minLogLevel: "warn",
-};
-
 class SimplePoolExt implements NostrFetcherBase {
   #simplePool: SimplePool;
 
@@ -235,7 +232,7 @@ class SimplePoolExt implements NostrFetcherBase {
 
   #debugLogger: DebugLogger | undefined;
 
-  constructor(sp: SimplePool, options: Required<SimplePoolExtOptions>) {
+  constructor(sp: SimplePool, options: Required<NostrFetcherCommonOptions>) {
     this.#simplePool = sp;
     if (options.minLogLevel !== "none") {
       this.#debugLogger = new DebugLogger(options.minLogLevel);
@@ -398,10 +395,8 @@ class SimplePoolExt implements NostrFetcherBase {
  * const fetcher = NostrFetcher.withCustomPool(simplePoolAdapter(pool));
  * ```
  */
-export const simplePoolAdapter = (
-  pool: SimplePool,
-  options: SimplePoolExtOptions = {}
-): NostrFetcherBase => {
-  const finalOpts = { ...defaultExtOptions, ...options };
-  return new SimplePoolExt(pool, finalOpts);
+export const simplePoolAdapter = (pool: SimplePool): NostrFetcherBaseInitializer => {
+  return (commonOpts: Required<NostrFetcherCommonOptions>) => {
+    return new SimplePoolExt(pool, commonOpts);
+  };
 };
