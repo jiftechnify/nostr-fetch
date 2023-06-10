@@ -1,9 +1,11 @@
 import { Channel } from "@nostr-fetch/kernel/channel";
-import { DebugLogger, LogLevel } from "@nostr-fetch/kernel/debugLogger";
+import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
 import type {
   EnsureRelaysOptions,
   FetchTillEoseOptions,
   NostrFetcherBase,
+  NostrFetcherBaseInitializer,
+  NostrFetcherCommonOptions,
 } from "@nostr-fetch/kernel/fetcherBase";
 import type { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
 import { normalizeRelayUrls, withTimeout } from "@nostr-fetch/kernel/utils";
@@ -27,14 +29,6 @@ type NRTPoolListenersTable = {
   [E in keyof NRTPoolEventCbs]: Map<string, NRTPoolEventCbs[E]>;
 };
 
-type NRTPoolAdapterOptions = {
-  minLogLevel?: LogLevel;
-};
-
-const defaultOptions: Required<NRTPoolAdapterOptions> = {
-  minLogLevel: "warn",
-};
-
 class NRTPoolAdapter implements NostrFetcherBase {
   #pool: RelayPool;
 
@@ -49,7 +43,7 @@ class NRTPoolAdapter implements NostrFetcherBase {
 
   #debugLogger: DebugLogger | undefined;
 
-  constructor(pool: RelayPool, options: Required<NRTPoolAdapterOptions>) {
+  constructor(pool: RelayPool, options: Required<NostrFetcherCommonOptions>) {
     // set listeners that dispatches events to "per-relay" listeners
     pool.onnotice((rurl, msg) => {
       this.#listeners.notice.get(rurl)?.(msg);
@@ -273,10 +267,8 @@ class NRTPoolAdapter implements NostrFetcherBase {
  * const fetcher = NostrFetcher.withCustomPool(relayPoolAdapter(pool));
  * ```
  */
-export const relayPoolAdapter = (
-  pool: RelayPool,
-  options: NRTPoolAdapterOptions = {}
-): NostrFetcherBase => {
-  const finalOpts = { ...defaultOptions, ...options };
-  return new NRTPoolAdapter(pool, finalOpts);
+export const relayPoolAdapter = (pool: RelayPool): NostrFetcherBaseInitializer => {
+  return (commonOpts: Required<NostrFetcherCommonOptions>) => {
+    return new NRTPoolAdapter(pool, commonOpts);
+  };
 };

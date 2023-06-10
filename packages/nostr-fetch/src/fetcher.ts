@@ -1,7 +1,13 @@
 import { Channel, Deferred } from "@nostr-fetch/kernel/channel";
 import { verifyEventSig } from "@nostr-fetch/kernel/crypto";
-import { DebugLogger, LogLevel } from "@nostr-fetch/kernel/debugLogger";
-import type { FetchTillEoseOptions, NostrFetcherBase } from "@nostr-fetch/kernel/fetcherBase";
+import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
+import {
+  FetchTillEoseOptions,
+  NostrFetcherBase,
+  NostrFetcherBaseInitializer,
+  NostrFetcherCommonOptions,
+  defaultFetcherCommonOptions,
+} from "@nostr-fetch/kernel/fetcherBase";
 import type { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
 import { abbreviate, currUnixtimeSec } from "@nostr-fetch/kernel/utils";
 
@@ -16,14 +22,6 @@ import {
 
 export type FetchFilter = Omit<Filter, "limit" | "since" | "until">;
 export type FetchTimeRangeFilter = Pick<Filter, "since" | "until">;
-
-export type FetcherInitOptions = {
-  minLogLevel?: LogLevel;
-};
-
-const defaultFetcherInitOptions: Required<FetcherInitOptions> = {
-  minLogLevel: "warn",
-};
 
 const MAX_LIMIT_PER_REQ = 5000;
 
@@ -65,7 +63,10 @@ export class NostrFetcher {
   #fetcherBase: NostrFetcherBase;
   #debugLogger: DebugLogger | undefined;
 
-  private constructor(fetcherBase: NostrFetcherBase, initOpts: Required<FetcherInitOptions>) {
+  private constructor(
+    fetcherBase: NostrFetcherBase,
+    initOpts: Required<NostrFetcherCommonOptions>
+  ) {
     this.#fetcherBase = fetcherBase;
 
     if (initOpts.minLogLevel !== "none") {
@@ -76,8 +77,8 @@ export class NostrFetcher {
   /**
    * Initializes `NostrFetcher` with the default relay pool implementation.
    */
-  public static init(initOpts: FetcherInitOptions = {}): NostrFetcher {
-    const finalOpts = { ...defaultFetcherInitOptions, ...initOpts };
+  public static init(initOpts: NostrFetcherCommonOptions = {}): NostrFetcher {
+    const finalOpts = { ...defaultFetcherCommonOptions, ...initOpts };
     const base = new DefaultFetcherBase(finalOpts);
     return new NostrFetcher(base, finalOpts);
   }
@@ -93,11 +94,11 @@ export class NostrFetcher {
    * ```
    */
   public static withCustomPool(
-    base: NostrFetcherBase,
-    initOpts: FetcherInitOptions = {}
+    poolAdapter: NostrFetcherBaseInitializer,
+    initOpts: NostrFetcherCommonOptions = {}
   ): NostrFetcher {
-    const finalOpts = { ...defaultFetcherInitOptions, ...initOpts };
-    return new NostrFetcher(base, finalOpts);
+    const finalOpts = { ...defaultFetcherCommonOptions, ...initOpts };
+    return new NostrFetcher(poolAdapter(finalOpts), finalOpts);
   }
 
   /**
