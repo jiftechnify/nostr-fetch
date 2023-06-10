@@ -223,7 +223,7 @@ type SimplePoolExtOptions = {
 };
 
 const defaultExtOptions: Required<SimplePoolExtOptions> = {
-  minLogLevel: "none",
+  minLogLevel: "warn",
 };
 
 class SimplePoolExt implements NostrFetcherBase {

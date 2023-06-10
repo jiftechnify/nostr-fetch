@@ -32,7 +32,7 @@ type NRTPoolAdapterOptions = {
 };
 
 const defaultOptions: Required<NRTPoolAdapterOptions> = {
-  minLogLevel: "none",
+  minLogLevel: "warn",
 };
 
 class NRTPoolAdapter implements NostrFetcherBase {

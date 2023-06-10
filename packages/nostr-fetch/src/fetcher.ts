@@ -22,7 +22,7 @@ export type FetcherInitOptions = {
 };
 
 const defaultFetcherInitOptions: Required<FetcherInitOptions> = {
-  minLogLevel: "none",
+  minLogLevel: "warn",
 };
 
 const MAX_LIMIT_PER_REQ = 5000;
