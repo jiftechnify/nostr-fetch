@@ -282,7 +282,7 @@ class SimplePoolExt implements NostrFetcherBase {
           connectedRelays.push(rurl);
           this.#relays.set(rurl, r);
         } catch (err) {
-          console.error(err);
+          this.#debugLogger?.log("error", err);
           this.#relays.delete(rurl);
         }
       })

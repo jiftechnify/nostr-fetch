@@ -97,26 +97,28 @@ class RelayPoolImpl implements RelayPool {
 
     await Promise.all([
       ...relaysToConnect.map(async (rurl): Promise<void> => {
+        const logger = this.#debugLogger?.subLogger(rurl);
+
         const deferred = new VoidDeferred();
         try {
           this.#relays.set(rurl, { state: "connecting", relayUrl: rurl, wait: deferred.promise });
 
           const r = initRelay(rurl, relayOpts);
-          r.on("connect", () => this.#debugLogger?.log("info", `[${rurl}] connected`));
+          r.on("connect", () => logger?.log("info", `connected`));
           r.on("disconnect", (ev) => {
-            this.#debugLogger?.log("info", `[${rurl}] disconnected: ${JSON.stringify(ev)}`);
+            logger?.log("info", `disconnected: ${JSON.stringify(ev)}`);
             this.#relays.set(r.url, { state: "disconnected", relayUrl: r.url });
           });
           r.on("error", () => {
-            this.#debugLogger?.log("error", `[${rurl}] WebSocket error`);
+            logger?.log("error", `WebSocket error`);
             this.#relays.set(r.url, { state: "disconnected", relayUrl: r.url });
           });
-          r.on("notice", (notice) => this.#debugLogger?.log("warn", `[${rurl}] NOTICE: ${notice}`));
+          r.on("notice", (notice) => logger?.log("warn", `NOTICE: ${notice}`));
 
           await r.connect();
           this.#relays.set(rurl, { state: "alive", relayUrl: rurl, relay: r });
         } catch {
-          console.error(`failed to connect to the relay '${rurl}'`);
+          logger?.log("error", "failed to connect to the relay");
           this.#relays.set(rurl, {
             state: "connectFailed",
             relayUrl: rurl,
