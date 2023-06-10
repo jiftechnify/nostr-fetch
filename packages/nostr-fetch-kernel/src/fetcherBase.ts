@@ -33,11 +33,6 @@ export interface NostrFetcherBase {
   ensureRelays(relayUrls: string[], options: EnsureRelaysOptions): Promise<string[]>;
 
   /**
-   * Cleans up all the internal states of the fetcher.
-   */
-  shutdown(): void;
-
-  /**
    * Fetches Nostr events matching `filters` from the relay specified by `relayUrl` until EOSE.
    *
    * The result is an `AsyncIterable` of Nostr events.
@@ -54,6 +49,11 @@ export interface NostrFetcherBase {
     filters: Filter[],
     options: FetchTillEoseOptions
   ): AsyncIterable<NostrEvent>;
+
+  /**
+   * Cleans up all the internal states of the fetcher.
+   */
+  shutdown(): void;
 }
 
 /**
