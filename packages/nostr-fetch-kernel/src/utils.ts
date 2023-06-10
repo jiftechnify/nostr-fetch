@@ -48,3 +48,38 @@ export const normalizeRelayUrls = (relayUrls: string[]): string[] => {
 export async function* emptyAsyncGen() {
   return;
 }
+
+/**
+ * Abbreviates strings as:
+ * <first `affixLen` chars of `s`> + ":" + <last `affixLen` charas of `s`>
+ *
+ * if `s.length` is less than `affixLen * 2` or `affixLen` is not positive, just returns original string.
+ */
+export const abbreviate = (s: string, affixLen: number): string => {
+  if (s.length <= affixLen * 2 || affixLen <= 0) {
+    return s;
+  }
+  const len = s.length;
+  return `${s.slice(0, affixLen)}:${s.slice(len - affixLen)}`;
+};
+
+/**
+ * Attaches timeout to the `promise`.
+ *
+ * If the `promise` is not settled by the time limit, returned promise rejects with the error which has the specified message.
+ */
+export const withTimeout = async <T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  msgOnTimeout: string
+): Promise<T> => {
+  const timeoutAborter = new AbortController();
+  const timeout = new Promise<T>((_, reject) => {
+    setTimeout(() => reject(Error(msgOnTimeout)), timeoutMs);
+    timeoutAborter.signal.addEventListener("abort", () => reject());
+  });
+
+  const t = await Promise.race([promise, timeout]);
+  timeoutAborter.abort();
+  return t;
+};

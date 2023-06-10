@@ -1,14 +1,14 @@
 import { Channel } from "@nostr-fetch/kernel/channel";
+import { DebugLogger, LogLevel } from "@nostr-fetch/kernel/debugLogger";
 import type {
   EnsureRelaysOptions,
   FetchTillEoseOptions,
   NostrFetcherBase,
 } from "@nostr-fetch/kernel/fetcherBase";
 import type { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
-import { normalizeRelayUrls } from "@nostr-fetch/kernel/utils";
+import { normalizeRelayUrls, withTimeout } from "@nostr-fetch/kernel/utils";
 
 import type { RelayPool } from "nostr-relaypool";
-import { withTimeout } from "./utils";
 
 type NRTPoolNoticeCb = (msg: string) => void;
 type NRTPoolErrorCb = (err: string) => void;
@@ -28,11 +28,11 @@ type NRTPoolListenersTable = {
 };
 
 type NRTPoolAdapterOptions = {
-  enableDebugLog?: boolean;
+  minLogLevel?: LogLevel;
 };
 
 const defaultOptions: Required<NRTPoolAdapterOptions> = {
-  enableDebugLog: false,
+  minLogLevel: "warn",
 };
 
 class NRTPoolAdapter implements NostrFetcherBase {
@@ -47,7 +47,7 @@ class NRTPoolAdapter implements NostrFetcherBase {
     auth: new Map(),
   };
 
-  #logForDebug: typeof console.log | undefined;
+  #debugLogger: DebugLogger | undefined;
 
   constructor(pool: RelayPool, options: Required<NRTPoolAdapterOptions>) {
     // set listeners that dispatches events to "per-relay" listeners
@@ -66,8 +66,8 @@ class NRTPoolAdapter implements NostrFetcherBase {
 
     this.#pool = pool;
 
-    if (options.enableDebugLog) {
-      this.#logForDebug = console.log;
+    if (options.minLogLevel !== "none") {
+      this.#debugLogger = new DebugLogger(options.minLogLevel);
     }
   }
 
@@ -100,22 +100,24 @@ class NRTPoolAdapter implements NostrFetcherBase {
 
     const ensure = (rurl: string) =>
       new Promise<string>((resolve, reject) => {
+        const logger = this.#debugLogger?.subLogger(rurl);
+
         const r = this.#pool.addOrGetRelay(rurl);
 
         r.on("connect", () => {
           // setup debug log
           // listener for notice/error will be overwritten in fetchTillEose
           this.addListener(rurl, "disconnect", (msg) =>
-            this.#logForDebug?.(`[${rurl}] disconnected: ${msg}`)
+            logger?.log("info", `disconnected: ${msg}`)
           );
           this.addListener(rurl, "error", (msg) => {
-            this.#logForDebug?.(`[${rurl}] Websocket error: ${msg}`);
+            logger?.log("error", `Websocket error: ${msg}`);
           });
           this.addListener(rurl, "notice", (msg) => {
-            this.#logForDebug?.(`[${rurl}] NOTICE: ${msg}`);
+            logger?.log("warn", `NOTICE: ${msg}`);
           });
           this.addListener(rurl, "auth", () =>
-            this.#logForDebug?.(`[${rurl}] received AUTH challange (ignoring)`)
+            logger?.log("warn", "received AUTH challange (ignoring)")
           );
           resolve(rurl);
         });
@@ -142,7 +144,7 @@ class NRTPoolAdapter implements NostrFetcherBase {
           connectedRelays.push(r.value);
           break;
         case "rejected":
-          console.error(r.reason);
+          this.#debugLogger?.log("error", r.reason);
           break;
       }
     }
@@ -175,31 +177,36 @@ class NRTPoolAdapter implements NostrFetcherBase {
     filters: Filter[],
     options: FetchTillEoseOptions
   ): AsyncIterable<NostrEvent> {
+    const logger = this.#debugLogger?.subLogger(relayUrl);
+
     const [tx, chIter] = Channel.make<NostrEvent>();
 
     // error handlings
     const onNotice = (msg: string) => {
       tx.error(Error(`NOTICE: ${JSON.stringify(msg)}`));
+      removeRelayListeners();
     };
     const onError = (msg: string) => {
       tx.error(Error(`ERROR: ${msg}`));
+      removeRelayListeners();
     };
     const removeRelayListeners = () => {
       this.removeListener(relayUrl, "notice");
       this.removeListener(relayUrl, "error");
     };
+
     this.addListener(relayUrl, "notice", onNotice);
     this.addListener(relayUrl, "error", onError);
 
     // if "relay" is set, that filter will be requested only from that relay
     // it's the very behavior we want here!
-    const relayedFilters = filters.map((f) => {
+    const filtersWithRelay = filters.map((f) => {
       return { ...f, relay: relayUrl };
     });
 
     // subscribe
     const unsub = this.#pool.subscribe(
-      relayedFilters,
+      filtersWithRelay,
       // relays
       [],
       // onEvent
@@ -221,7 +228,8 @@ class NRTPoolAdapter implements NostrFetcherBase {
 
     // common process for subscription abortion
     const abortSub = (debugMsg: string) => {
-      this.#logForDebug?.(debugMsg);
+      logger?.log("info", debugMsg);
+
       unsub();
       tx.close();
       removeRelayListeners();
@@ -235,17 +243,17 @@ class NRTPoolAdapter implements NostrFetcherBase {
         subAutoAbortTimer = undefined;
       }
       subAutoAbortTimer = setTimeout(() => {
-        abortSub(`[${relayUrl}] subscription aborted before EOSE due to timeout`);
+        abortSub(`subscription aborted before EOSE due to timeout`);
       }, options.abortSubBeforeEoseTimeoutMs);
     };
     resetAutoAbortTimer(); // initiate subscription auto abortion timer
 
     // handle abortion by AbortController
     if (options.abortSignal?.aborted) {
-      abortSub(`[${relayUrl}] subscription aborted by AbortController`);
+      abortSub(`subscription aborted by AbortController`);
     }
     options.abortSignal?.addEventListener("abort", () => {
-      abortSub(`[${relayUrl}] subscription aborted by AbortController`);
+      abortSub(`subscription aborted by AbortController`);
     });
 
     return chIter;

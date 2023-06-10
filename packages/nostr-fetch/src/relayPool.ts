@@ -15,6 +15,7 @@ import {
   normalizeRelayUrls,
 } from "@nostr-fetch/kernel/utils";
 
+import { DebugLogger, LogLevel } from "@nostr-fetch/kernel/debugLogger";
 import { Relay, initRelay } from "./relay";
 
 export interface RelayPool {
@@ -33,7 +34,7 @@ export interface RelayPool {
 }
 
 export type RelayPoolOptions = {
-  enableDebugLog: boolean;
+  minLogLevel: LogLevel;
 };
 
 export const initRelayPool = (opts: RelayPoolOptions): RelayPool => {
@@ -64,11 +65,11 @@ type ManagedRelay = AliveRelay | ConnectingRelay | ConnectFailedRelay | Disconne
 class RelayPoolImpl implements RelayPool {
   // keys are **normalized** relay URLs
   #relays: Map<string, ManagedRelay> = new Map();
-  #logForDebug: typeof console.log | undefined;
+  #debugLogger: DebugLogger | undefined;
 
   constructor(options: Required<RelayPoolOptions>) {
-    if (options.enableDebugLog) {
-      this.#logForDebug = console.log;
+    if (options.minLogLevel !== "none") {
+      this.#debugLogger = new DebugLogger(options.minLogLevel);
     }
   }
 
@@ -96,26 +97,28 @@ class RelayPoolImpl implements RelayPool {
 
     await Promise.all([
       ...relaysToConnect.map(async (rurl): Promise<void> => {
+        const logger = this.#debugLogger?.subLogger(rurl);
+
         const deferred = new VoidDeferred();
         try {
           this.#relays.set(rurl, { state: "connecting", relayUrl: rurl, wait: deferred.promise });
 
           const r = initRelay(rurl, relayOpts);
-          r.on("connect", () => this.#logForDebug?.(`[${rurl}] connect`));
+          r.on("connect", () => logger?.log("info", `connected`));
           r.on("disconnect", (ev) => {
-            this.#logForDebug?.(`[${rurl}] disconnect: ${ev}`);
+            logger?.log("info", `disconnected: ${JSON.stringify(ev)}`);
             this.#relays.set(r.url, { state: "disconnected", relayUrl: r.url });
           });
           r.on("error", () => {
-            this.#logForDebug?.(`[${rurl}] WebSocket error`);
+            logger?.log("error", `WebSocket error`);
             this.#relays.set(r.url, { state: "disconnected", relayUrl: r.url });
           });
-          r.on("notice", (notice) => this.#logForDebug?.(`[${rurl}] NOTICE: ${notice}`));
+          r.on("notice", (notice) => logger?.log("warn", `NOTICE: ${notice}`));
 
           await r.connect();
           this.#relays.set(rurl, { state: "alive", relayUrl: rurl, relay: r });
         } catch {
-          console.error(`failed to connect to the relay '${rurl}'`);
+          logger?.log("error", "failed to connect to the relay");
           this.#relays.set(rurl, {
             state: "connectFailed",
             relayUrl: rurl,
@@ -176,7 +179,7 @@ class RelayPoolImpl implements RelayPool {
       throw Error("no relays are available");
     }
 
-    this.#logForDebug?.(`subId: ${subId}, make sub to: ${Array.from(subs.keys())}`);
+    this.#debugLogger?.log("verbose", `subId: ${subId}, make sub to: ${Array.from(subs.keys())}`);
     return new RelayPoolSubscription(subId, subs);
   }
 

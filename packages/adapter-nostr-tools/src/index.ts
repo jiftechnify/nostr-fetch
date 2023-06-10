@@ -1,4 +1,5 @@
 import { Channel } from "@nostr-fetch/kernel/channel";
+import { DebugLogger, LogLevel } from "@nostr-fetch/kernel/debugLogger";
 import type { FetchTillEoseOptions, NostrFetcherBase } from "@nostr-fetch/kernel/fetcherBase";
 import { NostrEvent, generateSubId, type Filter } from "@nostr-fetch/kernel/nostr";
 import type {
@@ -10,7 +11,12 @@ import type {
   Subscription,
   SubscriptionOptions,
 } from "@nostr-fetch/kernel/relayTypes";
-import { emptyAsyncGen, normalizeRelayUrl, normalizeRelayUrls } from "@nostr-fetch/kernel/utils";
+import {
+  emptyAsyncGen,
+  normalizeRelayUrl,
+  normalizeRelayUrls,
+  withTimeout,
+} from "@nostr-fetch/kernel/utils";
 
 import type { SimplePool, Relay as ToolsRelay, Sub as ToolsSub } from "nostr-tools";
 
@@ -212,29 +218,12 @@ class ToolsRelayExt {
   }
 }
 
-// attach timeout to the `promise`
-const withTimeout = async <T>(
-  promise: Promise<T>,
-  timeoutMs: number,
-  msgOnTimeout: string
-): Promise<T> => {
-  const timeoutAborter = new AbortController();
-  const timeout = new Promise<T>((_, reject) => {
-    setTimeout(() => reject(Error(msgOnTimeout)), timeoutMs);
-    timeoutAborter.signal.addEventListener("abort", () => reject());
-  });
-
-  const t = await Promise.race([promise, timeout]);
-  timeoutAborter.abort();
-  return t;
-};
-
 type SimplePoolExtOptions = {
-  enableDebugLog?: boolean;
+  minLogLevel?: LogLevel;
 };
 
 const defaultExtOptions: Required<SimplePoolExtOptions> = {
-  enableDebugLog: false,
+  minLogLevel: "warn",
 };
 
 class SimplePoolExt implements NostrFetcherBase {
@@ -244,12 +233,12 @@ class SimplePoolExt implements NostrFetcherBase {
   // keys are **normalized** relay URLs.
   #relays: Map<string, ToolsRelayExt> = new Map();
 
-  #logForDebug: typeof console.log | undefined;
+  #debugLogger: DebugLogger | undefined;
 
   constructor(sp: SimplePool, options: Required<SimplePoolExtOptions>) {
     this.#simplePool = sp;
-    if (options.enableDebugLog) {
-      this.#logForDebug = console.log;
+    if (options.minLogLevel !== "none") {
+      this.#debugLogger = new DebugLogger(options.minLogLevel);
     }
   }
 
@@ -267,13 +256,15 @@ class SimplePoolExt implements NostrFetcherBase {
     const normalizedUrls = normalizeRelayUrls(relayUrls);
 
     const ensure = async (rurl: string) => {
+      const logger = this.#debugLogger?.subLogger(rurl);
+
       const r = await this.#simplePool.ensureRelay(rurl);
 
       // setup debug log
-      r.on("disconnect", () => this.#logForDebug?.(`[${rurl}] disconnected`));
-      r.on("error", () => this.#logForDebug?.(`[${rurl}] WebSocket error`));
-      r.on("notice", (notice) => this.#logForDebug?.(`[${rurl}] NOTICE: ${notice}`));
-      r.on("auth", () => this.#logForDebug?.(`[${rurl}] received AUTH challange (ignoring)`));
+      r.on("disconnect", () => logger?.log("info", `disconnected`));
+      r.on("error", () => logger?.log("error", `WebSocket error`));
+      r.on("notice", (notice) => logger?.log("warn", `NOTICE: ${notice}`));
+      r.on("auth", () => logger?.log("warn", `received AUTH challange (ignoring)`));
 
       return new ToolsRelayExt(rurl, r);
     };
@@ -291,7 +282,7 @@ class SimplePoolExt implements NostrFetcherBase {
           connectedRelays.push(rurl);
           this.#relays.set(rurl, r);
         } catch (err) {
-          console.error(err);
+          this.#debugLogger?.log("error", err);
           this.#relays.delete(rurl);
         }
       })
@@ -328,10 +319,13 @@ class SimplePoolExt implements NostrFetcherBase {
     filters: Filter[],
     options: FetchTillEoseOptions
   ): AsyncIterable<NostrEvent> {
+    const logger = this.#debugLogger?.subLogger(relayUrl);
+
     const [tx, chIter] = Channel.make<NostrEvent>();
 
     const relay = this.getRelayExtIfConnected(relayUrl);
     if (relay === undefined) {
+      logger?.log("warn", "not connected");
       return emptyAsyncGen();
     }
 
@@ -359,27 +353,29 @@ class SimplePoolExt implements NostrFetcherBase {
     sub.on("event", (ev: NostrEvent) => {
       tx.send(ev);
     });
+
+    // common process to close subscription
+    const closeSub = () => {
+      sub.close();
+      tx.close();
+      removeRelayListeners();
+    };
+
     sub.on("eose", ({ aborted }) => {
       if (aborted) {
-        this.#logForDebug?.(
-          `[${relay.url}] subscription (id: ${sub.subId}) aborted before EOSE due to timeout`
-        );
+        logger?.log("info", `subscription (id: ${sub.subId}) aborted before EOSE due to timeout`);
       }
-
-      sub.close();
-      tx.close();
-      removeRelayListeners();
+      closeSub();
     });
 
-    // handle abortion
+    // handle abortion by AbortController
+    if (options.abortSignal?.aborted) {
+      logger?.log("info", `subscription (id: ${sub.subId}) aborted by AbortController`);
+      closeSub();
+    }
     options.abortSignal?.addEventListener("abort", () => {
-      this.#logForDebug?.(
-        `[${relay.url}] subscription (id: ${sub.subId}) aborted via AbortController`
-      );
-
-      sub.close();
-      tx.close();
-      removeRelayListeners();
+      logger?.log("info", `subscription (id: ${sub.subId}) aborted by AbortController`);
+      closeSub();
     });
 
     // start the subscription

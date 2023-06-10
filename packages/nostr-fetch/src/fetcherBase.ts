@@ -7,6 +7,7 @@ import type {
 import type { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
 import { emptyAsyncGen } from "@nostr-fetch/kernel/utils";
 
+import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
 import type { RelayPoolOptions } from "./relayPool";
 import { RelayPool, initRelayPool } from "./relayPool";
 
@@ -15,12 +16,12 @@ import { RelayPool, initRelayPool } from "./relayPool";
  */
 export class DefaultFetcherBase implements NostrFetcherBase {
   #relayPool: RelayPool;
-  #logForDebug: typeof console.log | undefined;
+  #debugLogger: DebugLogger | undefined;
 
   public constructor(options: RelayPoolOptions) {
     this.#relayPool = initRelayPool(options);
-    if (options.enableDebugLog) {
-      this.#logForDebug = console.log;
+    if (options.minLogLevel === "none") {
+      this.#debugLogger = new DebugLogger(options.minLogLevel);
     }
   }
 
@@ -57,6 +58,8 @@ export class DefaultFetcherBase implements NostrFetcherBase {
     filters: Filter[],
     options: FetchTillEoseOptions
   ): AsyncIterable<NostrEvent> {
+    const logger = this.#debugLogger?.subLogger(relayUrl);
+
     const [tx, chIter] = Channel.make<NostrEvent>();
 
     const relay = this.#relayPool.getRelayIfConnected(relayUrl);
@@ -88,27 +91,29 @@ export class DefaultFetcherBase implements NostrFetcherBase {
     sub.on("event", (ev: NostrEvent) => {
       tx.send(ev);
     });
-    sub.on("eose", ({ aborted }) => {
-      if (aborted) {
-        this.#logForDebug?.(
-          `[${relay.url}] subscription (id: ${sub.subId}) aborted before EOSE due to timeout`
-        );
-      }
 
+    // common process to close subscription
+    const closeSub = () => {
       sub.close();
       tx.close();
       removeRelayListeners();
+    };
+
+    sub.on("eose", ({ aborted }) => {
+      if (aborted) {
+        logger?.log("info", `subscription (id: ${sub.subId}) aborted before EOSE due to timeout`);
+      }
+      closeSub();
     });
 
     // handle abortion
+    if (options.abortSignal?.aborted) {
+      logger?.log("info", `subscription (id: ${sub.subId}) aborted by AbortController`);
+      closeSub();
+    }
     options.abortSignal?.addEventListener("abort", () => {
-      this.#logForDebug?.(
-        `[${relay.url}] subscription (id: ${sub.subId}) aborted via AbortController`
-      );
-
-      sub.close();
-      tx.close();
-      removeRelayListeners();
+      logger?.log("info", `subscription (id: ${sub.subId}) aborted by AbortController`);
+      closeSub();
     });
 
     // start the subscription
