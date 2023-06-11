@@ -1,4 +1,4 @@
-/* global WebSocket, CloseEvent, MessageEvent */
+/* global WebSocket, MessageEvent */
 import { verifyEventSig } from "@nostr-fetch/kernel/crypto";
 import type { C2RMessage, Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
 import { generateSubId, parseR2CMessage } from "@nostr-fetch/kernel/nostr";
@@ -16,6 +16,7 @@ import type {
   SubEventTypes,
   Subscription,
   SubscriptionOptions,
+  WSCloseEvent,
 } from "@nostr-fetch/kernel/relayTypes";
 
 export interface Relay {
@@ -139,8 +140,13 @@ class RelayImpl implements Relay {
         clearTimeout(timeout);
       };
 
-      ws.onclose = (e: CloseEvent) => {
-        this.#onDisconnect.forEach((cb) => cb(e));
+      ws.onclose = (e: WSCloseEvent) => {
+        const reducted = {
+          code: e.code,
+          reason: e.reason,
+          wasClean: e.wasClean,
+        };
+        this.#onDisconnect.forEach((cb) => cb(reducted));
       };
 
       ws.onmessage = (e: MessageEvent) => {
