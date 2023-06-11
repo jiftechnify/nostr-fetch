@@ -168,7 +168,7 @@ class NRTPoolAdapter implements NostrFetcherBase {
    */
   public fetchTillEose(
     relayUrl: string,
-    filters: Filter[],
+    filter: Filter,
     options: FetchTillEoseOptions
   ): AsyncIterable<NostrEvent> {
     const logger = this.#debugLogger?.subLogger(relayUrl);
@@ -194,13 +194,11 @@ class NRTPoolAdapter implements NostrFetcherBase {
 
     // if "relay" is set, that filter will be requested only from that relay
     // it's the very behavior we want here!
-    const filtersWithRelay = filters.map((f) => {
-      return { ...f, relay: relayUrl };
-    });
+    const filterWithRelay = { ...filter, relay: relayUrl };
 
     // subscribe
     const unsub = this.#pool.subscribe(
-      filtersWithRelay,
+      [filterWithRelay],
       // relays
       [],
       // onEvent

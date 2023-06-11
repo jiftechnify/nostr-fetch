@@ -9,11 +9,9 @@ const main = async () => {
   // fetch the latest 100 text events (kind: 1) from the relays
   const latestPosts = await fetcher.fetchLatestEvents(
     defaultRelays,
-    [
-      {
-        kinds: [eventKind.text],
-      },
-    ],
+    {
+      kinds: [eventKind.text],
+    },
     100
     // { skipVerification: true }
   );

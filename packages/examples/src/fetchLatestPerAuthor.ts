@@ -13,9 +13,10 @@ const main = async () => {
   const fetcher = NostrFetcher.init();
 
   // get pubkeys of followees from the latest kind 3 event
-  const lastFollowEvent = await fetcher.fetchLastEvent(defaultRelays, [
-    { kinds: [eventKind.contacts], authors: [pubkey] },
-  ]);
+  const lastFollowEvent = await fetcher.fetchLastEvent(defaultRelays, {
+    kinds: [eventKind.contacts],
+    authors: [pubkey],
+  });
   if (lastFollowEvent === undefined) {
     console.log("contacts event (kind: 3) not found");
     return;
@@ -28,7 +29,7 @@ const main = async () => {
   const latestPostsPerFollowee = await fetcher.fetchLatestEventsPerAuthor(
     defaultRelays,
     followees,
-    [{ kinds: [eventKind.text] }],
+    { kinds: [eventKind.text] },
     10
   );
 

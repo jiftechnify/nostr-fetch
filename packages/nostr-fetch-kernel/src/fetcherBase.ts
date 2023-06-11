@@ -46,7 +46,7 @@ export interface NostrFetcherBase {
    */
   fetchTillEose(
     relayUrl: string,
-    filters: Filter[],
+    filter: Filter,
     options: FetchTillEoseOptions
   ): AsyncIterable<NostrEvent>;
 

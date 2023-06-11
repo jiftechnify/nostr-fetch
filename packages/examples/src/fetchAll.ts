@@ -9,11 +9,9 @@ const main = async () => {
   // fetch all text events (kind: 1) posted in last hour from the relays
   const events = await fetcher.fetchAllEvents(
     defaultRelays,
-    [
-      {
-        kinds: [eventKind.text],
-      },
-    ],
+    {
+      kinds: [eventKind.text],
+    },
     {
       since: nHoursAgo(1),
     },

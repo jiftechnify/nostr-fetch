@@ -29,10 +29,8 @@ const relayUrls = [/* relay URLs */];
 // fetches all text events since 24 hr ago in streaming manner
 const postIter = await fetcher.allEventsIterator(
     relayUrls, 
-    /* filters (kinds, authors, ids, tags) */
-    [
-        { kinds: [ eventKind.text ] }
-    ],
+    /* filter (kinds, authors, ids, tags) */
+    { kinds: [ eventKind.text ] },
     /* time range filter (since, until) */
     // it is merged into each filter in the array of normal filters above.
     { since: nHoursAgo(24) },
@@ -46,10 +44,8 @@ for await (const ev of postIter) {
 // fetches all text events since 24 hr ago, as a single array
 const allPosts = await fetcher.fetchAllEvents(
     relayUrls,
-    /* filters */
-    [
-        { kinds: [ eventKind.text ] }
-    ],
+    /* filter */
+    { kinds: [ eventKind.text ] },
     /* time range filter */
     { since: nHoursAgo(24) },
     /* fetch options (optional) */
@@ -72,10 +68,8 @@ const relayUrls = [/* relay URLs */];
 // 3. take latest 100 events
 const latestPosts: NostrEvent[] = await fetcher.fetchLatestEvents(
     relayUrls,
-    /* filters */
-    [
-        { kinds: [ eventKind.text ] }
-    ],
+    /* filter */
+    { kinds: [ eventKind.text ] },
     /* number of events to fetch */
     100,
 );
@@ -86,10 +80,8 @@ const latestPosts: NostrEvent[] = await fetcher.fetchLatestEvents(
 // 2. take the latest one
 const lastMetadata: NostrEvent | undefined = await fetcher.fetchLastEvent(
     relayUrls,
-    /* filters */
-    [
-        { kinds: [ eventKind.metadata ], authors: [ "deadbeef..." ] }
-    ],
+    /* filter */
+    { kinds: [ eventKind.metadata ], authors: [ "deadbeef..." ] },
 );
 
 // fetches latest 10 text posts from each author in `authors`
@@ -97,10 +89,8 @@ const postsPerAuthor = await fetcher.fetchLatestEventsPerAuthor(
     relayUrls,
     /* authors */
     ["deadbeef...", "abcdef01...", ...],
-    /* filters */
-    [
-        { kinds: [ eventKind.text ] }
-    ],
+    /* filter */
+    { kinds: [ eventKind.text ] },
     /* number of events to fetch for each author */
     10,
 );
@@ -116,10 +106,8 @@ const metadataPerAuthor = await fetcher.fetchLastEventPerAuthor(
     relayUrls,
     /* authors */
     ["deadbeef...", "abcdef01...", ...],
-    /* filters */
-    [
-        { kinds: [ eventKind.metadata ] }
-    ],
+    /* filter */
+    { kinds: [ eventKind.metadata ] },
 );
 for await (const { author, event } of metadataPerAuthor ) {
     console.log(`${author}: ${event?.content ?? "not found"}`);
@@ -168,7 +156,7 @@ const abortCtrl = new AbortController();
 
 const evIter = await fetcher.allEventsIterator(
     relayUrls,
-    [/* filters */],
+    {/* filter */},
     {/* time range */},
     /* pass `AbortController.signal` here to enable abortion! */
     { abortSignal: abortCtrl.signal } 
@@ -253,13 +241,13 @@ All methods are instance methods of `NostrFetcher`.
 ```ts
 public async allEventsIterator(
     relayUrls: string[],
-    filters: FetchFilter[],
+    filter: FetchFilter,
     timeRangeFilter: FetchTimeRangeFilter,
     options: FetchOptions = {}
 ): Promise<AsyncIterable<NostrEvent>>
 ```
 
-Returns an async iterable of all events matching the filters from Nostr relays specified by the array of URLs.
+Returns an async iterable of all events matching the filter from Nostr relays specified by the array of URLs.
 
 You can iterate over events using for-await-of loop.
 
@@ -282,13 +270,13 @@ for await (const ev of events) {
 ```ts
 public async fetchAllEvents(
     relayUrls: string[],
-    filters: FetchFilter[],
+    filter: FetchFilter,
     timeRangeFilter: FetchTimeRangeFilter,
     options: FetchAllOptions = {}
 ): Promise<NostrEvent[]>
 ```
 
-Fetches all events matching the filters from Nostr relays specified by the array of URLs, and collect them into an array.
+Fetches all events matching the filter from Nostr relays specified by the array of URLs, and collect them into an array.
 
 If `sort: true` is specified in `options`, events in the resulting array will be sorted in "newest to oldest" order.
 
@@ -303,13 +291,13 @@ If `sort: true` is specified in `options`, events in the resulting array will be
 ```ts
 public async fetchLatestEvents(
     relayUrls: string[],
-    filters: FetchFilter[],
+    filter: FetchFilter,
     limit: number,
     options: FetchLatestOptions = {}
 ): Promise<NostrEvent[]>
 ```
 
-Fetches latest up to `limit` events matching the filters from Nostr relays specified by the array of URLs. 
+Fetches latest up to `limit` events matching the filter from Nostr relays specified by the array of URLs. 
 
 Events in the result will be sorted in "newest to oldest" order.
 
@@ -320,14 +308,14 @@ Events in the result will be sorted in "newest to oldest" order.
 ```ts
 public async fetchLastEvent(
     relayUrls: string[],
-    filters: FetchFilter[],
+    filter: FetchFilter,
     options: FetchLatestOptions = {}
 ): Promise<NostrEvent | undefined>
 ```
 
-Fetches the last event matching the filters from Nostr relays specified by the array of URLs.
+Fetches the last event matching the filter from Nostr relays specified by the array of URLs.
 
-Returns `undefined` if no event matching the filters exists in any relay.
+Returns `undefined` if no event matching the filter exists in any relay.
 
 ---
 
@@ -337,12 +325,12 @@ Returns `undefined` if no event matching the filters exists in any relay.
 public async fetchLatestEventsPerAuthor(
     relayUrls: string[],
     authors: string[],
-    otherFilters: Omit<FetchFilter, "authors">[],
+    otherFilter: Omit<FetchFilter, "authors">,
     limit: number,
     options: FetchLatestOptions = {}
 ): Promise<AsyncIterable<{ author: string; events: NostrEvent[] }>>
 ```
-Fetches latest up to `limit` events **for each author in `authors`** matching the filters, from Nostr relays.
+Fetches latest up to `limit` events **for each author in `authors`** matching the filter, from Nostr relays.
 
 Result is an async iterable of `{ author (pubkey), events (from that author) }` pairs.
 
@@ -356,14 +344,14 @@ Each array of events in the result are sorted in "newest to oldest" order.
 public async fetchLastEventPerAuthor(
     relayUrls: string[],
     authors: string[],
-    otherFilters: Omit<FetchFilter, "authors">[],
+    otherFilter: Omit<FetchFilter, "authors">,
     options: FetchLatestOptions = {}
 ): Promise<AsyncIterable<{ author: string; event: NostrEvent | undefined }>>
 ```
 
-Fetches the last event matching the filters **for each author in `authors`** from Nostr relays.
+Fetches the last event matching the filter **for each author in `authors`** from Nostr relays.
 
 Result is an async iterable of `{ author (pubkey), event }` pairs.
 
-`event` in result will be `undefined` if no event matching the filters for the author exists in any relay.
+`event` in result will be `undefined` if no event matching the filter for the author exists in any relay.
 

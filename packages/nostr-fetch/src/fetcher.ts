@@ -102,7 +102,7 @@ export class NostrFetcher {
   }
 
   /**
-   * Returns an async iterable of all events matching the filters from Nostr relays specified by the array of URLs.
+   * Returns an async iterable of all events matching the filter from Nostr relays specified by the array of URLs.
    *
    * You can iterate over events using for-await-of loop.
    *
@@ -111,21 +111,20 @@ export class NostrFetcher {
    * Throws {@linkcode NostrFetchError} if any of `relayUrls` and `filters` is empty.
    *
    * @param relayUrls
-   * @param filters
+   * @param filter
    * @param timeRangeFilter
    * @param options
    * @returns
    */
   public async allEventsIterator(
     relayUrls: string[],
-    filters: FetchFilter[],
+    filter: FetchFilter,
     timeRangeFilter: FetchTimeRangeFilter,
     options: FetchOptions = {}
   ): Promise<AsyncIterable<NostrEvent>> {
     // assertion
-    validateReq({ relayUrls, filters }, [
+    validateReq({ relayUrls }, [
       checkIfNonEmpty((r) => r.relayUrls, "Specify at least 1 relay URL"),
-      checkIfNonEmpty((r) => r.filters, "Specify at least 1 filter"),
     ]);
 
     const finalOpts: Required<FetchOptions> = {
@@ -153,22 +152,20 @@ export class NostrFetcher {
         const localSeenEventIds = new Set<string>();
 
         while (true) {
-          const refinedFilters = filters.map((filter) => {
-            return {
-              ...timeRangeFilter,
-              ...filter,
-              until: nextUntil,
-              // relays are supposed to return *latest* events by specifying `limit` explicitly (cf. [NIP-01](https://github.com/nostr-protocol/nips/blob/master/01.md)).
-              // nostream doesn't accept a filter which has `limit` grater than 5000, so limit `limit` to this threshold or less.
-              limit: Math.min(finalOpts.limitPerReq, MAX_LIMIT_PER_REQ),
-            };
-          });
-          logger?.log("verbose", "refinedFilters=%O", refinedFilters);
+          const refinedFilter = {
+            ...timeRangeFilter,
+            ...filter,
+            until: nextUntil,
+            // relays are supposed to return *latest* events by specifying `limit` explicitly (cf. [NIP-01](https://github.com/nostr-protocol/nips/blob/master/01.md)).
+            // nostream doesn't accept a filter which has `limit` grater than 5000, so limit `limit` to this threshold or less.
+            limit: Math.min(finalOpts.limitPerReq, MAX_LIMIT_PER_REQ),
+          };
+          logger?.log("verbose", "refinedFilter=%O", refinedFilter);
 
           let gotNewEvent = false;
           let oldestCreatedAt = Number.MAX_SAFE_INTEGER;
 
-          for await (const e of this.#fetcherBase.fetchTillEose(rurl, refinedFilters, finalOpts)) {
+          for await (const e of this.#fetcherBase.fetchTillEose(rurl, refinedFilter, finalOpts)) {
             // eliminate duplicated events
             if (!localSeenEventIds.has(e.id)) {
               gotNewEvent = true;
@@ -208,7 +205,7 @@ export class NostrFetcher {
   }
 
   /**
-   * Fetches all events matching the filters from Nostr relays specified by the array of URLs,
+   * Fetches all events matching the filter from Nostr relays specified by the array of URLs,
    * and collect them into an array.
    *
    * Note: there are no guarantees about the order of returned events if `sort` options is not specified.
@@ -216,28 +213,27 @@ export class NostrFetcher {
    * Throws {@linkcode NostrFetchError} if any of `relayUrls` and `filters` is empty.
    *
    * @param relayUrls
-   * @param filters
+   * @param filter
    * @param timeRangeFilter
    * @param options
    * @returns
    */
   public async fetchAllEvents(
     relayUrls: string[],
-    filters: FetchFilter[],
+    filter: FetchFilter,
     timeRangeFilter: FetchTimeRangeFilter,
     options: FetchAllOptions = {}
   ): Promise<NostrEvent[]> {
     // assertion
-    validateReq({ relayUrls, filters }, [
+    validateReq({ relayUrls }, [
       checkIfNonEmpty((r) => r.relayUrls, "Specify at least 1 relay URL"),
-      checkIfNonEmpty((r) => r.filters, "Specify at least 1 filter"),
     ]);
 
     const finalOpts = { ...defaultFetchAllOptions, ...options };
 
     const res: NostrEvent[] = [];
 
-    const allEvents = await this.allEventsIterator(relayUrls, filters, timeRangeFilter, finalOpts);
+    const allEvents = await this.allEventsIterator(relayUrls, filter, timeRangeFilter, finalOpts);
     for await (const ev of allEvents) {
       res.push(ev);
     }
@@ -250,28 +246,27 @@ export class NostrFetcher {
   }
 
   /**
-   * Fetches latest events matching the filters from Nostr relays specified by the array of URLs.
+   * Fetches latest events matching the filter from Nostr relays specified by the array of URLs.
    *
    * Events are sorted in "newest to oldest" order.
    *
    * Throws {@linkcode NostrFetchError} if any of `relayUrls` and `filters` is empty or `limit` is negative.
    *
    * @param relayUrls
-   * @param filters
+   * @param filter
    * @param limit
    * @param options
    * @returns
    */
   public async fetchLatestEvents(
     relayUrls: string[],
-    filters: FetchFilter[],
+    filter: FetchFilter,
     limit: number,
     options: FetchLatestOptions = {}
   ): Promise<NostrEvent[]> {
     // assertion
-    validateReq({ relayUrls, filters, limit }, [
+    validateReq({ relayUrls, limit }, [
       checkIfNonEmpty((r) => r.relayUrls, "Specify at least 1 relay URL"),
-      checkIfNonEmpty((r) => r.filters, "Specify at least 1 filter"),
       (r) => (r.limit <= 0 ? '"limit" should be positive number' : undefined),
     ]);
 
@@ -309,21 +304,19 @@ export class NostrFetcher {
         const localSeenEventIds = new Set<string>();
 
         while (true) {
-          const refinedFilters = filters.map((filter) => {
-            return {
-              ...filter,
-              until: nextUntil,
-              // relays are supposed to return *latest* events by specifying `limit` explicitly (cf. [NIP-01](https://github.com/nostr-protocol/nips/blob/master/01.md)).
-              // nostream doesn't accept a filter which has `limit` grater than 5000, so limit `limit` to this threshold or less.
-              limit: Math.min(remainingLimit, MAX_LIMIT_PER_REQ),
-            };
-          });
-          logger?.log("verbose", "refinedFilters=%O", refinedFilters);
+          const refinedFilter = {
+            ...filter,
+            until: nextUntil,
+            // relays are supposed to return *latest* events by specifying `limit` explicitly (cf. [NIP-01](https://github.com/nostr-protocol/nips/blob/master/01.md)).
+            // nostream doesn't accept a filter which has `limit` grater than 5000, so limit `limit` to this threshold or less.
+            limit: Math.min(remainingLimit, MAX_LIMIT_PER_REQ),
+          };
+          logger?.log("verbose", "refinedFilter=%O", refinedFilter);
 
           let numNewEvents = 0;
           let oldestCreatedAt = Number.MAX_SAFE_INTEGER;
 
-          for await (const e of this.#fetcherBase.fetchTillEose(rurl, refinedFilters, subOpts)) {
+          for await (const e of this.#fetcherBase.fetchTillEose(rurl, refinedFilter, subOpts)) {
             // eliminate duplicated events
             if (!localSeenEventIds.has(e.id)) {
               numNewEvents++;
@@ -386,20 +379,20 @@ export class NostrFetcher {
   }
 
   /**
-   * Fetches the last event matching the filters from Nostr relays specified by the array of URLs.
+   * Fetches the last event matching the filter from Nostr relays specified by the array of URLs.
    *
    * Returns `undefined` if no event matching the filters exists in any relay.
    *
    * Throws {@linkcode NostrFetchError} if any of `relayUrls` and `filters` is empty.
    *
    * @param relayUrls
-   * @param filters
+   * @param filter
    * @param options
    * @returns
    */
   public async fetchLastEvent(
     relayUrls: string[],
-    filters: FetchFilter[],
+    filter: FetchFilter,
     options: FetchLatestOptions = {}
   ): Promise<NostrEvent | undefined> {
     const finalOpts: FetchLatestOptions & { abortSubBeforeEoseTimeoutMs: number } = {
@@ -410,12 +403,12 @@ export class NostrFetcher {
         ...options,
       },
     };
-    const latest1 = await this.fetchLatestEvents(relayUrls, filters, 1, finalOpts);
+    const latest1 = await this.fetchLatestEvents(relayUrls, filter, 1, finalOpts);
     return latest1[0];
   }
 
   /**
-   * Fetches latest up to `limit` events **for each author in `authors`** matching the filters, from Nostr relays.
+   * Fetches latest up to `limit` events **for each author in `authors`** matching the filter, from Nostr relays.
    *
    * Result is an async iterable of `{ author (pubkey), events (from that author) }` pairs.
    *
@@ -425,7 +418,7 @@ export class NostrFetcher {
    *
    * @param relayUrls
    * @param authors
-   * @param otherFilters
+   * @param otherFilter
    * @param limit
    * @param options
    * @returns
@@ -433,15 +426,14 @@ export class NostrFetcher {
   public async fetchLatestEventsPerAuthor(
     relayUrls: string[],
     authors: string[],
-    otherFilters: Omit<FetchFilter, "authors">[],
+    otherFilter: Omit<FetchFilter, "authors">,
     limit: number,
     options: FetchLatestOptions = {}
   ): Promise<AsyncIterable<{ author: string; events: NostrEvent[] }>> {
     // assertion
-    validateReq({ relayUrls, authors, otherFilters, limit }, [
+    validateReq({ relayUrls, authors, limit }, [
       checkIfNonEmpty((r) => r.relayUrls, "Specify at least 1 relay URL"),
       checkIfNonEmpty((r) => r.authors, "Specify at least 1 author (pubkey)"),
-      checkIfNonEmpty((r) => r.otherFilters, "Specify at least 1 filter"),
       (r) => (r.limit <= 0 ? '"limit" should be positive number' : undefined),
     ]);
 
@@ -503,20 +495,18 @@ export class NostrFetcher {
             break;
           }
 
-          const refinedFilters = otherFilters.map((filter) => {
-            return {
-              ...filter,
-              authors: nextAuthors,
-              until: nextUntil,
-              limit: Math.min(nextLimit, MAX_LIMIT_PER_REQ),
-            };
-          });
-          logger?.log("verbose", `refinedFilters=%O`, refinedFilters);
+          const refinedFilter = {
+            ...otherFilter,
+            authors: nextAuthors,
+            until: nextUntil,
+            limit: Math.min(nextLimit, MAX_LIMIT_PER_REQ),
+          };
+          logger?.log("verbose", `refinedFilter=%O`, refinedFilter);
 
           let gotNewEvent = false;
           let oldestCreatedAt = Number.MAX_SAFE_INTEGER;
 
-          for await (const e of this.#fetcherBase.fetchTillEose(rurl, refinedFilters, subOpts)) {
+          for await (const e of this.#fetcherBase.fetchTillEose(rurl, refinedFilter, subOpts)) {
             if (!localSeenEventIds.has(e.id)) {
               gotNewEvent = true;
               localSeenEventIds.add(e.id);
@@ -612,7 +602,7 @@ export class NostrFetcher {
   }
 
   /**
-   * Fetches the last event matching the filters **for each author in `authors`** from Nostr relays.
+   * Fetches the last event matching the filter **for each author in `authors`** from Nostr relays.
    *
    * Result is an async iterable of `{ author (pubkey), event }` pairs.
    *
@@ -622,14 +612,14 @@ export class NostrFetcher {
    *
    * @param relayUrls
    * @param authors
-   * @param otherFilters
+   * @param otherFilter
    * @param options
    * @returns
    */
   public async fetchLastEventPerAuthor(
     relayUrls: string[],
     authors: string[],
-    otherFilters: Omit<FetchFilter, "authors">[],
+    otherFilter: Omit<FetchFilter, "authors">,
     options: FetchLatestOptions = {}
   ): Promise<AsyncIterable<{ author: string; event: NostrEvent | undefined }>> {
     const finalOpts: FetchLatestOptions & { abortSubBeforeEoseTimeoutMs: number } = {
@@ -644,7 +634,7 @@ export class NostrFetcher {
     const latest1Iter = await this.fetchLatestEventsPerAuthor(
       relayUrls,
       authors,
-      otherFilters,
+      otherFilter,
       1,
       finalOpts
     );

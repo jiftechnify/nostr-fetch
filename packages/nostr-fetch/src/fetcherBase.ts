@@ -55,7 +55,7 @@ export class DefaultFetcherBase implements NostrFetcherBase {
    */
   public fetchTillEose(
     relayUrl: string,
-    filters: Filter[],
+    filter: Filter,
     options: FetchTillEoseOptions
   ): AsyncIterable<NostrEvent> {
     const logger = this.#debugLogger?.subLogger(relayUrl);
@@ -85,7 +85,7 @@ export class DefaultFetcherBase implements NostrFetcherBase {
     relay.on("error", onError);
 
     // prepare a subscription
-    const sub = relay.prepareSub(filters, options);
+    const sub = relay.prepareSub([filter], options);
 
     // handle subscription events
     sub.on("event", (ev: NostrEvent) => {
@@ -118,7 +118,7 @@ export class DefaultFetcherBase implements NostrFetcherBase {
     });
 
     // start the subscription
-    logger?.log("verbose", `REQ: subId=${options.subId ?? "<auto>"}, filters=%O`, filters);
+    logger?.log("verbose", `REQ: subId=${options.subId ?? "<auto>"}, filter=%O`, filter);
     sub.req();
 
     return chIter;
