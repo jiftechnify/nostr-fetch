@@ -142,6 +142,7 @@ const fetcher = NostrFetcher.withCustomPool(simplePoolAdapter(pool));
 |-----------------|------------------|----------------------------------------|---------------------|
 | [`nostr-tools`](https://github.com/nbd-wtf/nostr-tools)     | `SimplePool`     | `@nostr-fetch/adapter-nostr-tools`     | `simplePoolAdapter` |
 | [`nostr-relaypool`](https://github.com/adamritter/nostr-relaypool-ts) | `RelayPool`      | `@nostr-fetch/adapter-nostr-relaypool` | `relayPoolAdapter`  |
+| [`@nostr-dev-kit/ndk`](https://github.com/nostr-dev-kit/ndk) | `NDK` | `@nostr-fetch/adapter-ndk` | `ndkAdapter` |
 
 ### Aborting
 

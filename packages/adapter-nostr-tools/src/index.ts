@@ -318,13 +318,13 @@ class SimplePoolExt implements NostrFetcherBase {
   ): AsyncIterable<NostrEvent> {
     const logger = this.#debugLogger?.subLogger(relayUrl);
 
-    const [tx, chIter] = Channel.make<NostrEvent>();
-
     const relay = this.getRelayExtIfConnected(relayUrl);
     if (relay === undefined) {
       logger?.log("warn", "not connected");
       return emptyAsyncGen();
     }
+
+    const [tx, chIter] = Channel.make<NostrEvent>();
 
     // error handlings
     const onNotice = (n: unknown) => {
@@ -346,11 +346,6 @@ class SimplePoolExt implements NostrFetcherBase {
     // prepare a subscription
     const sub = relay.prepareSub([filter], options);
 
-    // handle subscription events
-    sub.on("event", (ev: NostrEvent) => {
-      tx.send(ev);
-    });
-
     // common process to close subscription
     const closeSub = () => {
       sub.close();
@@ -358,6 +353,10 @@ class SimplePoolExt implements NostrFetcherBase {
       removeRelayListeners();
     };
 
+    // handle subscription events
+    sub.on("event", (ev: NostrEvent) => {
+      tx.send(ev);
+    });
     sub.on("eose", ({ aborted }) => {
       if (aborted) {
         logger?.log("info", `subscription (id: ${sub.subId}) aborted before EOSE due to timeout`);

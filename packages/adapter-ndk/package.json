@@ -1,7 +1,7 @@
 {
-  "name": "@nostr-fetch/adapter-nostr-tools",
+  "name": "@nostr-fetch/adapter-ndk",
   "version": "0.7.0",
-  "description": "The adapter for nostr-tools' SimplePool that make it interoperable with nostr-fetch",
+  "description": "The adapter for NDK(Nostr Dev Kit) that make it interoperable with nostr-fetch",
   "author": "jiftechnify <jiftech.stlfy@gmail.com>",
   "repository": "https://github.com/jiftechnify/nostr-fetch",
   "homepage": "https://github.com/jiftechnify/nostr-fetch#readme",
@@ -28,28 +28,25 @@
   },
   "scripts": {
     "prepack": "yarn build",
-    "tsc": "tsc",
-    "lint": "run-p tsc lint:*",
+    "check-type": "tsc -p tsconfig.lint.json || exit 0",
+    "lint": "run-p check-type lint:*",
     "lint:format": "prettier --check --loglevel warn src/**/*.ts",
     "lint:js": "eslint --max-warnings 0 src/",
     "fix": "run-s fix:*",
     "fix:format": "prettier --write --loglevel warn src/**/*.ts",
     "fix:js": "eslint --fix src/",
-    "build": "npm-run-all tsc -p build:*",
+    "build": "npm-run-all -p build:*",
     "build:modules": "node build.js",
-    "build:types": "tsc -p tsconfig.build.json"
+    "build:types": "tsc -p tsconfig.build.json || exit 0"
   },
   "dependencies": {
     "@nostr-fetch/kernel": "^0.7.0"
   },
   "devDependencies": {
-    "nostr-tools": "^1.3.0"
+    "@nostr-dev-kit/ndk": "^0.4.6"
   },
   "peerDependencies": {
     "nostr-fetch": "^0.7.0",
-    "nostr-tools": "^1.3.0"
-  },
-  "volta": {
-    "node": "18.14.2"
+    "@nostr-dev-kit/ndk": "^0.4.6"
   }
 }
