@@ -313,7 +313,7 @@ class SimplePoolExt implements NostrFetcherBase {
   // TODO: eliminate duplicated code (most of codes overlap with impl of DefaultFetcherBase)
   public fetchTillEose(
     relayUrl: string,
-    filters: Filter[],
+    filter: Filter,
     options: FetchTillEoseOptions
   ): AsyncIterable<NostrEvent> {
     const logger = this.#debugLogger?.subLogger(relayUrl);
@@ -344,7 +344,7 @@ class SimplePoolExt implements NostrFetcherBase {
     relay.on("error", onError);
 
     // prepare a subscription
-    const sub = relay.prepareSub(filters, options);
+    const sub = relay.prepareSub([filter], options);
 
     // handle subscription events
     sub.on("event", (ev: NostrEvent) => {

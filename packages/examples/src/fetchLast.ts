@@ -9,12 +9,10 @@ const main = async () => {
   // fetch the last metadata event (kind 0) and contact list event (kind 3) published by the pubkey from the relays
   const [lastMetadata, lastContacts] = await Promise.all(
     [eventKind.metadata, eventKind.contacts].map((kind) =>
-      fetcher.fetchLastEvent(defaultRelays, [
-        {
-          kinds: [kind],
-          authors: ["d1d1747115d16751a97c239f46ec1703292c3b7e9988b9ebdd4ec4705b15ed44"],
-        },
-      ])
+      fetcher.fetchLastEvent(defaultRelays, {
+        kinds: [kind],
+        authors: ["d1d1747115d16751a97c239f46ec1703292c3b7e9988b9ebdd4ec4705b15ed44"],
+      })
     )
   );
 

@@ -10,11 +10,9 @@ const main = async () => {
   // fetch all text events (kind: 1) posted in the last hour from the relays
   const evIter = await fetcher.allEventsIterator(
     defaultRelays,
-    [
-      {
-        kinds: [eventKind.text],
-      },
-    ],
+    {
+      kinds: [eventKind.text],
+    },
     {
       since: nHoursAgo(1),
     },

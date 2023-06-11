@@ -16,9 +16,10 @@ const main = async () => {
   const fetcher = NostrFetcher.init();
 
   // get pubkeys of followees from the latest kind 3 event
-  const lastFollowEvent = await fetcher.fetchLastEvent(defaultRelays, [
-    { kinds: [eventKind.contacts], authors: [pubkey] },
-  ]);
+  const lastFollowEvent = await fetcher.fetchLastEvent(defaultRelays, {
+    kinds: [eventKind.contacts],
+    authors: [pubkey],
+  });
   if (lastFollowEvent === undefined) {
     console.log("contacts event (kind: 3) not found");
     return;
@@ -28,9 +29,9 @@ const main = async () => {
     .map((t) => t[1] as string);
 
   // get profile (metadata) events for each followee
-  const profilePerAuthor = await fetcher.fetchLastEventPerAuthor(defaultRelays, followees, [
-    { kinds: [eventKind.metadata] },
-  ]);
+  const profilePerAuthor = await fetcher.fetchLastEventPerAuthor(defaultRelays, followees, {
+    kinds: [eventKind.metadata],
+  });
 
   // display the name in profile for each author
   console.log(`${"pubkey".padEnd(64, " ")} | name`);
