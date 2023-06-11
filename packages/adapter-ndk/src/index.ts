@@ -196,16 +196,27 @@ class NDKAdapter implements NostrFetcherBase {
 }
 
 /**
- * Wraps a nostr-relaypool's `RelayPool`, allowing it to interoperate with nostr-fetch.
+ * Wraps an NDK instance, allowing it to interoperate with nostr-fetch.
  *
  * @example
  * ```
- * import { RelayPool } from 'nostr-relaypool';
- * import { NostrFetcher } from 'nostr-fetch';
- * import { relayPoolAdapter } from '@nostr-fetch/adapter-nostr-relaypool'
+ * import NDK from '@nostr-dev-kit/ndk';
+ * import { NostrFetcher, normalizeRelayUrls } from 'nostr-fetch';
+ * import { ndkAdapter } from '@nostr-fetch/adapter-ndk';
  *
- * const pool = new RelayPool();
- * const fetcher = NostrFetcher.withCustomPool(relayPoolAdapter(pool));
+ * // You should normalize relay URLs by `normalizeRelayUrls` before passing them to NDK's constructor if working with nostr-fetch!
+ * const explicitRelays = normalizeRelayUrls([
+ *   "wss://relay-jp.nostr.wirednet.jp",
+ *   "wss://relay.damus.io",
+ * ]);
+ *
+ * const main = async () => {
+ *   const ndk = new NDK({ explicitRelayUrls: explicitRelays });
+ *   await ndk.connect(); // ensure connections to the "explicit relays" before fetching events!
+ *
+ *   const fetcher = NostrFetcher.withCustomPool(ndkAdapter(ndk));
+ *   // ...
+ * }
  * ```
  */
 export const ndkAdapter = (ndk: NDK): NostrFetcherBaseInitializer => {
