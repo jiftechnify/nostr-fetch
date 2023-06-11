@@ -8,7 +8,7 @@ import "websocket-polyfill";
 // You should normalize relay URLs by `normalizeRelayUrls` before passing them to NDK's constructor if working with nostr-fetch!
 const explicitRelays = normalizeRelayUrls([
   "wss://relay-jp.nostr.wirednet.jp",
-  "wss://nostr.h3z.jp",
+  "wss://relay.damus.io",
 ]);
 
 const main = async () => {
