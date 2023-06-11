@@ -32,7 +32,6 @@ const postIter = await fetcher.allEventsIterator(
     /* filter (kinds, authors, ids, tags) */
     { kinds: [ eventKind.text ] },
     /* time range filter (since, until) */
-    // it is merged into each filter in the array of normal filters above.
     { since: nHoursAgo(24) },
     /* fetch options (optional) */
     { skipVerification: true }

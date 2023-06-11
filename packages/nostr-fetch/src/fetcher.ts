@@ -108,7 +108,7 @@ export class NostrFetcher {
    *
    * Note: there are no guarantees about the order of returned events.
    *
-   * Throws {@linkcode NostrFetchError} if any of `relayUrls` and `filters` is empty.
+   * Throws {@linkcode NostrFetchError} if `relayUrls` is empty.
    *
    * @param relayUrls
    * @param filter
@@ -210,7 +210,7 @@ export class NostrFetcher {
    *
    * Note: there are no guarantees about the order of returned events if `sort` options is not specified.
    *
-   * Throws {@linkcode NostrFetchError} if any of `relayUrls` and `filters` is empty.
+   * Throws {@linkcode NostrFetchError} if `relayUrls` is empty.
    *
    * @param relayUrls
    * @param filter
@@ -250,7 +250,7 @@ export class NostrFetcher {
    *
    * Events are sorted in "newest to oldest" order.
    *
-   * Throws {@linkcode NostrFetchError} if any of `relayUrls` and `filters` is empty or `limit` is negative.
+   * Throws {@linkcode NostrFetchError} if `relayUrls` is empty or `limit` is negative.
    *
    * @param relayUrls
    * @param filter
@@ -381,9 +381,9 @@ export class NostrFetcher {
   /**
    * Fetches the last event matching the filter from Nostr relays specified by the array of URLs.
    *
-   * Returns `undefined` if no event matching the filters exists in any relay.
+   * Returns `undefined` if no event matching the filter exists in any relay.
    *
-   * Throws {@linkcode NostrFetchError} if any of `relayUrls` and `filters` is empty.
+   * Throws {@linkcode NostrFetchError} if `relayUrls` is empty.
    *
    * @param relayUrls
    * @param filter
@@ -414,7 +414,7 @@ export class NostrFetcher {
    *
    * Each array of events in the result are sorted in "newest to oldest" order.
    *
-   * Throws {@linkcode NostrFetchError} if any of `relayUrls`, `authors` and `othreFilters` is empty or `limit` is negative.
+   * Throws {@linkcode NostrFetchError} if any of `relayUrls` and `authors` is empty or `limit` is negative.
    *
    * @param relayUrls
    * @param authors
@@ -606,9 +606,9 @@ export class NostrFetcher {
    *
    * Result is an async iterable of `{ author (pubkey), event }` pairs.
    *
-   * `event` in result will be `undefined` if no event matching the filters for the author exists in any relay.
+   * `event` in result will be `undefined` if no event matching the filter for the author exists in any relay.
    *
-   * Throws {@linkcode NostrFetchError} if any of `relayUrls`, `authors` and `othreFilters` is empty.
+   * Throws {@linkcode NostrFetchError} if any of `relayUrls` and `authors` is empty.
    *
    * @param relayUrls
    * @param authors
