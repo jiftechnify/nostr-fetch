@@ -10,7 +10,8 @@ import type {
 import type { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
 import { emptyAsyncGen, normalizeRelayUrls, withTimeout } from "@nostr-fetch/kernel/utils";
 
-import NDK, { NDKEvent, NDKRelay, NDKRelaySet, NDKRelayStatus } from "@nostr-dev-kit/ndk";
+import type NDK from "@nostr-dev-kit/ndk";
+import { NDKEvent, NDKRelay, NDKRelaySet, NDKRelayStatus } from "@nostr-dev-kit/ndk";
 
 class NDKAdapter implements NostrFetcherBase {
   #ndk: NDK;

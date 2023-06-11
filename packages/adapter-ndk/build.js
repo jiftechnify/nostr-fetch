@@ -8,6 +8,7 @@ const sharedBuildOptions = {
   entryPoints: ["src/index.ts"],
   outdir: DIST_DIR,
   bundle: true,
+  external: ["@nostr-dev-kit"],
   minify: true,
   sourcemap: "linked",
 };
