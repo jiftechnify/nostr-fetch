@@ -20,6 +20,8 @@ import type {
 
 export interface Relay {
   url: string;
+  wsReadyState: number;
+
   connect(): Promise<Relay>;
   close(): void;
   prepareSub(filters: Filter[], options: SubscriptionOptions): Subscription;
@@ -55,6 +57,10 @@ class RelayImpl implements Relay {
 
   public get url(): string {
     return this.#relayUrl;
+  }
+
+  public get wsReadyState(): number {
+    return this.#ws?.readyState ?? WebSocket.CONNECTING;
   }
 
   private forwardToSub(subId: string, forwardFn: (sub: RelaySubscription) => void) {

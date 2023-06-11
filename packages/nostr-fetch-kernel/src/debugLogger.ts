@@ -51,12 +51,12 @@ export class DebugLogger {
   /**
    * Emits log with the specified level.
    */
-  public log(lv: BasicLogLevel, ...data: unknown[]) {
+  public log(lv: BasicLogLevel, msg: unknown, ...optionalParams: unknown[]) {
     if (scoreForlogLevel[lv] < scoreForlogLevel[this.#minLevel]) {
       return;
     }
     this.#renderedPrefix
-      ? logFnForlogLevel[lv](this.#renderedPrefix, ...data)
-      : logFnForlogLevel[lv](...data);
+      ? logFnForlogLevel[lv](`${this.#renderedPrefix} ${msg}`, ...optionalParams)
+      : logFnForlogLevel[lv](msg, ...optionalParams);
   }
 }

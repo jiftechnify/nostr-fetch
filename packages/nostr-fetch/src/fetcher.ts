@@ -132,7 +132,7 @@ export class NostrFetcher {
       ...defaultFetchOptions,
       ...options,
     };
-    this.#debugLogger?.log("verbose", "finalOpts: %O", finalOpts);
+    this.#debugLogger?.log("verbose", "finalOpts=%O", finalOpts);
 
     const connectedRelayUrls = await this.#fetcherBase.ensureRelays(relayUrls, finalOpts);
 
@@ -163,7 +163,7 @@ export class NostrFetcher {
               limit: Math.min(finalOpts.limitPerReq, MAX_LIMIT_PER_REQ),
             };
           });
-          logger?.log("verbose", "refinedFilters: %O", refinedFilters);
+          logger?.log("verbose", "refinedFilters=%O", refinedFilters);
 
           let gotNewEvent = false;
           let oldestCreatedAt = Number.MAX_SAFE_INTEGER;
@@ -186,12 +186,12 @@ export class NostrFetcher {
 
           if (!gotNewEvent) {
             // termination contidion 1
-            this.#debugLogger?.log("info", `[${rurl}] got ${localSeenEventIds.size} events`);
+            logger?.log("info", `got ${localSeenEventIds.size} events`);
             break;
           }
           if (finalOpts.abortSignal?.aborted) {
             // termination contidion 2
-            this.#debugLogger?.log("info", `[${rurl}] aborted`);
+            logger?.log("info", `aborted`);
             break;
           }
 
@@ -279,7 +279,7 @@ export class NostrFetcher {
       ...defaultFetchLatestOptions,
       ...options,
     };
-    this.#debugLogger?.log("verbose", "finalOpts: %O", finalOpts);
+    this.#debugLogger?.log("verbose", "finalOpts=%O", finalOpts);
 
     // options for subscription
     const subOpts: FetchTillEoseOptions = {
@@ -318,7 +318,7 @@ export class NostrFetcher {
               limit: Math.min(remainingLimit, MAX_LIMIT_PER_REQ),
             };
           });
-          logger?.log("verbose", "refinedFilters: %O", refinedFilters);
+          logger?.log("verbose", "refinedFilters=%O", refinedFilters);
 
           let numNewEvents = 0;
           let oldestCreatedAt = Number.MAX_SAFE_INTEGER;
@@ -342,12 +342,12 @@ export class NostrFetcher {
           remainingLimit -= numNewEvents;
           if (numNewEvents === 0 || remainingLimit <= 0) {
             // termination condition 1, 2
-            this.#debugLogger?.log("info", `[${rurl}] got ${localSeenEventIds.size} events`);
+            logger?.log("info", `got ${localSeenEventIds.size} events`);
             break;
           }
           if (finalOpts.abortSignal?.aborted) {
             // termination condition 3
-            this.#debugLogger?.log("info", `[${rurl}] aborted`);
+            logger?.log("info", `aborted`);
             break;
           }
 
@@ -449,7 +449,7 @@ export class NostrFetcher {
       ...defaultFetchLatestOptions,
       ...options,
     };
-    this.#debugLogger?.log("verbose", "finalOpts: %O", finalOpts);
+    this.#debugLogger?.log("verbose", "finalOpts=%O", finalOpts);
 
     // options for subscription
     const subOpts: FetchTillEoseOptions = {
