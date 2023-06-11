@@ -42,6 +42,9 @@
   "dependencies": {
     "@nostr-fetch/kernel": "^0.7.0"
   },
+  "devDependencies": {
+    "nostr-relaypool": "^0.6.28"
+  },
   "peerDependencies": {
     "nostr-fetch": "^0.7.0",
     "nostr-relaypool": "^0.6.28"
