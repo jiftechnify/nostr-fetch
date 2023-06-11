@@ -2,8 +2,14 @@ import type { NostrEvent } from "./nostr";
 
 type Callback<E> = E extends void ? () => void : (ev: E) => void;
 
+export type WSCloseEvent = {
+  code: number;
+  reason: string;
+  wasClean: boolean | undefined; // optional since websocket-polyfill's CloseEvent doesn't have it
+};
+
 export type RelayConnectCb = Callback<void>;
-export type RelayDisconnectCb = Callback<CloseEvent | undefined>;
+export type RelayDisconnectCb = Callback<WSCloseEvent | undefined>;
 export type RelayNoticeCb = Callback<unknown>;
 export type RelayErrorCb = Callback<void>;
 
