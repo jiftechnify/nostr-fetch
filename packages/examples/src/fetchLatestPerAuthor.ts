@@ -27,8 +27,7 @@ const main = async () => {
 
   // get latest 10 posts for each followee
   const latestPostsPerFollowee = await fetcher.fetchLatestEventsPerAuthor(
-    defaultRelays,
-    followees,
+    { authors: followees, relayUrls: defaultRelays },
     { kinds: [eventKind.text] },
     10
   );

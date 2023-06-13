@@ -2,6 +2,7 @@ import { Channel, Deferred } from "@nostr-fetch/kernel/channel";
 import { verifyEventSig } from "@nostr-fetch/kernel/crypto";
 import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
 import {
+  EnsureRelaysOptions,
   FetchTillEoseOptions,
   NostrFetcherBase,
   NostrFetcherBaseInitializer,
@@ -9,12 +10,13 @@ import {
   defaultFetcherCommonOptions,
 } from "@nostr-fetch/kernel/fetcherBase";
 import type { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
-import { abbreviate, currUnixtimeSec } from "@nostr-fetch/kernel/utils";
+import { abbreviate, currUnixtimeSec, normalizeRelayUrls } from "@nostr-fetch/kernel/utils";
 
 import { DefaultFetcherBase } from "./fetcherBase";
 import {
   EventBuckets,
   KeyRelayMatrix,
+  NostrFetchError,
   checkIfNonEmpty,
   createdAtDesc,
   validateReq,
@@ -57,6 +59,24 @@ export type FetchLatestOptions = FetchOptions & {
 const defaultFetchLatestOptions: Required<FetchLatestOptions> = {
   ...defaultFetchOptions,
   reduceVerification: true,
+};
+
+export type AuthorsAndRelays = RelaySetForAllAuthors | RelaySetsPerAuthor;
+
+// use same relay set for all authors
+type RelaySetForAllAuthors = {
+  authors: string[];
+  relayUrls: string[];
+};
+
+// use saperate relay set for each author
+type RelaySetsPerAuthor = Iterable<[author: string, relayUrls: string[]]>;
+
+const isRelaySetForAllAuthors = (a2rs: AuthorsAndRelays): a2rs is RelaySetForAllAuthors => {
+  return "relayUrls" in a2rs && "authors" in a2rs;
+};
+const isRelaySetsPerAuthor = (a2rs: AuthorsAndRelays): a2rs is RelaySetsPerAuthor => {
+  return Symbol.iterator in Object(a2rs);
 };
 
 export class NostrFetcher {
@@ -165,20 +185,25 @@ export class NostrFetcher {
           let gotNewEvent = false;
           let oldestCreatedAt = Number.MAX_SAFE_INTEGER;
 
-          for await (const e of this.#fetcherBase.fetchTillEose(rurl, refinedFilter, finalOpts)) {
-            // eliminate duplicated events
-            if (!localSeenEventIds.has(e.id)) {
-              gotNewEvent = true;
-              localSeenEventIds.add(e.id);
-              if (e.created_at < oldestCreatedAt) {
-                oldestCreatedAt = e.created_at;
-              }
+          try {
+            for await (const e of this.#fetcherBase.fetchTillEose(rurl, refinedFilter, finalOpts)) {
+              // eliminate duplicated events
+              if (!localSeenEventIds.has(e.id)) {
+                gotNewEvent = true;
+                localSeenEventIds.add(e.id);
+                if (e.created_at < oldestCreatedAt) {
+                  oldestCreatedAt = e.created_at;
+                }
 
-              if (!globalSeenEventIds.has(e.id)) {
-                globalSeenEventIds.add(e.id);
-                tx.send(e);
+                if (!globalSeenEventIds.has(e.id)) {
+                  globalSeenEventIds.add(e.id);
+                  tx.send(e);
+                }
               }
             }
+          } catch (err) {
+            logger?.log("error", err);
+            break;
           }
 
           if (!gotNewEvent) {
@@ -267,7 +292,7 @@ export class NostrFetcher {
     // assertion
     validateReq({ relayUrls, limit }, [
       checkIfNonEmpty((r) => r.relayUrls, "Specify at least 1 relay URL"),
-      (r) => (r.limit <= 0 ? '"limit" should be positive number' : undefined),
+      (r) => (r.limit <= 0 ? ['"limit" should be positive number'] : []),
     ]);
 
     const finalOpts: Required<FetchLatestOptions> = {
@@ -316,20 +341,25 @@ export class NostrFetcher {
           let numNewEvents = 0;
           let oldestCreatedAt = Number.MAX_SAFE_INTEGER;
 
-          for await (const e of this.#fetcherBase.fetchTillEose(rurl, refinedFilter, subOpts)) {
-            // eliminate duplicated events
-            if (!localSeenEventIds.has(e.id)) {
-              numNewEvents++;
-              localSeenEventIds.add(e.id);
-              if (e.created_at < oldestCreatedAt) {
-                oldestCreatedAt = e.created_at;
-              }
+          try {
+            for await (const e of this.#fetcherBase.fetchTillEose(rurl, refinedFilter, subOpts)) {
+              // eliminate duplicated events
+              if (!localSeenEventIds.has(e.id)) {
+                numNewEvents++;
+                localSeenEventIds.add(e.id);
+                if (e.created_at < oldestCreatedAt) {
+                  oldestCreatedAt = e.created_at;
+                }
 
-              if (!globalSeenEventIds.has(e.id)) {
-                globalSeenEventIds.add(e.id);
-                tx.send(e);
+                if (!globalSeenEventIds.has(e.id)) {
+                  globalSeenEventIds.add(e.id);
+                  tx.send(e);
+                }
               }
             }
+          } catch (err) {
+            logger?.log("error", err);
+            break;
           }
 
           remainingLimit -= numNewEvents;
@@ -407,36 +437,85 @@ export class NostrFetcher {
     return latest1[0];
   }
 
+  // creates mapping of available relays to authors.
+  // returns that mapping and array of all authors.
+  async #mapAvailableRelayToAuthors(
+    a2rs: AuthorsAndRelays,
+    ensureOpts: EnsureRelaysOptions
+  ): Promise<[map: Map<string, string[]>, allAuthors: string[]]> {
+    if (isRelaySetForAllAuthors(a2rs)) {
+      validateReq(a2rs, [
+        checkIfNonEmpty((r) => r.relayUrls, "Specify at least 1 relay URL"),
+        checkIfNonEmpty((r) => r.authors, "Specify at least 1 author (pubkey)"),
+      ]);
+
+      const connectedRelays = await this.#fetcherBase.ensureRelays(a2rs.relayUrls, ensureOpts);
+      return [new Map(connectedRelays.map((rurl) => [rurl, a2rs.authors])), a2rs.authors];
+    }
+
+    if (isRelaySetsPerAuthor(a2rs)) {
+      const a2rsArr = [...a2rs];
+      validateReq(a2rsArr, [checkIfNonEmpty((a2rs) => a2rs, "Specify at least 1 author")]);
+      validateReq(a2rsArr, [
+        (a2rs) =>
+          a2rs.some(([, relays]) => relays.length === 0)
+            ? ["Specify at least 1 relay URL for all authors"]
+            : [],
+      ]);
+
+      // transpose: author to rurls -> rurl to authors
+      const rurl2authors = new Map<string, string[]>();
+      for (const [author, rurls] of a2rsArr) {
+        const normalized = normalizeRelayUrls(rurls);
+        for (const rurl of normalized) {
+          const authors = rurl2authors.get(rurl);
+          rurl2authors.set(rurl, [...(authors ?? []), author]);
+        }
+      }
+      const connectedRelays = await this.#fetcherBase.ensureRelays(
+        [...rurl2authors.keys()],
+        ensureOpts
+      );
+
+      // retain connected relays only
+      return [
+        /* eslint-disable-next-line @typescript-eslint/no-non-null-assertion */
+        new Map(connectedRelays.map((rurl) => [rurl, rurl2authors.get(rurl)!])),
+        a2rsArr.map(([author]) => author),
+      ];
+    }
+
+    throw new NostrFetchError(
+      "malformed first argument for fetchLatestEventsPerAuthor/fetchLastEventPerAuthor"
+    );
+  }
+
   /**
-   * Fetches latest up to `limit` events **for each author in `authors`** matching the filter, from Nostr relays.
+   * Fetches latest up to `limit` events **for each author specified by `authorsAndRelays`**.
    *
-   * Result is an async iterable of `{ author (pubkey), events (from that author) }` pairs.
+   * `authorsAndRelays` can be either of two types:
+   *
+   * - `{ authors: string[], relayUrls: string[] }`: The fetcher will use the same relay set (`relayUrls`) for all `authors` to fetch events.
+   * - `Map<string, string[]>`: Key must be author's pubkey and value must be relay set for that author. The fetcher will use separate relay set for each author to fetch events.
+   *
+   * Result is an async iterable of `{ author (pubkey), events (from the author) }` pairs.
    *
    * Each array of events in the result are sorted in "newest to oldest" order.
    *
-   * Throws {@linkcode NostrFetchError} if any of `relayUrls` and `authors` is empty or `limit` is negative.
+   * Throws {@linkcode NostrFetchError} if `authorsAndRelays` is malformed or`limit` is negative.
    *
-   * @param relayUrls
-   * @param authors
+   * @param authorsAndRelays
    * @param otherFilter
    * @param limit
    * @param options
    * @returns
    */
   public async fetchLatestEventsPerAuthor(
-    relayUrls: string[],
-    authors: string[],
+    authorsAndRelays: AuthorsAndRelays,
     otherFilter: Omit<FetchFilter, "authors">,
     limit: number,
     options: FetchLatestOptions = {}
   ): Promise<AsyncIterable<{ author: string; events: NostrEvent[] }>> {
-    // assertion
-    validateReq({ relayUrls, authors, limit }, [
-      checkIfNonEmpty((r) => r.relayUrls, "Specify at least 1 relay URL"),
-      checkIfNonEmpty((r) => r.authors, "Specify at least 1 author (pubkey)"),
-      (r) => (r.limit <= 0 ? '"limit" should be positive number' : undefined),
-    ]);
-
     const finalOpts = {
       ...defaultFetchLatestOptions,
       ...options,
@@ -450,21 +529,22 @@ export class NostrFetcher {
       skipVerification: finalOpts.skipVerification || finalOpts.reduceVerification,
     };
 
-    const connectedRelayUrls = await this.#fetcherBase.ensureRelays(relayUrls, finalOpts);
+    // get mapping of available relay to authors and list of all authors
+    const [relayToAuthors, allAuthors] = await this.#mapAvailableRelayToAuthors(
+      authorsAndRelays,
+      finalOpts
+    );
+    this.#debugLogger?.log("verbose", "relayToAuthors=%O", relayToAuthors);
 
     const [tx, chIter] = Channel.make<{ author: string; events: NostrEvent[] }>();
     const initialUntil = currUnixtimeSec();
 
     // for each pair of author and relay URL, create a promise that act as "latch", so that the "merger" can wait for a subscription to complete
-    const latches = new KeyRelayMatrix(
-      authors,
-      connectedRelayUrls,
-      () => new Deferred<NostrEvent[]>()
-    );
+    const latches = new KeyRelayMatrix(relayToAuthors, () => new Deferred<NostrEvent[]>());
 
     // the "fetcher" fetches events from each relay
     Promise.all(
-      connectedRelayUrls.map(async (rurl) => {
+      [...relayToAuthors].map(async ([rurl, authors]) => {
         // repeat subscription until one of the following conditions is met:
         // 1. have fetched required number of events for all authors
         // 2. the relay didn't return new event
@@ -506,24 +586,30 @@ export class NostrFetcher {
           let gotNewEvent = false;
           let oldestCreatedAt = Number.MAX_SAFE_INTEGER;
 
-          for await (const e of this.#fetcherBase.fetchTillEose(rurl, refinedFilter, subOpts)) {
-            if (!localSeenEventIds.has(e.id)) {
-              gotNewEvent = true;
-              localSeenEventIds.add(e.id);
+          try {
+            for await (const e of this.#fetcherBase.fetchTillEose(rurl, refinedFilter, subOpts)) {
+              if (!localSeenEventIds.has(e.id)) {
+                gotNewEvent = true;
+                localSeenEventIds.add(e.id);
 
-              if (e.created_at < oldestCreatedAt) {
-                oldestCreatedAt = e.created_at;
-              }
+                if (e.created_at < oldestCreatedAt) {
+                  oldestCreatedAt = e.created_at;
+                }
 
-              // add the event to the bucket for the author(pubkey)
-              const addRes = evBucketsPerAuthor.add(e.pubkey, e);
-              if (addRes.state === "fulfilled") {
-                // notify that event fetching is completed for the author at this relay
-                // by resolveing the Promise corresponds to the author and the relay
-                latches.get(e.pubkey, rurl)?.resolve(addRes.events);
-                logger?.log("verbose", `fulfilled a bucket for author=${e.pubkey}`);
+                // add the event to the bucket for the author(pubkey)
+                const addRes = evBucketsPerAuthor.add(e.pubkey, e);
+                if (addRes.state === "fulfilled") {
+                  // notify that event fetching is completed for the author at this relay
+                  // by resolveing the Promise corresponds to the author and the relay
+                  latches.get(e.pubkey, rurl)?.resolve(addRes.events);
+                  logger?.log("verbose", `fulfilled a bucket for author=${e.pubkey}`);
+                }
               }
             }
+          } catch (err) {
+            logger?.log("error", err);
+            resolveAllOnEarlyReturn();
+            break;
           }
 
           if (!gotNewEvent) {
@@ -547,7 +633,7 @@ export class NostrFetcher {
     // the "merger".
     // merges result from relays, sorts events, takes latest events and sends it to the result channel on all event fetching for a author is completed
     Promise.all(
-      authors.map(async (pubkey) => {
+      allAuthors.map(async (pubkey) => {
         const logger = this.#debugLogger?.subLogger(abbreviate(pubkey, 6));
 
         // wait for all the buckets for the author to fulfilled
@@ -602,23 +688,26 @@ export class NostrFetcher {
   }
 
   /**
-   * Fetches the last event matching the filter **for each author in `authors`** from Nostr relays.
+   * Fetches the last event **for each author specified by `authorsAndRelays`**.
+   *
+   * `authorsAndRelays` can be either of two types:
+   *
+   * - `{ authors: string[], relayUrls: string[] }`: The fetcher will use the same relay set (`relayUrls`) for all `authors` to fetch events.
+   * - `Map<string, string[]>`: Key must be author's pubkey and value must be relay set for that author. The fetcher will use separate relay set for each author to fetch events.
    *
    * Result is an async iterable of `{ author (pubkey), event }` pairs.
    *
    * `event` in result will be `undefined` if no event matching the filter for the author exists in any relay.
    *
-   * Throws {@linkcode NostrFetchError} if any of `relayUrls` and `authors` is empty.
+   * Throws {@linkcode NostrFetchError} if `authorsAndRelays` is malformed.
    *
-   * @param relayUrls
-   * @param authors
+   * @param authorsAndRelays
    * @param otherFilter
    * @param options
    * @returns
    */
   public async fetchLastEventPerAuthor(
-    relayUrls: string[],
-    authors: string[],
+    authorsAndRelays: AuthorsAndRelays,
     otherFilter: Omit<FetchFilter, "authors">,
     options: FetchLatestOptions = {}
   ): Promise<AsyncIterable<{ author: string; event: NostrEvent | undefined }>> {
@@ -632,8 +721,7 @@ export class NostrFetcher {
     };
 
     const latest1Iter = await this.fetchLatestEventsPerAuthor(
-      relayUrls,
-      authors,
+      authorsAndRelays,
       otherFilter,
       1,
       finalOpts

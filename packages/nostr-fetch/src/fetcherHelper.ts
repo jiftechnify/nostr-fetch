@@ -14,13 +14,11 @@ export class NostrFetchError extends Error {
  *
  * If there are something wrong, throws error that includes all error messages from validators.
  */
-export const validateReq = <T>(req: T, validators: ((req: T) => string | undefined)[]): void => {
+export const validateReq = <T>(req: T, validators: ((req: T) => string[])[]): void => {
   const errors = [];
   for (const validate of validators) {
-    const err = validate(req);
-    if (err) {
-      errors.push(err);
-    }
+    const subErrs = validate(req);
+    errors.push(...subErrs);
   }
   if (errors.length > 0) {
     const lines = errors.map((e) => `- ${e}`).join("\n");
@@ -31,8 +29,8 @@ export const validateReq = <T>(req: T, validators: ((req: T) => string | undefin
 export function checkIfNonEmpty<T, U>(
   getArray: (req: T) => U[],
   msg: string
-): (req: T) => string | undefined {
-  return (req: T): string | undefined => (getArray(req).length === 0 ? msg : undefined);
+): (req: T) => string[] {
+  return (req: T): string[] => (getArray(req).length === 0 ? [msg] : []);
 }
 
 /**
@@ -111,7 +109,7 @@ export class EventBuckets<K> {
 }
 
 /**
- * Map from all combinations of `keys` and  `relayUrls` to a value of type `V`.
+ * Map from all combinations of keys per relay URL in `keysPerRelay` to a value of type `V`.
  *
  * This has additional mapping from `key` in `keys` to array of values.
  */
@@ -119,12 +117,14 @@ export class KeyRelayMatrix<K extends string | number, V> {
   #matrix: Map<string, V>;
   #byKey: Map<K, V[]>;
 
-  constructor(keys: K[], relayUrls: string[], initVal: () => V) {
+  constructor(relayToKeys: Map<string, K[]>, initVal: () => V) {
     this.#matrix = new Map();
-    this.#byKey = new Map(keys.map((k) => [k, []]));
 
-    for (const k of keys) {
-      for (const r of relayUrls) {
+    const allKeys = [...new Set([...relayToKeys.values()].flat())]; // relayToKeys.values(): K[][]
+    this.#byKey = new Map(allKeys.map((k) => [k, []]));
+
+    for (const [r, keys] of relayToKeys) {
+      for (const k of keys) {
         const v = initVal();
 
         this.#matrix.set(this.#getKey(k, r), v);

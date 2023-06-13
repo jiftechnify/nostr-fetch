@@ -36,9 +36,22 @@ const dedup = <T>(items: T[]): T[] => {
 
 /**
  *  Normalizes each relay URL in `relayUrls`, then removes duplications.
+ *
+ *  This function also filters out malformed URLs.
  */
 export const normalizeRelayUrls = (relayUrls: string[]): string[] => {
-  return dedup(relayUrls.map((u) => normalizeRelayUrl(u)));
+  return dedup(
+    relayUrls
+      .filter((u) => {
+        try {
+          new URL(u);
+          return true;
+        } catch {
+          return false;
+        }
+      })
+      .map((u) => normalizeRelayUrl(u))
+  );
 };
 
 /**
