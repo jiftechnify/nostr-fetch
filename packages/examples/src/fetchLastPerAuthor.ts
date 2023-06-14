@@ -29,9 +29,12 @@ const main = async () => {
     .map((t) => t[1] as string);
 
   // get profile (metadata) events for each followee
-  const profilePerAuthor = await fetcher.fetchLastEventPerAuthor(defaultRelays, followees, {
-    kinds: [eventKind.metadata],
-  });
+  const profilePerAuthor = await fetcher.fetchLastEventPerAuthor(
+    { authors: followees, relayUrls: defaultRelays },
+    {
+      kinds: [eventKind.metadata],
+    }
+  );
 
   // display the name in profile for each author
   console.log(`${"pubkey".padEnd(64, " ")} | name`);
