@@ -47,11 +47,11 @@ export class Channel<T> {
   #iterAlreadyStarted = false;
 
   // backpressure mode related
-  #highWaterMark: number | undefined;
+  #highWaterMark: number;
   #drainWaiter: Deferred<void> | undefined;
 
   private constructor({ highWaterMark = undefined }: ChannelMakeOptions) {
-    this.#highWaterMark = highWaterMark;
+    this.#highWaterMark = highWaterMark ?? Number.POSITIVE_INFINITY;
   }
 
   /**
@@ -103,17 +103,12 @@ export class Channel<T> {
     }
   }
 
-  // checks if sendQ's "water level" is higher than highWaterMark
-  private get isSendQOverflowed(): boolean {
-    return this.#highWaterMark !== undefined && this.#sendQ.length > this.#highWaterMark;
-  }
-
   waitUntilDrained(): Promise<void> {
     if (this.#drainWaiter !== undefined) {
       return this.#drainWaiter.promise;
     }
 
-    if (!this.isSendQOverflowed) {
+    if (this.#sendQ.length <= this.#highWaterMark) {
       return Promise.resolve();
     }
     // sendQ have overflowed -> wait until drained
@@ -129,7 +124,7 @@ export class Channel<T> {
     if (this.#sendQ.length > 0) {
       const next = this.#sendQ.shift() as () => Promise<T>;
 
-      if (this.#drainWaiter !== undefined && !this.isSendQOverflowed) {
+      if (this.#drainWaiter !== undefined && this.#sendQ.length <= this.#highWaterMark) {
         // notify to sender that sendQ have been drained enough
         this.#drainWaiter.resolve();
         this.#drainWaiter = undefined;
