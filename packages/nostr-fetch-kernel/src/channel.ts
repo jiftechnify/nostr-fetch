@@ -21,6 +21,8 @@ interface ChannelSender<T> {
   send(v: T): void;
   error(e: unknown): void;
   close(): void;
+
+  waitUntilDrained(): Promise<void>;
 }
 
 interface ChannelIter<T> {
@@ -33,6 +35,10 @@ class ChannelCloseSignal extends Error {
   }
 }
 
+type ChannelMakeOptions = {
+  highWaterMark?: number | undefined;
+};
+
 export class Channel<T> {
   #sendQ: (() => Promise<T>)[] = [];
   #recvQ: Deferred<T> | undefined;
@@ -40,11 +46,24 @@ export class Channel<T> {
 
   #iterAlreadyStarted = false;
 
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  private constructor() {}
+  // backpressure mode related
+  #highWaterMark: number;
+  #drainWaiter: Deferred<void> | undefined;
 
-  static make<T>(): [ChannelSender<T>, ChannelIter<T>] {
-    const c = new Channel<T>();
+  private constructor({ highWaterMark = undefined }: ChannelMakeOptions) {
+    this.#highWaterMark = highWaterMark ?? Number.POSITIVE_INFINITY;
+  }
+
+  /**
+   * Makes an asyncronous channel.
+   *
+   * Return a pair of a sender endpoint and an iterator which iterate over items sent to the channel.
+   *
+   * Specifying `highWaterMark` option enables the "backpressure mode".
+   * In this mode, a sender can wait until internal queue is free enough.
+   */
+  static make<T>(options?: ChannelMakeOptions): [ChannelSender<T>, ChannelIter<T>] {
+    const c = new Channel<T>(options ?? {});
     return [c as ChannelSender<T>, c as ChannelIter<T>];
   }
 
@@ -84,13 +103,34 @@ export class Channel<T> {
     }
   }
 
+  waitUntilDrained(): Promise<void> {
+    if (this.#drainWaiter !== undefined) {
+      return this.#drainWaiter.promise;
+    }
+
+    if (this.#sendQ.length <= this.#highWaterMark) {
+      return Promise.resolve();
+    }
+    // sendQ have overflowed -> wait until drained
+    this.#drainWaiter = new Deferred();
+    return this.#drainWaiter.promise;
+  }
+
   private get isCompleted(): boolean {
     return this.#closed && this.#sendQ.length === 0;
   }
 
   private recv(): () => Promise<T> {
     if (this.#sendQ.length > 0) {
-      return this.#sendQ.shift() as () => Promise<T>;
+      const next = this.#sendQ.shift() as () => Promise<T>;
+
+      if (this.#drainWaiter !== undefined && this.#sendQ.length <= this.#highWaterMark) {
+        // notify to sender that sendQ have been drained enough
+        this.#drainWaiter.resolve();
+        this.#drainWaiter = undefined;
+      }
+
+      return next;
     }
     if (this.#recvQ !== undefined) {
       return () => Promise.reject(Error("Double receive is not allowed"));

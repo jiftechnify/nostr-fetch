@@ -1,4 +1,5 @@
 import { setTimeout as wait } from "node:timers/promises";
+import { inspect } from "util";
 import { describe, expect, test } from "vitest";
 import { Channel } from "./channel";
 
@@ -98,5 +99,45 @@ describe("channel", () => {
     await expect(async () => {
       await Promise.all([iterate(chIter), iterate(chIter)]);
     }).rejects.toThrow("Iterating a single channel in multiple location is not allowed");
+  });
+
+  test.concurrent("backpressure", async () => {
+    const [tx, chIter] = Channel.make<number>({ highWaterMark: 3 });
+
+    for (const n of [0, 1, 2, 3]) {
+      tx.send(n);
+    }
+    tx.close();
+
+    // check if `wait` is pending
+    const wait1 = tx.waitUntilDrained();
+    const wait2 = tx.waitUntilDrained();
+    [wait1, wait2].forEach((w) => {
+      expect(inspect(w).includes("pending")).toBe(true);
+    });
+
+    const res = [];
+
+    // drain first item -> sendQ is now drained enough
+    const iterBody = chIter[Symbol.asyncIterator]();
+    const fst = await iterBody.next();
+    res.push(fst.value);
+
+    // check if `wait` have been resolved
+    [wait1, wait2].forEach((w) => {
+      expect(inspect(w).includes("pending")).toBe(false);
+    });
+    await expect(Promise.all([wait1, wait2])).resolves.toEqual([undefined, undefined]);
+
+    // drain remaining items
+    while (true) {
+      const { done, value } = await iterBody.next();
+      if (done) {
+        break;
+      }
+      res.push(value);
+    }
+
+    expect(res).toEqual([0, 1, 2, 3]);
   });
 });

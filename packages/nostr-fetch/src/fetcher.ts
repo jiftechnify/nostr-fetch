@@ -26,6 +26,9 @@ export type FetchFilter = Omit<Filter, "limit" | "since" | "until">;
 export type FetchTimeRangeFilter = Pick<Filter, "since" | "until">;
 
 const MAX_LIMIT_PER_REQ = 5000;
+const MAX_LIMIT_PER_REQ_IN_BACKPRESSURE = 500;
+
+const MIN_HIGH_WATER_MARK = 5000;
 
 export type FetchOptions = {
   skipVerification?: boolean;
@@ -41,6 +44,15 @@ const defaultFetchOptions: Required<FetchOptions> = {
   abortSignal: undefined,
   abortSubBeforeEoseTimeoutMs: 10000,
   limitPerReq: MAX_LIMIT_PER_REQ,
+};
+
+export type AllEventsIterOptions = FetchOptions & {
+  enableBackpressure?: boolean;
+};
+
+const defaultAllEventsIterOptions: Required<AllEventsIterOptions> = {
+  ...defaultFetchOptions,
+  enableBackpressure: false,
 };
 
 export type FetchAllOptions = FetchOptions & {
@@ -147,22 +159,34 @@ export class NostrFetcher {
     relayUrls: string[],
     filter: FetchFilter,
     timeRangeFilter: FetchTimeRangeFilter,
-    options: FetchOptions = {}
+    options: AllEventsIterOptions = {}
   ): Promise<AsyncIterable<NostrEvent>> {
     // assertion
     validateReq({ relayUrls }, [
       checkIfNonEmpty((r) => r.relayUrls, "Specify at least 1 relay URL"),
     ]);
 
-    const finalOpts: Required<FetchOptions> = {
-      ...defaultFetchOptions,
+    const filledOpts: Required<AllEventsIterOptions> = {
+      ...defaultAllEventsIterOptions,
       ...options,
+    };
+
+    // use smaller limit if backpressure is enabled
+    const finalOpts: Required<AllEventsIterOptions> = {
+      ...filledOpts,
+      limitPerReq: filledOpts.enableBackpressure
+        ? Math.min(filledOpts.limitPerReq, MAX_LIMIT_PER_REQ_IN_BACKPRESSURE)
+        : filledOpts.limitPerReq,
     };
     this.#debugLogger?.log("verbose", "finalOpts=%O", finalOpts);
 
     const connectedRelayUrls = await this.#fetcherBase.ensureRelays(relayUrls, finalOpts);
 
-    const [tx, chIter] = Channel.make<NostrEvent>();
+    const highWaterMark = finalOpts.enableBackpressure
+      ? Math.max(finalOpts.limitPerReq * connectedRelayUrls.length, MIN_HIGH_WATER_MARK)
+      : undefined;
+    const [tx, chIter] = Channel.make<NostrEvent>({ highWaterMark });
+
     const globalSeenEventIds = new Set<string>();
     const initialUntil = timeRangeFilter.until ?? currUnixtimeSec();
 
@@ -222,13 +246,16 @@ export class NostrFetcher {
           }
           if (finalOpts.abortSignal?.aborted) {
             // termination contidion 2
-            logger?.log("info", `aborted`);
+            logger?.log("info", "aborted");
             break;
           }
 
           // set next `until` to `created_at` of the oldest event returned in this time.
           // `+ 1` is needed to make it work collectly even if we used relays which has "exclusive" behaviour with respect to `until`.
           nextUntil = oldestCreatedAt + 1;
+
+          // receive backpressure: wait until the channel is drained enough
+          await tx.waitUntilDrained();
         }
       })
     ).then(() => {
@@ -263,11 +290,17 @@ export class NostrFetcher {
       checkIfNonEmpty((r) => r.relayUrls, "Specify at least 1 relay URL"),
     ]);
 
-    const finalOpts = { ...defaultFetchAllOptions, ...options };
+    const finalOpts = {
+      ...defaultFetchAllOptions,
+      ...options,
+    };
 
     const res: NostrEvent[] = [];
 
-    const allEvents = await this.allEventsIterator(relayUrls, filter, timeRangeFilter, finalOpts);
+    const allEvents = await this.allEventsIterator(relayUrls, filter, timeRangeFilter, {
+      ...finalOpts,
+      enableBackpressure: false,
+    });
     for await (const ev of allEvents) {
       res.push(ev);
     }
