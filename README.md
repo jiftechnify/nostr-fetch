@@ -15,7 +15,7 @@ pnpm add nostr-fetch
 
 ## Usage
 
-### Basic
+### Basics
 
 ```ts
 import { eventKind, NostrFetcher } from "nostr-fetch";
@@ -224,7 +224,7 @@ Initializes a `NostrFetcher` instance based on the default relay pool implementa
 
 Initializes a `NostrFetcher` instance based on a custom relay pool implementation passed as an argument.
 
-This opens up interoperability with other relay pool implementations such as [nostr-tools](https://github.com/nbd-wtf/nostr-tools)' `SimplePool`.
+This opens up interoperability with other relay pool implementations such as [nostr-tools](https://github.com/nbd-wtf/nostr-tools)' `SimplePool`.  See [here](#working-with-custom-relay-pool-implementations) for details.
 
 #### `NostrFetcher#shutdown`
 
@@ -243,7 +243,7 @@ public async allEventsIterator(
     relayUrls: string[],
     filter: FetchFilter,
     timeRangeFilter: FetchTimeRangeFilter,
-    options: FetchOptions = {}
+    options: AllEventsIterOptions = {}
 ): Promise<AsyncIterable<NostrEvent>>
 ```
 
@@ -253,11 +253,13 @@ You can iterate over events using for-await-of loop.
 
 ```ts
 const fetcher = NostrFetcher.init();
-const events = await fetcher.allEventsIterator([...], [{...}], {...});
+const events = await fetcher.allEventsIterator([/* relays */], {/* filter */}, {/* time range */});
 for await (const ev of events) {
     // process events
 }
 ```
+
+Specifying `enableBackpressure: true` in `options` enables "backpressure mode", where the fetcher is backpressured by the consumer of the iterator.
 
 > **Note**
 >
@@ -323,14 +325,18 @@ Returns `undefined` if no event matching the filter exists in any relay.
 
 ```ts
 public async fetchLatestEventsPerAuthor(
-    relayUrls: string[],
-    authors: string[],
+    authorsAndRelays: AuthorsAndRelays,
     otherFilter: Omit<FetchFilter, "authors">,
     limit: number,
     options: FetchLatestOptions = {}
 ): Promise<AsyncIterable<{ author: string; events: NostrEvent[] }>>
 ```
-Fetches latest up to `limit` events **for each author in `authors`** matching the filter, from Nostr relays.
+Fetches latest up to `limit` events **for each author specified by `authorsAndRelays`**.
+
+`authorsAndRelays` can be either of two types:
+
+- `{ authors: string[], relayUrls: string[] }`: The fetcher will use the same relay set (`relayUrls`) for all `authors` to fetch events.
+- `Map<string, string[]>`: Key must be author's pubkey and value must be relay set for that author. The fetcher will use separate relay set for each author to fetch events.
 
 Result is an async iterable of `{ author (pubkey), events (from that author) }` pairs.
 
@@ -342,14 +348,18 @@ Each array of events in the result are sorted in "newest to oldest" order.
 
 ```ts
 public async fetchLastEventPerAuthor(
-    relayUrls: string[],
-    authors: string[],
+    authorsAndRelays: AuthorsAndRelays,
     otherFilter: Omit<FetchFilter, "authors">,
     options: FetchLatestOptions = {}
 ): Promise<AsyncIterable<{ author: string; event: NostrEvent | undefined }>>
 ```
 
-Fetches the last event matching the filter **for each author in `authors`** from Nostr relays.
+Fetches the last event **for each author specified by `authorsAndRelays`**.
+
+`authorsAndRelays` can be either of two types:
+
+- `{ authors: string[], relayUrls: string[] }`: The fetcher will use the same relay set (`relayUrls`) for all `authors` to fetch events.
+- `Map<string, string[]>`: Key must be author's pubkey and value must be relay set for that author. The fetcher will use separate relay set for each author to fetch events.
 
 Result is an async iterable of `{ author (pubkey), event }` pairs.
 
