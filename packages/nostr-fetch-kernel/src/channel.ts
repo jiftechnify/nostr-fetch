@@ -36,7 +36,7 @@ class ChannelCloseSignal extends Error {
 }
 
 type ChannelMakeOptions = {
-  highWaterMark?: number;
+  highWaterMark?: number | undefined;
 };
 
 export class Channel<T> {
