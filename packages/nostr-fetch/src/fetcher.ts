@@ -61,15 +61,22 @@ const defaultFetchLatestOptions: Required<FetchLatestOptions> = {
   reduceVerification: true,
 };
 
+/**
+ * Type of the fiest argument of `fetchLatestEventsPerAuthor`/`fetchLastEventPerAuthor`
+ */
 export type AuthorsAndRelays = RelaySetForAllAuthors | RelaySetsPerAuthor;
 
-// use same relay set for all authors
+/**
+ * Use same relay set for all authors
+ */
 type RelaySetForAllAuthors = {
   authors: string[];
   relayUrls: string[];
 };
 
-// use saperate relay set for each author
+/**
+ * Use saperate relay set for each author.  Typically `Map<string, string[]>`
+ */
 type RelaySetsPerAuthor = Iterable<[author: string, relayUrls: string[]]>;
 
 const isRelaySetForAllAuthors = (a2rs: AuthorsAndRelays): a2rs is RelaySetForAllAuthors => {
@@ -165,6 +172,7 @@ export class NostrFetcher {
         // repeat subscription until one of the following conditions is met:
         // 1. the relay didn't return new event
         // 2. aborted by AbortController
+        // E. an error occured while fetching events
 
         const logger = this.#debugLogger?.subLogger(rurl);
 
@@ -202,6 +210,7 @@ export class NostrFetcher {
               }
             }
           } catch (err) {
+            // an error occured while fetching events
             logger?.log("error", err);
             break;
           }
@@ -321,6 +330,7 @@ export class NostrFetcher {
         // 1. got enough amount of events
         // 2. the relay didn't return new event
         // 3. aborted by AbortController
+        // E. an error occured while fetching events
 
         const logger = this.#debugLogger?.subLogger(rurl);
 
@@ -358,6 +368,7 @@ export class NostrFetcher {
               }
             }
           } catch (err) {
+            // an error occured while fetching events
             logger?.log("error", err);
             break;
           }
@@ -549,6 +560,7 @@ export class NostrFetcher {
         // 1. have fetched required number of events for all authors
         // 2. the relay didn't return new event
         // 3. aborted by AbortController
+        // E. an error occured while fetching events
 
         const logger = this.#debugLogger?.subLogger(rurl);
 
@@ -556,11 +568,11 @@ export class NostrFetcher {
         const evBucketsPerAuthor = new EventBuckets(authors, limit);
         const localSeenEventIds = new Set<string>();
 
-        // procedure to complete the subscription in the middle on early return, resolving all remaining promises.
-        // resolve() is called even if a Promise is already resolved, but it's not a problem.
-        const resolveAllOnEarlyReturn = () => {
+        // procedure to complete the subscription in the middle, resolving all remaining promises.
+        // resolve() is called even if a promise is already resolved, but it's not a problem.
+        const resolveAllOnEarlyBreak = () => {
+          logger?.log("verbose", `resolving bucket on early return`);
           for (const pk of authors) {
-            logger?.log("verbose", `resolving bucket on early return: author=${pk}`);
             latches.get(pk, rurl)?.resolve(evBucketsPerAuthor.getBucket(pk) ?? []);
           }
         };
@@ -607,21 +619,22 @@ export class NostrFetcher {
               }
             }
           } catch (err) {
+            // an error occured while fetching events
             logger?.log("error", err);
-            resolveAllOnEarlyReturn();
+            resolveAllOnEarlyBreak();
             break;
           }
 
           if (!gotNewEvent) {
             // termination condition 2
             logger?.log("info", `got ${localSeenEventIds.size} events`);
-            resolveAllOnEarlyReturn();
+            resolveAllOnEarlyBreak();
             break;
           }
           if (finalOpts.abortSignal?.aborted) {
             // termination condition 3
             logger?.log("info", `aborted`);
-            resolveAllOnEarlyReturn();
+            resolveAllOnEarlyBreak();
             break;
           }
 
@@ -631,7 +644,7 @@ export class NostrFetcher {
     );
 
     // the "merger".
-    // merges result from relays, sorts events, takes latest events and sends it to the result channel on all event fetching for a author is completed
+    // for each author: merges result from relays, sorts events, takes latest events and sends it to the result channel.
     Promise.all(
       allAuthors.map(async (pubkey) => {
         const logger = this.#debugLogger?.subLogger(abbreviate(pubkey, 6));
