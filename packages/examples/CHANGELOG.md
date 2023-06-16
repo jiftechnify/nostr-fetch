@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.9.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.8.0...v0.9.0) (2023-06-16)
+
+### Features
+
+* separate relay set for each authors ([41b2291](https://github.com/jiftechnify/nostr-fetch/commit/41b2291bab2ab9cbd0601fea9e73a05fea3309d4))
+
 # [0.8.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.7.0...v0.8.0) (2023-06-11)
 
 ### Features

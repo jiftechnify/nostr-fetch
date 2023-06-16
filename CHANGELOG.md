@@ -3,6 +3,15 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.9.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.8.0...v0.9.0) (2023-06-16)
+
+### Features
+
+* add backpressure feature to Channel ([1ef5596](https://github.com/jiftechnify/nostr-fetch/commit/1ef5596ff8ac06c1dd8e6b39623329e02e53a7ad))
+* add option for enabling backpressure to allEventsIterator ([ba4c126](https://github.com/jiftechnify/nostr-fetch/commit/ba4c126dc7fa08fcdb8f267d6447d02807b99716))
+* relax assertion of args to fetchers ([16ad322](https://github.com/jiftechnify/nostr-fetch/commit/16ad3220b73ddeb4f83dc76670beffe804fd9058))
+* separate relay set for each authors ([41b2291](https://github.com/jiftechnify/nostr-fetch/commit/41b2291bab2ab9cbd0601fea9e73a05fea3309d4))
+
 # [0.8.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.7.0...v0.8.0) (2023-06-11)
 
 ### Bug Fixes
