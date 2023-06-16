@@ -17,9 +17,10 @@ import {
   EventBuckets,
   KeyRelayMatrix,
   NostrFetchError,
+  assertReq,
   checkIfNonEmpty,
+  checkIfTrue,
   createdAtDesc,
-  validateReq,
 } from "./fetcherHelper";
 
 export type FetchFilter = Omit<Filter, "limit" | "since" | "until">;
@@ -147,8 +148,6 @@ export class NostrFetcher {
    *
    * Note: there are no guarantees about the order of returned events.
    *
-   * Throws {@linkcode NostrFetchError} if `relayUrls` is empty.
-   *
    * @param relayUrls
    * @param filter
    * @param timeRangeFilter
@@ -161,10 +160,11 @@ export class NostrFetcher {
     timeRangeFilter: FetchTimeRangeFilter,
     options: AllEventsIterOptions = {}
   ): Promise<AsyncIterable<NostrEvent>> {
-    // assertion
-    validateReq({ relayUrls }, [
-      checkIfNonEmpty((r) => r.relayUrls, "Specify at least 1 relay URL"),
-    ]);
+    assertReq(
+      { relayUrls },
+      [checkIfNonEmpty((r) => r.relayUrls, "warn", "Specify at least 1 relay URL")],
+      this.#debugLogger
+    );
 
     const filledOpts: Required<AllEventsIterOptions> = {
       ...defaultAllEventsIterOptions,
@@ -271,8 +271,6 @@ export class NostrFetcher {
    *
    * Note: there are no guarantees about the order of returned events if `sort` options is not specified.
    *
-   * Throws {@linkcode NostrFetchError} if `relayUrls` is empty.
-   *
    * @param relayUrls
    * @param filter
    * @param timeRangeFilter
@@ -285,10 +283,11 @@ export class NostrFetcher {
     timeRangeFilter: FetchTimeRangeFilter,
     options: FetchAllOptions = {}
   ): Promise<NostrEvent[]> {
-    // assertion
-    validateReq({ relayUrls }, [
-      checkIfNonEmpty((r) => r.relayUrls, "Specify at least 1 relay URL"),
-    ]);
+    assertReq(
+      { relayUrls },
+      [checkIfNonEmpty((r) => r.relayUrls, "warn", "Specify at least 1 relay URL")],
+      this.#debugLogger
+    );
 
     const finalOpts = {
       ...defaultFetchAllOptions,
@@ -317,7 +316,7 @@ export class NostrFetcher {
    *
    * Events are sorted in "newest to oldest" order.
    *
-   * Throws {@linkcode NostrFetchError} if `relayUrls` is empty or `limit` is negative.
+   * Throws {@linkcode NostrFetchError} if `limit` is a non-positive number.
    *
    * @param relayUrls
    * @param filter
@@ -331,11 +330,14 @@ export class NostrFetcher {
     limit: number,
     options: FetchLatestOptions = {}
   ): Promise<NostrEvent[]> {
-    // assertion
-    validateReq({ relayUrls, limit }, [
-      checkIfNonEmpty((r) => r.relayUrls, "Specify at least 1 relay URL"),
-      (r) => (r.limit <= 0 ? ['"limit" should be positive number'] : []),
-    ]);
+    assertReq(
+      { relayUrls, limit },
+      [
+        checkIfNonEmpty((r) => r.relayUrls, "warn", "Specify at least 1 relay URL"),
+        checkIfTrue((r) => r.limit > 0, "error", '"limit" should be positive number'),
+      ],
+      this.#debugLogger
+    );
 
     const finalOpts: Required<FetchLatestOptions> = {
       ...defaultFetchLatestOptions,
@@ -457,8 +459,6 @@ export class NostrFetcher {
    *
    * Returns `undefined` if no event matching the filter exists in any relay.
    *
-   * Throws {@linkcode NostrFetchError} if `relayUrls` is empty.
-   *
    * @param relayUrls
    * @param filter
    * @param options
@@ -488,10 +488,14 @@ export class NostrFetcher {
     ensureOpts: EnsureRelaysOptions
   ): Promise<[map: Map<string, string[]>, allAuthors: string[]]> {
     if (isRelaySetForAllAuthors(a2rs)) {
-      validateReq(a2rs, [
-        checkIfNonEmpty((r) => r.relayUrls, "Specify at least 1 relay URL"),
-        checkIfNonEmpty((r) => r.authors, "Specify at least 1 author (pubkey)"),
-      ]);
+      assertReq(
+        a2rs,
+        [
+          checkIfNonEmpty((r) => r.relayUrls, "warn", "Specify at least 1 relay URL"),
+          checkIfNonEmpty((r) => r.authors, "warn", "Specify at least 1 author (pubkey)"),
+        ],
+        this.#debugLogger
+      );
 
       const connectedRelays = await this.#fetcherBase.ensureRelays(a2rs.relayUrls, ensureOpts);
       return [new Map(connectedRelays.map((rurl) => [rurl, a2rs.authors])), a2rs.authors];
@@ -499,13 +503,18 @@ export class NostrFetcher {
 
     if (isRelaySetsPerAuthor(a2rs)) {
       const a2rsArr = [...a2rs];
-      validateReq(a2rsArr, [checkIfNonEmpty((a2rs) => a2rs, "Specify at least 1 author")]);
-      validateReq(a2rsArr, [
-        (a2rs) =>
-          a2rs.some(([, relays]) => relays.length === 0)
-            ? ["Specify at least 1 relay URL for all authors"]
-            : [],
-      ]);
+      assertReq(
+        a2rsArr,
+        [
+          checkIfNonEmpty((a2rs) => a2rs, "warn", "Specify at least 1 author"),
+          checkIfTrue(
+            (a2rs) => a2rs.every(([, relays]) => relays.length > 0),
+            "warn",
+            "Specify at least 1 relay URL for all authors"
+          ),
+        ],
+        this.#debugLogger
+      );
 
       // transpose: author to rurls -> rurl to authors
       const rurl2authors = new Map<string, string[]>();
@@ -546,7 +555,7 @@ export class NostrFetcher {
    *
    * Each array of events in the result are sorted in "newest to oldest" order.
    *
-   * Throws {@linkcode NostrFetchError} if `authorsAndRelays` is malformed or`limit` is negative.
+   * Throws {@linkcode NostrFetchError} if `limit` is a non-positive number.
    *
    * @param authorsAndRelays
    * @param otherFilter
@@ -560,6 +569,12 @@ export class NostrFetcher {
     limit: number,
     options: FetchLatestOptions = {}
   ): Promise<AsyncIterable<{ author: string; events: NostrEvent[] }>> {
+    assertReq(
+      { limit },
+      [checkIfTrue((r) => r.limit > 0, "error", '"limit" should be positive number')],
+      this.#debugLogger
+    );
+
     const finalOpts = {
       ...defaultFetchLatestOptions,
       ...options,
@@ -744,8 +759,6 @@ export class NostrFetcher {
    * Result is an async iterable of `{ author (pubkey), event }` pairs.
    *
    * `event` in result will be `undefined` if no event matching the filter for the author exists in any relay.
-   *
-   * Throws {@linkcode NostrFetchError} if `authorsAndRelays` is malformed.
    *
    * @param authorsAndRelays
    * @param otherFilter
