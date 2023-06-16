@@ -85,9 +85,13 @@ const lastMetadata: NostrEvent | undefined = await fetcher.fetchLastEvent(
 
 // fetches latest 10 text posts from each author in `authors`
 const postsPerAuthor = await fetcher.fetchLatestEventsPerAuthor(
-    relayUrls,
-    /* authors */
-    ["deadbeef...", "abcdef01...", ...],
+    /* authors and relay set */
+    // you can also pass a `Map` which has mappings from authors (pubkey) to reley sets,
+    // to specify a relay set for each author
+    { 
+        authors: ["deadbeef...", "abcdef01...", ...],
+        relayUrls,
+    },
     /* filter */
     { kinds: [ eventKind.text ] },
     /* number of events to fetch for each author */
@@ -102,9 +106,13 @@ for await (const { author, events } of postsPerAuthor) {
 
 // fetches the last metadata event from each author in `authors`
 const metadataPerAuthor = await fetcher.fetchLastEventPerAuthor(
-    relayUrls,
-    /* authors */
-    ["deadbeef...", "abcdef01...", ...],
+    /* authors and relay set */
+    // you can also pass a `Map` which has mappings from authors (pubkey) to reley sets,
+    // to specify a relay set for each author
+    {
+        authors: ["deadbeef...", "abcdef01...", ...],
+        relayUrls,
+    }
     /* filter */
     { kinds: [ eventKind.metadata ] },
 );

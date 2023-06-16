@@ -1,3 +1,4 @@
+import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
 import { NostrEvent } from "@nostr-fetch/kernel/nostr";
 
 /**
@@ -9,16 +10,39 @@ export class NostrFetchError extends Error {
   }
 }
 
+type AssertionResult =
+  | {
+      severity: "error" | "warn";
+      msg: string;
+    }
+  | {
+      severity: "none";
+    };
+
 /**
- * Validates `req` by `validators`.
+ * assert `req` by `assertions`.
  *
- * If there are something wrong, throws error that includes all error messages from validators.
+ * If there are some errors, throws `NostrFetchError` which includes all error messages raised from assertions.
+ * If there are some warnings, just log them.
  */
-export const validateReq = <T>(req: T, validators: ((req: T) => string[])[]): void => {
+export const assertReq = <T>(
+  req: T,
+  assertions: ((req: T) => AssertionResult)[],
+  logger: DebugLogger | undefined
+): void => {
   const errors = [];
-  for (const validate of validators) {
-    const subErrs = validate(req);
-    errors.push(...subErrs);
+  for (const assert of assertions) {
+    const res = assert(req);
+
+    switch (res.severity) {
+      case "error":
+        logger?.log("error", `assertion error: ${res.msg}`);
+        errors.push(res.msg);
+        break;
+      case "warn":
+        logger?.log("warn", `warning: ${res.msg}`);
+        break;
+    }
   }
   if (errors.length > 0) {
     const lines = errors.map((e) => `- ${e}`).join("\n");
@@ -26,11 +50,20 @@ export const validateReq = <T>(req: T, validators: ((req: T) => string[])[]): vo
   }
 };
 
+export function checkIfTrue<T>(
+  predicate: (req: T) => boolean,
+  severity: "error" | "warn",
+  msg: string
+): (req: T) => AssertionResult {
+  return (req: T) => (predicate(req) ? { severity: "none" } : { severity, msg });
+}
+
 export function checkIfNonEmpty<T, U>(
   getArray: (req: T) => U[],
+  severity: "error" | "warn",
   msg: string
-): (req: T) => string[] {
-  return (req: T): string[] => (getArray(req).length === 0 ? [msg] : []);
+): (req: T) => AssertionResult {
+  return (req: T) => (getArray(req).length !== 0 ? { severity: "none" } : { severity, msg });
 }
 
 /**
