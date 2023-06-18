@@ -1,20 +1,11 @@
-import type { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
-import { generateSubId } from "@nostr-fetch/kernel/nostr";
-import type {
-  RelayOptions,
-  SubEoseCb,
-  SubEventCb,
-  SubEventCbTypes,
-  SubEventTypes,
-  Subscription,
-  SubscriptionOptions,
-} from "@nostr-fetch/kernel/relayTypes";
+import type { RelayOptions } from "@nostr-fetch/kernel/relayTypes";
 import {
   currUnixtimeMilli,
   normalizeRelayUrl,
   normalizeRelayUrls,
 } from "@nostr-fetch/kernel/utils";
 
+import { Deferred } from "@nostr-fetch/kernel/channel";
 import { DebugLogger, LogLevel } from "@nostr-fetch/kernel/debugLogger";
 import { Relay, initRelay } from "./relay";
 
@@ -22,15 +13,6 @@ export interface RelayPool {
   ensureRelays(relayUrls: string[], relayOpts: RelayOptions): Promise<Relay[]>;
   getRelayIfConnected(relayUrl: string): Relay | undefined;
   shutdown(): void;
-
-  // prepareSub(
-  //   relayUrls: string[],
-  //   filters: Filter[],
-  //   opts: RelayOptions & SubscriptionOptions
-  // ): Promise<Subscription>;
-
-  // on<E extends RelayEventTypes>(type: E, cb: RelayEventCbTypes[E]): void;
-  // off<E extends RelayEventTypes>(type: E, cb: RelayEventCbTypes[E]): void;
 }
 
 export type RelayPoolOptions = {
@@ -88,7 +70,7 @@ class RelayPoolImpl implements RelayPool {
     }, WATCHDOG_INTERVAL);
   }
 
-  private relayShouldBeReconnected(relay: ManagedRelay): boolean {
+  #relayShouldBeReconnected(relay: ManagedRelay): boolean {
     return (
       // TODO: make the threshold configuarable
       (relay.state === "connectFailed" && currUnixtimeMilli() - relay.failedAt > 60 * 1000) ||
@@ -104,7 +86,7 @@ class RelayPoolImpl implements RelayPool {
 
     for (const rurl of relayUrls) {
       const r = this.#relays.get(rurl);
-      if (r === undefined || this.relayShouldBeReconnected(r)) {
+      if (r === undefined || this.#relayShouldBeReconnected(r)) {
         relaysToConnect.push(rurl);
       } else if (r.state === "connecting") {
         waitsForConnnect.push(r.wait);
@@ -115,7 +97,7 @@ class RelayPoolImpl implements RelayPool {
       ...relaysToConnect.map(async (rurl): Promise<void> => {
         const logger = this.#debugLogger?.subLogger(rurl);
 
-        const deferred = new VoidDeferred();
+        const deferred = new Deferred<void>();
         try {
           this.#relays.set(rurl, { state: "connecting", relayUrl: rurl, wait: deferred.promise });
 
@@ -173,32 +155,6 @@ class RelayPoolImpl implements RelayPool {
     return r.relay;
   }
 
-  public async prepareSub(
-    relayUrls: string[],
-    filters: Filter[],
-    opts: RelayOptions & SubscriptionOptions
-  ): Promise<Subscription> {
-    const normalizedUrls = normalizeRelayUrls(relayUrls);
-    await this.addRelays(normalizedUrls, opts);
-
-    const subId = generateSubId();
-    const subs = new Map<string, Subscription>();
-
-    for (const rurl of normalizedUrls) {
-      const r = this.#relays.get(rurl);
-      if (r !== undefined && r.state === "alive") {
-        const rsub = r.relay.prepareSub(filters, { ...opts, subId });
-        subs.set(rurl, rsub);
-      }
-    }
-    if (subs.size === 0) {
-      throw Error("no relays are available");
-    }
-
-    this.#debugLogger?.log("verbose", `subId: ${subId}, make sub to: ${Array.from(subs.keys())}`);
-    return new RelayPoolSubscription(subId, subs);
-  }
-
   /**
    * Cleans up all the internal states of the fetcher.
    *
@@ -213,100 +169,5 @@ class RelayPoolImpl implements RelayPool {
       }
     }
     this.#relays.clear();
-  }
-}
-
-// not used so far.  maybe completely useless...?
-class RelayPoolSubscription implements Subscription {
-  #subId: string;
-  #relaySubs: Map<string, Subscription>;
-
-  #onEvent: Set<SubEventCb> = new Set();
-  #onEose: Set<SubEoseCb> = new Set();
-
-  #seenEventIds: Set<string> = new Set();
-  #eoseRelays: Set<string> = new Set();
-
-  constructor(subId: string, relaySubs: Map<string, Subscription>) {
-    this.#subId = subId;
-    this.#relaySubs = relaySubs;
-  }
-
-  public get subId(): string {
-    return this.#subId;
-  }
-
-  public req() {
-    for (const [rurl, rsub] of this.#relaySubs.entries()) {
-      rsub.on("event", (ev: NostrEvent) => {
-        // eliminate duplicated events
-        if (!this.#seenEventIds.has(ev.id)) {
-          this.#onEvent.forEach((cb) => cb(ev));
-          this.#seenEventIds.add(ev.id);
-        }
-      });
-      rsub.on("eose", () => {
-        this.#eoseRelays.add(rurl);
-        // fire EOSE callbacks at the moment when all relays have reached EOSE.
-        if (this.#eoseRelays.size === this.#relaySubs.size) {
-          this.#onEose.forEach((cb) => cb({ aborted: false })); // TODO
-        }
-      });
-
-      // TODO: error handling?
-      rsub.req();
-    }
-  }
-
-  public close() {
-    this.clearListeners();
-
-    for (const relaySub of this.#relaySubs.values()) {
-      relaySub.close();
-    }
-  }
-
-  public on<E extends SubEventTypes>(type: E, cb: SubEventCbTypes[E]) {
-    switch (type) {
-      case "event":
-        this.#onEvent.add(cb as SubEventCb);
-        return;
-
-      case "eose":
-        this.#onEose.add(cb as SubEoseCb);
-        return;
-    }
-  }
-
-  public off<E extends SubEventTypes>(type: E, cb: SubEventCbTypes[E]) {
-    switch (type) {
-      case "event":
-        this.#onEvent.delete(cb as SubEventCb);
-        return;
-
-      case "eose":
-        this.#onEose.delete(cb as SubEoseCb);
-        return;
-    }
-  }
-
-  private clearListeners() {
-    this.#onEvent.clear();
-    this.#onEose.clear();
-  }
-}
-
-interface VoidDeferred {
-  resolve(): void;
-}
-
-class VoidDeferred {
-  promise: Promise<void>;
-  constructor() {
-    this.promise = new Promise((resolve) => {
-      this.resolve = () => {
-        resolve();
-      };
-    });
   }
 }
