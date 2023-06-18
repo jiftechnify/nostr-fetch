@@ -164,10 +164,6 @@ class RelayImpl implements Relay {
   }
 
   public prepareSub(filters: Filter[], options: SubscriptionOptions): Subscription {
-    if (this.#ws === undefined) {
-      throw Error("not connected to the relay");
-    }
-
     const subId = options.subId ?? generateSubId();
     const sub = new RelaySubscription(this, subId, filters, options);
     this.#subscriptions.set(subId, sub);
@@ -188,12 +184,10 @@ class RelayImpl implements Relay {
   }
 
   _sendC2RMessage(msg: C2RMessage) {
-    const jstr = JSON.stringify(msg);
-    // TODO: check WS connection status
-    if (this.#ws === undefined) {
-      throw Error("not connected to relay");
+    if (this.#ws === undefined || this.#ws.readyState !== WebSocket.OPEN) {
+      throw Error("not connected to the relay");
     }
-    this.#ws.send(jstr);
+    this.#ws.send(JSON.stringify(msg));
   }
 }
 

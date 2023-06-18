@@ -94,7 +94,11 @@ export class DefaultFetcherBase implements NostrFetcherBase {
 
     // common process to close subscription
     const closeSub = () => {
-      sub.close();
+      try {
+        sub.close();
+      } catch (err) {
+        logger?.log("error", `failed to close subscription (id: ${sub.subId}): ${err}`);
+      }
       tx.close();
       removeRelayListeners();
       logger?.log("verbose", `CLOSE: subId=${options.subId ?? "<auto>"}`);
@@ -119,7 +123,12 @@ export class DefaultFetcherBase implements NostrFetcherBase {
 
     // start the subscription
     logger?.log("verbose", `REQ: subId=${options.subId ?? "<auto>"}, filter=%O`, filter);
-    sub.req();
+    try {
+      sub.req();
+    } catch (err) {
+      tx.error(err);
+      removeRelayListeners();
+    }
 
     return chIter;
   }
