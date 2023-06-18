@@ -3,15 +3,9 @@ import { verifyEventSig } from "@nostr-fetch/kernel/crypto";
 import type { C2RMessage, Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
 import { generateSubId, parseR2CMessage } from "@nostr-fetch/kernel/nostr";
 import type {
-  RelayConnectCb,
-  RelayDisconnectCb,
-  RelayErrorCb,
   RelayEventCbTypes,
   RelayEventTypes,
-  RelayNoticeCb,
   RelayOptions,
-  SubEoseCb,
-  SubEventCb,
   SubEventCbTypes,
   SubEventTypes,
   Subscription,
@@ -35,17 +29,22 @@ export const initRelay = (relayUrl: string, options: RelayOptions): Relay => {
   return new RelayImpl(relayUrl, options);
 };
 
+type RelayListenersTable = {
+  [E in RelayEventTypes]: Set<RelayEventCbTypes[E]>;
+};
+
 class RelayImpl implements Relay {
   #relayUrl: string;
   #ws: WebSocket | undefined;
 
   #options: Required<RelayOptions>;
 
-  #onConnect: Set<RelayConnectCb> = new Set();
-  #onDisconnect: Set<RelayDisconnectCb> = new Set();
-  #onNotice: Set<RelayNoticeCb> = new Set();
-  #onError: Set<RelayErrorCb> = new Set();
-
+  #listeners: RelayListenersTable = {
+    connect: new Set(),
+    disconnect: new Set(),
+    notice: new Set(),
+    error: new Set(),
+  };
   #subscriptions: Map<string, RelaySubscription> = new Map();
 
   #msgQueue: string[] = [];
@@ -100,7 +99,7 @@ class RelayImpl implements Relay {
         }
         case "NOTICE": {
           const [, notice] = parsed;
-          this.#onNotice.forEach((cb) => cb(notice));
+          this.#listeners.notice.forEach((cb) => cb(notice));
           break;
         }
       }
@@ -119,12 +118,12 @@ class RelayImpl implements Relay {
 
       ws.onopen = () => {
         if (!isTimedout) {
-          this.#onConnect.forEach((cb) => cb());
+          this.#listeners.connect.forEach((cb) => cb());
           this.#ws = ws;
 
           // set error listeners after the connection opened successfully
           ws.onerror = () => {
-            this.#onError.forEach((cb) => cb());
+            this.#listeners.error.forEach((cb) => cb());
           };
 
           resolve(this);
@@ -146,7 +145,7 @@ class RelayImpl implements Relay {
           reason: e.reason,
           wasClean: e.wasClean,
         };
-        this.#onDisconnect.forEach((cb) => cb(reducted));
+        this.#listeners.disconnect.forEach((cb) => cb(reducted));
       };
 
       ws.onmessage = (e: MessageEvent) => {
@@ -181,43 +180,11 @@ class RelayImpl implements Relay {
   }
 
   public on<E extends RelayEventTypes>(type: E, cb: RelayEventCbTypes[E]) {
-    switch (type) {
-      case "connect":
-        this.#onConnect.add(cb as RelayConnectCb);
-        return;
-
-      case "disconnect":
-        this.#onDisconnect.add(cb as RelayDisconnectCb);
-        return;
-
-      case "notice":
-        this.#onNotice.add(cb as RelayNoticeCb);
-        return;
-
-      case "error":
-        this.#onError.add(cb as RelayErrorCb);
-        return;
-    }
+    this.#listeners[type].add(cb);
   }
 
   public off<E extends RelayEventTypes>(type: E, cb: RelayEventCbTypes[E]) {
-    switch (type) {
-      case "connect":
-        this.#onConnect.delete(cb as RelayConnectCb);
-        return;
-
-      case "disconnect":
-        this.#onDisconnect.delete(cb as RelayDisconnectCb);
-        return;
-
-      case "notice":
-        this.#onNotice.delete(cb as RelayNoticeCb);
-        return;
-
-      case "error":
-        this.#onError.delete(cb as RelayErrorCb);
-        return;
-    }
+    this.#listeners[type].delete(cb);
   }
 
   _sendC2RMessage(msg: C2RMessage) {
@@ -230,14 +197,20 @@ class RelayImpl implements Relay {
   }
 }
 
+type SubListenersTable = {
+  [E in SubEventTypes]: Set<SubEventCbTypes[E]>;
+};
+
 class RelaySubscription implements Subscription {
   #relay: RelayImpl;
   #subId: string;
   #filters: Filter[];
   #options: SubscriptionOptions;
 
-  #onEvent: Set<SubEventCb> = new Set();
-  #onEose: Set<SubEoseCb> = new Set();
+  #listeners: SubListenersTable = {
+    event: new Set(),
+    eose: new Set(),
+  };
 
   #abortSubTimer: NodeJS.Timeout | undefined;
 
@@ -254,69 +227,54 @@ class RelaySubscription implements Subscription {
 
   public req() {
     this.#relay._sendC2RMessage(["REQ", this.#subId, ...this.#filters]);
-    this.resetAbortSubTimer();
+    this.#resetAbortSubTimer();
   }
 
   public close() {
-    this.clearListeners();
+    this.#clearListeners();
     this.#relay._removeSub(this.#subId);
 
     this.#relay._sendC2RMessage(["CLOSE", this.#subId]);
   }
 
   public on<E extends SubEventTypes>(type: E, cb: SubEventCbTypes[E]) {
-    switch (type) {
-      case "event":
-        this.#onEvent.add(cb as SubEventCb);
-        return;
-
-      case "eose":
-        this.#onEose.add(cb as SubEoseCb);
-        return;
-    }
+    this.#listeners[type].add(cb);
   }
 
   public off<E extends SubEventTypes>(type: E, cb: SubEventCbTypes[E]) {
-    switch (type) {
-      case "event":
-        this.#onEvent.delete(cb as SubEventCb);
-        return;
+    this.#listeners[type].delete(cb);
+  }
 
-      case "eose":
-        this.#onEose.delete(cb as SubEoseCb);
-        return;
+  #clearListeners() {
+    for (const s of Object.values(this.#listeners)) {
+      s.clear();
     }
   }
 
-  private clearListeners() {
-    this.#onEvent.clear();
-    this.#onEose.clear();
-  }
-
-  private resetAbortSubTimer() {
+  #resetAbortSubTimer() {
     if (this.#abortSubTimer !== undefined) {
       clearTimeout(this.#abortSubTimer);
       this.#abortSubTimer = undefined;
     }
 
     this.#abortSubTimer = setTimeout(() => {
-      this.#onEose.forEach((cb) => cb({ aborted: true }));
+      this.#listeners.eose.forEach((cb) => cb({ aborted: true }));
     }, this.#options.abortSubBeforeEoseTimeoutMs);
   }
 
   _forwardEvent(ev: NostrEvent) {
-    this.resetAbortSubTimer();
+    this.#resetAbortSubTimer();
 
     if (!this.#options.skipVerification && !verifyEventSig(ev)) {
       return;
     }
-    this.#onEvent.forEach((cb) => cb(ev));
+    this.#listeners.event.forEach((cb) => cb(ev));
   }
 
   _forwardEose() {
     if (this.#abortSubTimer !== undefined) {
       clearTimeout(this.#abortSubTimer);
     }
-    this.#onEose.forEach((cb) => cb({ aborted: false }));
+    this.#listeners.eose.forEach((cb) => cb({ aborted: false }));
   }
 }
