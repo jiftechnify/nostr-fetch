@@ -10,7 +10,7 @@ import { DebugLogger, LogLevel } from "@nostr-fetch/kernel/debugLogger";
 import { Relay, initRelay } from "./relay";
 
 export interface RelayPool {
-  ensureRelays(relayUrls: string[], relayOpts: RelayOptions): Promise<Relay[]>;
+  ensureRelays(relayUrls: string[], relayOpts: RelayOptions): Promise<string[]>;
   getRelayIfConnected(relayUrl: string): Relay | undefined;
   shutdown(): void;
 }
@@ -130,18 +130,18 @@ class RelayPoolImpl implements RelayPool {
     ]);
   }
 
-  public async ensureRelays(relayUrls: string[], relayOpts: RelayOptions): Promise<Relay[]> {
+  public async ensureRelays(relayUrls: string[], relayOpts: RelayOptions): Promise<string[]> {
     const normalizedUrls = normalizeRelayUrls(relayUrls);
     await this.addRelays(normalizedUrls, relayOpts);
 
-    const res: Relay[] = [];
+    const connectedRelays: string[] = [];
     for (const rurl of normalizedUrls) {
       const r = this.#relays.get(rurl);
       if (r !== undefined && r.state === "alive") {
-        res.push(r.relay);
+        connectedRelays.push(r.relay.url);
       }
     }
-    return res;
+    return connectedRelays;
   }
 
   public getRelayIfConnected(relayUrl: string): Relay | undefined {

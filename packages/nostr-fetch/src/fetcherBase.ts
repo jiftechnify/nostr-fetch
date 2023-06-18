@@ -33,8 +33,7 @@ export class DefaultFetcherBase implements NostrFetcherBase {
    * It should *normalize* the passed `relayUrls` before establishing connections to relays.
    */
   public async ensureRelays(relayUrls: string[], options: EnsureRelaysOptions): Promise<string[]> {
-    const relays = await this.#relayPool.ensureRelays(relayUrls, options);
-    return relays.map((r) => r.url);
+    return this.#relayPool.ensureRelays(relayUrls, options);
   }
 
   /**
