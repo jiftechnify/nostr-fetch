@@ -198,6 +198,9 @@ class NDKAdapter implements NostrFetcherBase {
 /**
  * Wraps an NDK instance, allowing it to interoperate with nostr-fetch.
  *
+ * Note: if you use this adapter, `skipVerification` option is ignored and it always behaves as if `false` is specified (always verify signatures).
+ * Moreover, `reduceVerification` option becomes meaningless with this adapter.
+ *
  * @example
  * ```
  * import NDK from '@nostr-dev-kit/ndk';
