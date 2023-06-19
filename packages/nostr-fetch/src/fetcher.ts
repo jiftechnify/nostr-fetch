@@ -9,7 +9,7 @@ import {
   NostrFetcherCommonOptions,
   defaultFetcherCommonOptions,
 } from "@nostr-fetch/kernel/fetcherBase";
-import type { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
+import { Filter, NostrEvent, querySupportedNips } from "@nostr-fetch/kernel/nostr";
 import { abbreviate, currUnixtimeSec, normalizeRelayUrls } from "@nostr-fetch/kernel/utils";
 
 import { DefaultFetcherBase } from "./fetcherBase";
@@ -103,6 +103,8 @@ export class NostrFetcher {
   #fetcherBase: NostrFetcherBase;
   #debugLogger: DebugLogger | undefined;
 
+  #supportedNipsCache: Map<string, Set<number>> = new Map();
+
   private constructor(
     fetcherBase: NostrFetcherBase,
     initOpts: Required<NostrFetcherCommonOptions>
@@ -139,6 +141,56 @@ export class NostrFetcher {
   ): NostrFetcher {
     const finalOpts = { ...defaultFetcherCommonOptions, ...initOpts };
     return new NostrFetcher(poolAdapter(finalOpts), finalOpts);
+  }
+
+  async #ensureRelaysWithCapCheck(
+    relayUrls: string[],
+    opts: EnsureRelaysOptions,
+    requiredNips: number[]
+  ): Promise<string[]> {
+    const connectedRelays = await this.#fetcherBase.ensureRelays(relayUrls, opts);
+
+    if (requiredNips.length === 0) {
+      // if capability check is not needed, return early
+      return connectedRelays;
+    }
+
+    this.#debugLogger?.log("info", `required NIPs: ${requiredNips}`);
+
+    const res: string[] = [];
+    await Promise.all(
+      connectedRelays.map(async (rurl) => {
+        const logger = this.#debugLogger?.subLogger(rurl);
+
+        const supportSetFromCache = this.#supportedNipsCache.get(rurl);
+        if (supportSetFromCache !== undefined) {
+          if (requiredNips.every((nip) => supportSetFromCache.has(nip))) {
+            res.push(rurl);
+          }
+          return;
+        }
+
+        // query supported NIP's of the relay if cache doesn't have information
+        const supportSet = await querySupportedNips(rurl);
+        logger?.log("verbose", `supported NIPs: ${supportSet}`);
+
+        if (requiredNips.every((nip) => supportSet.has(nip))) {
+          res.push(rurl);
+        }
+        this.#supportedNipsCache.set(rurl, supportSet);
+      })
+    );
+
+    this.#debugLogger?.log("info", `eligible relays: ${res}`);
+    return res;
+  }
+
+  #calcRequiredNips(filter: { search?: string }): number[] {
+    const res: number[] = [];
+    if ("search" in filter) {
+      res.push(50); // NIP-50: Search Capability
+    }
+    return res;
   }
 
   /**
@@ -180,10 +232,11 @@ export class NostrFetcher {
     };
     this.#debugLogger?.log("verbose", "finalOpts=%O", finalOpts);
 
-    const connectedRelayUrls = await this.#fetcherBase.ensureRelays(relayUrls, finalOpts);
+    const reqNips = this.#calcRequiredNips(filter);
+    const eligibleRelayUrls = await this.#ensureRelaysWithCapCheck(relayUrls, filledOpts, reqNips);
 
     const highWaterMark = finalOpts.enableBackpressure
-      ? Math.max(finalOpts.limitPerReq * connectedRelayUrls.length, MIN_HIGH_WATER_MARK)
+      ? Math.max(finalOpts.limitPerReq * eligibleRelayUrls.length, MIN_HIGH_WATER_MARK)
       : undefined;
     const [tx, chIter] = Channel.make<NostrEvent>({ highWaterMark });
 
@@ -192,7 +245,7 @@ export class NostrFetcher {
 
     // fetch events from each relay
     Promise.all(
-      connectedRelayUrls.map(async (rurl) => {
+      eligibleRelayUrls.map(async (rurl) => {
         // repeat subscription until one of the following conditions is met:
         // 1. the relay didn't return new event
         // 2. aborted by AbortController
@@ -352,7 +405,8 @@ export class NostrFetcher {
       skipVerification: finalOpts.skipVerification || finalOpts.reduceVerification,
     };
 
-    const connectedRelayUrls = await this.#fetcherBase.ensureRelays(relayUrls, finalOpts);
+    const reqNips = this.#calcRequiredNips(filter);
+    const eligibleRelayUrls = await this.#ensureRelaysWithCapCheck(relayUrls, finalOpts, reqNips);
 
     const [tx, chIter] = Channel.make<NostrEvent>();
     const globalSeenEventIds = new Set<string>();
@@ -360,7 +414,7 @@ export class NostrFetcher {
 
     // fetch at most `limit` events from each relay
     Promise.all(
-      connectedRelayUrls.map(async (rurl) => {
+      eligibleRelayUrls.map(async (rurl) => {
         // repeat subscription until one of the following conditions is met:
         // 1. got enough amount of events
         // 2. the relay didn't return new event
@@ -485,7 +539,8 @@ export class NostrFetcher {
   // returns that mapping and array of all authors.
   async #mapAvailableRelayToAuthors(
     a2rs: AuthorsAndRelays,
-    ensureOpts: EnsureRelaysOptions
+    ensureOpts: EnsureRelaysOptions,
+    reqNips: number[]
   ): Promise<[map: Map<string, string[]>, allAuthors: string[]]> {
     if (isRelaySetForAllAuthors(a2rs)) {
       assertReq(
@@ -497,8 +552,12 @@ export class NostrFetcher {
         this.#debugLogger
       );
 
-      const connectedRelays = await this.#fetcherBase.ensureRelays(a2rs.relayUrls, ensureOpts);
-      return [new Map(connectedRelays.map((rurl) => [rurl, a2rs.authors])), a2rs.authors];
+      const eligibleRelays = await this.#ensureRelaysWithCapCheck(
+        a2rs.relayUrls,
+        ensureOpts,
+        reqNips
+      );
+      return [new Map(eligibleRelays.map((rurl) => [rurl, a2rs.authors])), a2rs.authors];
     }
 
     if (isRelaySetsPerAuthor(a2rs)) {
@@ -525,15 +584,16 @@ export class NostrFetcher {
           rurl2authors.set(rurl, [...(authors ?? []), author]);
         }
       }
-      const connectedRelays = await this.#fetcherBase.ensureRelays(
+      const eligibleRelays = await this.#ensureRelaysWithCapCheck(
         [...rurl2authors.keys()],
-        ensureOpts
+        ensureOpts,
+        reqNips
       );
 
-      // retain connected relays only
+      // retain eligible relays only
       return [
         /* eslint-disable-next-line @typescript-eslint/no-non-null-assertion */
-        new Map(connectedRelays.map((rurl) => [rurl, rurl2authors.get(rurl)!])),
+        new Map(eligibleRelays.map((rurl) => [rurl, rurl2authors.get(rurl)!])),
         a2rsArr.map(([author]) => author),
       ];
     }
@@ -589,9 +649,11 @@ export class NostrFetcher {
     };
 
     // get mapping of available relay to authors and list of all authors
+    const reqNips = this.#calcRequiredNips(otherFilter);
     const [relayToAuthors, allAuthors] = await this.#mapAvailableRelayToAuthors(
       authorsAndRelays,
-      finalOpts
+      finalOpts,
+      reqNips
     );
     this.#debugLogger?.log("verbose", "relayToAuthors=%O", relayToAuthors);
 

@@ -61,6 +61,7 @@ export type Filter = {
   since?: number;
   until?: number;
   limit?: number;
+  search?: string;
   [key: `#${string}`]: string[];
 };
 
@@ -199,35 +200,51 @@ const is64BytesHexStr = (s: string): boolean => {
 };
 
 /* Check Relay's Capabilities */
-// checks if the relay supports EOSE message
-export const isRelaySupportEose = async (relayUrl: string, timeoutMs: number): Promise<boolean> => {
-  const httpsUrl = wssToHttps(relayUrl);
+/**
+ * Queries supported NIP numbers of the given relay.
+ */
+export const querySupportedNips = async (relayUrl: string): Promise<Set<number>> => {
+  try {
+    const httpUrl = toHttpUrl(relayUrl);
 
-  const abortCtor = new AbortController();
-  const fetchTimeout = setTimeout(() => {
-    abortCtor.abort();
-  }, timeoutMs);
+    const abortCtrl = new AbortController();
+    const abortTimer = setTimeout(() => {
+      abortCtrl.abort();
+    }, 5000);
 
-  const resp = await fetch(httpsUrl, {
-    headers: { Accept: "application/nostr+json" },
-    signal: abortCtor.signal,
-  });
+    const resp = await fetch(httpUrl, {
+      headers: { Accept: "application/nostr+json" },
+      signal: abortCtrl.signal,
+    });
+    clearTimeout(abortTimer);
 
-  clearTimeout(fetchTimeout);
-  if (!resp.ok) {
-    throw Error("relay information response is not ok");
+    if (!resp.ok) {
+      console.error("relay information response is not ok");
+      return new Set();
+    }
+
+    const relayInfo = await resp.json();
+    if (!relayInfoHasSupportedNips(relayInfo)) {
+      console.error("relay information document doesn't have proper 'supported_nips' property");
+      return new Set();
+    }
+    return new Set(relayInfo.supported_nips);
+  } catch (err) {
+    console.error(err);
+    return new Set();
   }
-  const relayInfo = await resp.json();
-
-  if (!relayInfoHasSupportedNips(relayInfo)) {
-    throw Error("relay information document doesn't have valid 'supported_nips' property");
-  }
-  return relayInfo.supported_nips.includes(15);
 };
 
-const wssToHttps = (url: string): string => {
+const toHttpUrl = (url: string): string => {
   const u = new URL(url);
-  u.protocol = "https";
+  switch (u.protocol) {
+    case "wss:":
+      u.protocol = "https:";
+      break;
+    case "ws:":
+      u.protocol = "http:";
+      break;
+  }
   return u.toString();
 };
 
