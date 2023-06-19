@@ -204,35 +204,47 @@ const is64BytesHexStr = (s: string): boolean => {
  * Queries supported NIP numbers of the given relay.
  */
 export const querySupportedNips = async (relayUrl: string): Promise<Set<number>> => {
-  const httpsUrl = wssToHttps(relayUrl);
+  try {
+    const httpUrl = toHttpUrl(relayUrl);
 
-  const abortCtrl = new AbortController();
-  const abortTimer = setTimeout(() => {
-    abortCtrl.abort();
-  }, 5000);
+    const abortCtrl = new AbortController();
+    const abortTimer = setTimeout(() => {
+      abortCtrl.abort();
+    }, 5000);
 
-  const resp = await fetch(httpsUrl, {
-    headers: { Accept: "application/nostr+json" },
-    signal: abortCtrl.signal,
-  });
-  clearTimeout(abortTimer);
+    const resp = await fetch(httpUrl, {
+      headers: { Accept: "application/nostr+json" },
+      signal: abortCtrl.signal,
+    });
+    clearTimeout(abortTimer);
 
-  if (!resp.ok) {
-    console.error("relay information response is not ok");
+    if (!resp.ok) {
+      console.error("relay information response is not ok");
+      return new Set();
+    }
+
+    const relayInfo = await resp.json();
+    if (!relayInfoHasSupportedNips(relayInfo)) {
+      console.error("relay information document doesn't have proper 'supported_nips' property");
+      return new Set();
+    }
+    return new Set(relayInfo.supported_nips);
+  } catch (err) {
+    console.error(err);
     return new Set();
   }
-
-  const relayInfo = await resp.json();
-  if (!relayInfoHasSupportedNips(relayInfo)) {
-    console.error("relay information document doesn't have proper 'supported_nips' property");
-    return new Set();
-  }
-  return new Set(relayInfo.supported_nips);
 };
 
-const wssToHttps = (url: string): string => {
+const toHttpUrl = (url: string): string => {
   const u = new URL(url);
-  u.protocol = "https";
+  switch (u.protocol) {
+    case "wss:":
+      u.protocol = "https:";
+      break;
+    case "ws:":
+      u.protocol = "http:";
+      break;
+  }
   return u.toString();
 };
 

@@ -158,26 +158,28 @@ export class NostrFetcher {
     this.#debugLogger?.log("info", `required NIPs: ${requiredNips}`);
 
     const res: string[] = [];
-    connectedRelays.map(async (rurl) => {
-      const logger = this.#debugLogger?.subLogger(rurl);
+    await Promise.all(
+      connectedRelays.map(async (rurl) => {
+        const logger = this.#debugLogger?.subLogger(rurl);
 
-      const supportSetFromCache = this.#supportedNipsCache.get(rurl);
-      if (supportSetFromCache !== undefined) {
-        if (requiredNips.every((nip) => supportSetFromCache.has(nip))) {
+        const supportSetFromCache = this.#supportedNipsCache.get(rurl);
+        if (supportSetFromCache !== undefined) {
+          if (requiredNips.every((nip) => supportSetFromCache.has(nip))) {
+            res.push(rurl);
+          }
+          return;
+        }
+
+        // query supported NIP's of the relay if cache doesn't have information
+        const supportSet = await querySupportedNips(rurl);
+        logger?.log("verbose", `supported NIPs: ${supportSet}`);
+
+        if (requiredNips.every((nip) => supportSet.has(nip))) {
           res.push(rurl);
         }
-        return;
-      }
-
-      // query supported NIP's of the relay if cache doesn't have information
-      const supportSet = await querySupportedNips(rurl);
-      logger?.log("verbose", `supported NIPs: ${supportSet}`);
-
-      if (requiredNips.every((nip) => supportSet.has(nip))) {
-        res.push(rurl);
-      }
-      this.#supportedNipsCache.set(rurl, supportSet);
-    });
+        this.#supportedNipsCache.set(rurl, supportSet);
+      })
+    );
 
     this.#debugLogger?.log("info", `eligible relays: ${res}`);
     return res;
