@@ -61,6 +61,7 @@ export type Filter = {
   since?: number;
   until?: number;
   limit?: number;
+  search?: string;
   [key: `#${string}`]: string[];
 };
 
@@ -199,30 +200,34 @@ const is64BytesHexStr = (s: string): boolean => {
 };
 
 /* Check Relay's Capabilities */
-// checks if the relay supports EOSE message
-export const isRelaySupportEose = async (relayUrl: string, timeoutMs: number): Promise<boolean> => {
+/**
+ * Queries supported NIP numbers of the given relay.
+ */
+export const querySupportedNips = async (relayUrl: string): Promise<Set<number>> => {
   const httpsUrl = wssToHttps(relayUrl);
 
-  const abortCtor = new AbortController();
-  const fetchTimeout = setTimeout(() => {
-    abortCtor.abort();
-  }, timeoutMs);
+  const abortCtrl = new AbortController();
+  const abortTimer = setTimeout(() => {
+    abortCtrl.abort();
+  }, 5000);
 
   const resp = await fetch(httpsUrl, {
     headers: { Accept: "application/nostr+json" },
-    signal: abortCtor.signal,
+    signal: abortCtrl.signal,
   });
+  clearTimeout(abortTimer);
 
-  clearTimeout(fetchTimeout);
   if (!resp.ok) {
-    throw Error("relay information response is not ok");
+    console.error("relay information response is not ok");
+    return new Set();
   }
-  const relayInfo = await resp.json();
 
+  const relayInfo = await resp.json();
   if (!relayInfoHasSupportedNips(relayInfo)) {
-    throw Error("relay information document doesn't have valid 'supported_nips' property");
+    console.error("relay information document doesn't have proper 'supported_nips' property");
+    return new Set();
   }
-  return relayInfo.supported_nips.includes(15);
+  return new Set(relayInfo.supported_nips);
 };
 
 const wssToHttps = (url: string): string => {
