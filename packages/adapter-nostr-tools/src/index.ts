@@ -127,7 +127,10 @@ class SimplePoolExt implements NostrFetcherBase {
     relay.on("error", onError);
 
     // start a subscription
-    const sub = relay.sub([filter], { skipVerification: options.skipVerification });
+    const sub = relay.sub([filter], {
+      skipVerification: options.skipVerification,
+      ...(options.subId !== undefined ? { id: options.subId } : {}),
+    });
 
     // common process to close subscription
     const closeSub = () => {
