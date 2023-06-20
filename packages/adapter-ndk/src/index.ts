@@ -85,18 +85,6 @@ class NDKAdapter implements NostrFetcherBase {
     return [...managedRurls, ...connectedRurls];
   }
 
-  /**
-   * Cleans up all the internal states of the fetcher.
-   *
-   * Disconnects from relays managed by the adapter.
-   */
-  public shutdown(): void {
-    for (const relay of this.#implicitRelays.values()) {
-      relay.disconnect();
-    }
-    this.#implicitRelays.clear();
-  }
-
   private getRelayIfConnected(relayUrl: string): NDKRelay | undefined {
     const r1 = this.#ndk.pool.relays.get(relayUrl);
     if (r1 !== undefined && r1.status === NDKRelayStatus.CONNECTED) {
@@ -192,6 +180,18 @@ class NDKAdapter implements NostrFetcherBase {
     sub.start();
 
     return chIter;
+  }
+
+  /**
+   * Cleans up all the internal states of the fetcher.
+   *
+   * Disconnects from relays managed by the adapter.
+   */
+  public shutdown(): void {
+    for (const relay of this.#implicitRelays.values()) {
+      relay.disconnect();
+    }
+    this.#implicitRelays.clear();
   }
 }
 

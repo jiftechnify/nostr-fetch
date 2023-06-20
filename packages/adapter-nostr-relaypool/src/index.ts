@@ -146,18 +146,6 @@ class NRTPoolAdapter implements NostrFetcherBase {
   }
 
   /**
-   * Cleans up all the internal states of the fetcher.
-   *
-   * It doesn't close any connections to relays, because other codes may reuse them.
-   */
-  public shutdown(): void {
-    // just clear listeners map
-    for (const m of Object.values(this.#listeners)) {
-      m.clear();
-    }
-  }
-
-  /**
    * Fetches Nostr events matching `filters` from the relay specified by `relayUrl` until EOSE.
    *
    * The result is an `AsyncIterable` of Nostr events.
@@ -249,6 +237,18 @@ class NRTPoolAdapter implements NostrFetcherBase {
     });
 
     return chIter;
+  }
+
+  /**
+   * Cleans up all the internal states of the fetcher.
+   *
+   * It doesn't close any connections to relays, because other codes may reuse them.
+   */
+  public shutdown(): void {
+    // just clear listeners map
+    for (const m of Object.values(this.#listeners)) {
+      m.clear();
+    }
   }
 }
 

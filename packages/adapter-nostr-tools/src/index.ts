@@ -86,16 +86,6 @@ class SimplePoolExt implements NostrFetcherBase {
   }
 
   /**
-   * Cleans up all the internal states of the fetcher.
-   *
-   * It doesn't close any connections to relays, because other codes may reuse them.
-   */
-  public shutdown(): void {
-    // just clear extra refs to `RelayExt`s
-    this.#relays.clear();
-  }
-
-  /**
    * Fetches Nostr events matching `filters` from the relay specified by `relayUrl` until EOSE.
    *
    * The result is an `AsyncIterable` of Nostr events.
@@ -179,6 +169,16 @@ class SimplePoolExt implements NostrFetcherBase {
     });
 
     return chIter;
+  }
+
+  /**
+   * Cleans up all the internal states of the fetcher.
+   *
+   * It doesn't close any connections to relays, because other codes may reuse them.
+   */
+  public shutdown(): void {
+    // just clear extra refs to `RelayExt`s
+    this.#relays.clear();
   }
 }
 
