@@ -235,17 +235,17 @@ class NRTPoolAdapter implements NostrFetcherBase {
         subAutoAbortTimer = undefined;
       }
       subAutoAbortTimer = setTimeout(() => {
-        abortSub(`subscription aborted before EOSE due to timeout`);
+        abortSub("subscription aborted before EOSE due to timeout");
       }, options.abortSubBeforeEoseTimeoutMs);
     };
     resetAutoAbortTimer(); // initiate subscription auto abortion timer
 
     // handle abortion by AbortController
     if (options.abortSignal?.aborted) {
-      abortSub(`subscription aborted by AbortController`);
+      abortSub("subscription aborted by AbortController");
     }
     options.abortSignal?.addEventListener("abort", () => {
-      abortSub(`subscription aborted by AbortController`);
+      abortSub("subscription aborted by AbortController");
     });
 
     return chIter;

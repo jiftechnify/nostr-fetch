@@ -172,7 +172,7 @@ class NDKAdapter implements NostrFetcherBase {
         subAutoAbortTimer = undefined;
       }
       subAutoAbortTimer = setTimeout(() => {
-        logger?.log("info", `subscription aborted before EOSE due to timeout`);
+        logger?.log("info", "subscription aborted before EOSE due to timeout");
         closeSub();
       }, options.abortSubBeforeEoseTimeoutMs);
     };
