@@ -132,6 +132,15 @@ class SimplePoolExt implements NostrFetcherBase {
       ...(options.subId !== undefined ? { id: options.subId } : {}),
     });
 
+    // handle subscription events
+    sub.on("event", (ev: NostrEvent) => {
+      tx.send(ev);
+      resetAutoAbortTimer();
+    });
+    sub.on("eose", () => {
+      closeSub();
+    });
+
     // common process to close subscription
     const closeSub = () => {
       sub.unsub();
@@ -160,15 +169,6 @@ class SimplePoolExt implements NostrFetcherBase {
     }
     options.abortSignal?.addEventListener("abort", () => {
       logger?.log("info", `subscription aborted by AbortController`);
-      closeSub();
-    });
-
-    // handle subscription events
-    sub.on("event", (ev: NostrEvent) => {
-      tx.send(ev);
-      resetAutoAbortTimer();
-    });
-    sub.on("eose", () => {
       closeSub();
     });
 

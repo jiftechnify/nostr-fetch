@@ -90,7 +90,18 @@ export class DefaultFetcherBase implements NostrFetcherBase {
     sub.on("event", (ev: NostrEvent) => {
       tx.send(ev);
     });
-
+    sub.on("eose", ({ aborted }) => {
+      if (aborted) {
+        logger?.log("info", `subscription (id: ${sub.subId}) aborted before EOSE due to timeout`);
+      }
+      closeSub();
+    });
+    sub.on("eose", ({ aborted }) => {
+      if (aborted) {
+        logger?.log("info", `subscription (id: ${sub.subId}) aborted before EOSE due to timeout`);
+      }
+      closeSub();
+    });
     // common process to close subscription
     const closeSub = () => {
       try {
@@ -103,12 +114,14 @@ export class DefaultFetcherBase implements NostrFetcherBase {
       logger?.log("verbose", `CLOSE: subId=${options.subId ?? "<auto>"}`);
     };
 
-    sub.on("eose", ({ aborted }) => {
-      if (aborted) {
-        logger?.log("info", `subscription (id: ${sub.subId}) aborted before EOSE due to timeout`);
-      }
-      closeSub();
-    });
+    // start the subscription
+    logger?.log("verbose", `REQ: subId=${options.subId ?? "<auto>"}, filter=%O`, filter);
+    try {
+      sub.req();
+    } catch (err) {
+      tx.error(err);
+      removeRelayListeners();
+    }
 
     // handle abortion
     if (options.abortSignal?.aborted) {
@@ -119,15 +132,6 @@ export class DefaultFetcherBase implements NostrFetcherBase {
       logger?.log("info", `subscription (id: ${sub.subId}) aborted by AbortController`);
       closeSub();
     });
-
-    // start the subscription
-    logger?.log("verbose", `REQ: subId=${options.subId ?? "<auto>"}, filter=%O`, filter);
-    try {
-      sub.req();
-    } catch (err) {
-      tx.error(err);
-      removeRelayListeners();
-    }
 
     return chIter;
   }

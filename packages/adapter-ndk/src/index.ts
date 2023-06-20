@@ -137,6 +137,15 @@ class NDKAdapter implements NostrFetcherBase {
       new NDKRelaySet(new Set([relay]), this.#ndk)
     );
 
+    // handle subscription events
+    sub.on("event", (ndkEv: NDKEvent) => {
+      tx.send(ndkEv.rawEvent() as NostrEvent);
+      resetAutoAbortTimer();
+    });
+    sub.on("eose", () => {
+      closeSub();
+    });
+
     // common process to close subscription
     const closeSub = () => {
       sub.stop();
@@ -158,6 +167,9 @@ class NDKAdapter implements NostrFetcherBase {
     };
     resetAutoAbortTimer(); // initiate subscription auto abortion timer
 
+    // start subscription
+    sub.start();
+
     // handle abortion by AbortController
     if (options.abortSignal?.aborted) {
       logger?.log("info", `subscription aborted by AbortController`);
@@ -167,18 +179,6 @@ class NDKAdapter implements NostrFetcherBase {
       logger?.log("info", `subscription aborted by AbortController`);
       closeSub();
     });
-
-    // handle subscription events
-    sub.on("event", (ndkEv: NDKEvent) => {
-      tx.send(ndkEv.rawEvent() as NostrEvent);
-      resetAutoAbortTimer();
-    });
-    sub.on("eose", () => {
-      closeSub();
-    });
-
-    // start subscription
-    sub.start();
 
     return chIter;
   }
