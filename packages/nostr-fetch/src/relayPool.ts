@@ -1,13 +1,13 @@
-import type { RelayOptions } from "@nostr-fetch/kernel/relayTypes";
+import { Relay, initRelay } from "./relay";
+import type { RelayOptions } from "./relayTypes";
+
+import { Deferred } from "@nostr-fetch/kernel/channel";
+import { DebugLogger, LogLevel } from "@nostr-fetch/kernel/debugLogger";
 import {
   currUnixtimeMilli,
   normalizeRelayUrl,
   normalizeRelayUrls,
 } from "@nostr-fetch/kernel/utils";
-
-import { Deferred } from "@nostr-fetch/kernel/channel";
-import { DebugLogger, LogLevel } from "@nostr-fetch/kernel/debugLogger";
-import { Relay, initRelay } from "./relay";
 
 export interface RelayPool {
   ensureRelays(relayUrls: string[], relayOpts: RelayOptions): Promise<string[]>;

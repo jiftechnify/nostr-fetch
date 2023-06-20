@@ -1,4 +1,4 @@
-import type { NostrEvent } from "./nostr";
+import type { NostrEvent } from "@nostr-fetch/kernel/nostr";
 
 type Callback<E> = E extends void ? () => void : (ev: E) => void;
 

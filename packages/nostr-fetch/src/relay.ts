@@ -1,7 +1,3 @@
-/* global WebSocket, MessageEvent */
-import { verifyEventSig } from "@nostr-fetch/kernel/crypto";
-import type { C2RMessage, Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
-import { generateSubId, parseR2CMessage } from "@nostr-fetch/kernel/nostr";
 import type {
   RelayEventCbTypes,
   RelayEventTypes,
@@ -11,7 +7,11 @@ import type {
   Subscription,
   SubscriptionOptions,
   WSCloseEvent,
-} from "@nostr-fetch/kernel/relayTypes";
+} from "./relayTypes";
+
+import { verifyEventSig } from "@nostr-fetch/kernel/crypto";
+import type { C2RMessage, Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
+import { generateSubId, parseR2CMessage } from "@nostr-fetch/kernel/nostr";
 
 export interface Relay {
   url: string;
