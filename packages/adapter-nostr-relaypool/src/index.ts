@@ -146,18 +146,6 @@ class NRTPoolAdapter implements NostrFetcherBase {
   }
 
   /**
-   * Cleans up all the internal states of the fetcher.
-   *
-   * It doesn't close any connections to relays, because other codes may reuse them.
-   */
-  public shutdown(): void {
-    // just clear listeners map
-    for (const m of Object.values(this.#listeners)) {
-      m.clear();
-    }
-  }
-
-  /**
    * Fetches Nostr events matching `filters` from the relay specified by `relayUrl` until EOSE.
    *
    * The result is an `AsyncIterable` of Nostr events.
@@ -235,20 +223,32 @@ class NRTPoolAdapter implements NostrFetcherBase {
         subAutoAbortTimer = undefined;
       }
       subAutoAbortTimer = setTimeout(() => {
-        abortSub(`subscription aborted before EOSE due to timeout`);
+        abortSub("subscription aborted before EOSE due to timeout");
       }, options.abortSubBeforeEoseTimeoutMs);
     };
     resetAutoAbortTimer(); // initiate subscription auto abortion timer
 
     // handle abortion by AbortController
     if (options.abortSignal?.aborted) {
-      abortSub(`subscription aborted by AbortController`);
+      abortSub("subscription aborted by AbortController");
     }
     options.abortSignal?.addEventListener("abort", () => {
-      abortSub(`subscription aborted by AbortController`);
+      abortSub("subscription aborted by AbortController");
     });
 
     return chIter;
+  }
+
+  /**
+   * Cleans up all the internal states of the fetcher.
+   *
+   * It doesn't close any connections to relays, because other codes may reuse them.
+   */
+  public shutdown(): void {
+    // just clear listeners map
+    for (const m of Object.values(this.#listeners)) {
+      m.clear();
+    }
   }
 }
 

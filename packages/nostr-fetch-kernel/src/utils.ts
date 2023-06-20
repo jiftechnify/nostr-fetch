@@ -64,7 +64,7 @@ export async function* emptyAsyncGen() {
 
 /**
  * Abbreviates strings as:
- * <first `affixLen` chars of `s`> + ":" + <last `affixLen` charas of `s`>
+ * <first `affixLen` chars of `s`> + ":" + <last `affixLen` chars of `s`>
  *
  * if `s.length` is less than `affixLen * 2` or `affixLen` is not positive, just returns original string.
  */

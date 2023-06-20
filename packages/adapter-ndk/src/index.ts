@@ -85,18 +85,6 @@ class NDKAdapter implements NostrFetcherBase {
     return [...managedRurls, ...connectedRurls];
   }
 
-  /**
-   * Cleans up all the internal states of the fetcher.
-   *
-   * Disconnects from relays managed by the adapter.
-   */
-  public shutdown(): void {
-    for (const relay of this.#implicitRelays.values()) {
-      relay.disconnect();
-    }
-    this.#implicitRelays.clear();
-  }
-
   private getRelayIfConnected(relayUrl: string): NDKRelay | undefined {
     const r1 = this.#ndk.pool.relays.get(relayUrl);
     if (r1 !== undefined && r1.status === NDKRelayStatus.CONNECTED) {
@@ -149,20 +137,21 @@ class NDKAdapter implements NostrFetcherBase {
       new NDKRelaySet(new Set([relay]), this.#ndk)
     );
 
+    // handle subscription events
+    sub.on("event", (ndkEv: NDKEvent) => {
+      tx.send(ndkEv.rawEvent() as NostrEvent);
+      resetAutoAbortTimer();
+    });
+    sub.on("eose", () => {
+      closeSub();
+    });
+
     // common process to close subscription
     const closeSub = () => {
       sub.stop();
       tx.close();
       removeRelayListeners();
     };
-
-    // handle subscription events
-    sub.on("event", (ndkEv: NDKEvent) => {
-      tx.send(ndkEv.rawEvent() as NostrEvent);
-    });
-    sub.on("eose", () => {
-      closeSub();
-    });
 
     // auto abortion
     let subAutoAbortTimer: NodeJS.Timer | undefined;
@@ -172,11 +161,14 @@ class NDKAdapter implements NostrFetcherBase {
         subAutoAbortTimer = undefined;
       }
       subAutoAbortTimer = setTimeout(() => {
-        logger?.log("info", `subscription aborted before EOSE due to timeout`);
+        logger?.log("info", "subscription aborted before EOSE due to timeout");
         closeSub();
       }, options.abortSubBeforeEoseTimeoutMs);
     };
     resetAutoAbortTimer(); // initiate subscription auto abortion timer
+
+    // start subscription
+    sub.start();
 
     // handle abortion by AbortController
     if (options.abortSignal?.aborted) {
@@ -188,10 +180,19 @@ class NDKAdapter implements NostrFetcherBase {
       closeSub();
     });
 
-    // start subscription
-    sub.start();
-
     return chIter;
+  }
+
+  /**
+   * Cleans up all the internal states of the fetcher.
+   *
+   * Disconnects from relays managed by the adapter.
+   */
+  public shutdown(): void {
+    for (const relay of this.#implicitRelays.values()) {
+      relay.disconnect();
+    }
+    this.#implicitRelays.clear();
   }
 }
 
