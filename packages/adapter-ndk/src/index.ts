@@ -144,14 +144,6 @@ class NDKAdapter implements NostrFetcherBase {
       removeRelayListeners();
     };
 
-    // handle subscription events
-    sub.on("event", (ndkEv: NDKEvent) => {
-      tx.send(ndkEv.rawEvent() as NostrEvent);
-    });
-    sub.on("eose", () => {
-      closeSub();
-    });
-
     // auto abortion
     let subAutoAbortTimer: NodeJS.Timer | undefined;
     const resetAutoAbortTimer = () => {
@@ -173,6 +165,15 @@ class NDKAdapter implements NostrFetcherBase {
     }
     options.abortSignal?.addEventListener("abort", () => {
       logger?.log("info", `subscription aborted by AbortController`);
+      closeSub();
+    });
+
+    // handle subscription events
+    sub.on("event", (ndkEv: NDKEvent) => {
+      tx.send(ndkEv.rawEvent() as NostrEvent);
+      resetAutoAbortTimer();
+    });
+    sub.on("eose", () => {
       closeSub();
     });
 

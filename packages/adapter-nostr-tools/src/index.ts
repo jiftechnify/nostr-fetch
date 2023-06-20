@@ -139,14 +139,6 @@ class SimplePoolExt implements NostrFetcherBase {
       removeRelayListeners();
     };
 
-    // handle subscription events
-    sub.on("event", (ev: NostrEvent) => {
-      tx.send(ev);
-    });
-    sub.on("eose", () => {
-      closeSub();
-    });
-
     // auto abortion
     let subAutoAbortTimer: NodeJS.Timer | undefined;
     const resetAutoAbortTimer = () => {
@@ -168,6 +160,15 @@ class SimplePoolExt implements NostrFetcherBase {
     }
     options.abortSignal?.addEventListener("abort", () => {
       logger?.log("info", `subscription aborted by AbortController`);
+      closeSub();
+    });
+
+    // handle subscription events
+    sub.on("event", (ev: NostrEvent) => {
+      tx.send(ev);
+      resetAutoAbortTimer();
+    });
+    sub.on("eose", () => {
       closeSub();
     });
 
