@@ -29,6 +29,8 @@
   "scripts": {
     "prepack": "yarn build",
     "tsc": "tsc",
+    "test": "vitest run",
+    "testw": "vitest",
     "lint": "run-p tsc lint:*",
     "lint:format": "prettier --check --loglevel warn src/**/*.ts",
     "lint:js": "eslint --max-warnings 0 src/",
@@ -45,5 +47,9 @@
   },
   "volta": {
     "node": "18.14.2"
+  },
+  "devDependencies": {
+    "@noble/hashes": "^1.3.1",
+    "nostr-tools": "^1.12.0"
   }
 }
