@@ -18,7 +18,17 @@ import "websocket-polyfill";
 // sha256("test")
 const dummyPrivkey = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08";
 
-const setupMockRelay = (ws: WS, sendEventDelayMs: number, sendInvalidEvent = false) => {
+type MockRelayServerOptions = {
+  sendEventDelayMs?: number;
+  sendInvalidEvent?: boolean;
+};
+
+const setupMockRelayServer = (ws: WS, opts: MockRelayServerOptions = {}) => {
+  const { sendEventDelayMs, sendInvalidEvent } = {
+    ...{ sendEventDelayMs: 0, sendInvalidEvent: false },
+    ...opts,
+  };
+
   const evs = [
     { kind: 1, tags: [], content: "test1", created_at: 1000 },
     { kind: 1, tags: [], content: "test2", created_at: 0 },
@@ -222,7 +232,7 @@ describe("Relay", () => {
 
     test("normal case", async () => {
       const r = initRelay(rurl, { connectTimeoutMs: 5000 });
-      setupMockRelay(server, 0);
+      setupMockRelayServer(server);
 
       await r.connect();
 
@@ -251,7 +261,7 @@ describe("Relay", () => {
 
     test("abort before EOSE", async () => {
       const r = initRelay(rurl, { connectTimeoutMs: 5000 });
-      setupMockRelay(server, 2000);
+      setupMockRelayServer(server, { sendEventDelayMs: 2000 });
 
       await r.connect();
 
@@ -275,7 +285,7 @@ describe("Relay", () => {
 
     test("skip verification", async () => {
       const r = initRelay(rurl, { connectTimeoutMs: 5000 });
-      setupMockRelay(server, 0, true);
+      setupMockRelayServer(server, { sendInvalidEvent: true });
       await r.connect();
 
       const waitEose = new Deferred<void>();

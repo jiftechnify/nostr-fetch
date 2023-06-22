@@ -3,12 +3,12 @@ import type {
   EnsureRelaysOptions,
   FetchTillEoseOptions,
   NostrFetcherBase,
+  NostrFetcherCommonOptions,
 } from "@nostr-fetch/kernel/fetcherBase";
 import type { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
 import { emptyAsyncGen } from "@nostr-fetch/kernel/utils";
 
 import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
-import type { RelayPoolOptions } from "./relayPool";
 import { RelayPool, initRelayPool } from "./relayPool";
 
 /**
@@ -18,10 +18,10 @@ export class DefaultFetcherBase implements NostrFetcherBase {
   #relayPool: RelayPool;
   #debugLogger: DebugLogger | undefined;
 
-  public constructor(options: RelayPoolOptions) {
-    this.#relayPool = initRelayPool(options);
-    if (options.minLogLevel !== "none") {
-      this.#debugLogger = new DebugLogger(options.minLogLevel);
+  public constructor(commonOpts: Required<NostrFetcherCommonOptions>) {
+    this.#relayPool = initRelayPool(commonOpts);
+    if (commonOpts.minLogLevel !== "none") {
+      this.#debugLogger = new DebugLogger(commonOpts.minLogLevel);
     }
   }
 
