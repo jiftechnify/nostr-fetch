@@ -33,7 +33,7 @@ describe("RelayPool", () => {
   let pool: RelayPool;
 
   beforeEach(() => {
-    pool = initRelayPool({ minLogLevel: "all" });
+    pool = initRelayPool({ minLogLevel: "none" });
   });
   afterEach(() => {
     WS.clean();

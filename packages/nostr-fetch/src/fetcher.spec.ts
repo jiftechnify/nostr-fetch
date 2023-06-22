@@ -1,311 +1,9 @@
-import {
-  EnsureRelaysOptions,
-  FetchTillEoseOptions,
-  NostrFetcherBase,
-  NostrFetcherCommonOptions,
-} from "@nostr-fetch/kernel/fetcherBase";
-import { Filter, NostrEvent, generateSubId } from "@nostr-fetch/kernel/nostr";
-import {
-  emptyAsyncGen,
-  normalizeRelayUrl,
-  normalizeRelayUrls,
-  withTimeout,
-} from "@nostr-fetch/kernel/utils";
-import { RelayCapabilityChecker, createdAtDesc } from "./fetcherHelper";
+import { createdAtDesc } from "./fetcherHelper";
+import { FakedFetcherBuilder } from "./testutil/fakedFetcher";
+import { pubkeyFromAuthorName } from "./testutil/fakeEvent";
 
-import { setTimeout as delay } from "node:timers/promises";
-
-import { sha256 } from "@noble/hashes/sha256";
-import { bytesToHex } from "@noble/hashes/utils";
-import { Channel } from "@nostr-fetch/kernel/channel";
-import { finishEvent, getPublicKey, verifySignature } from "nostr-tools";
-
+import { NostrEvent } from "@nostr-fetch/kernel/nostr";
 import { assert, describe, expect, test } from "vitest";
-import { NostrFetcher } from "./fetcher";
-
-type FakeEventsSpec = {
-  content: string;
-  createdAtSpec: number | { since: number; until: number };
-  authorName?: string;
-  invalidSig?: boolean;
-  n?: number;
-};
-
-const genCreatedAt = (spec: number | { since: number; until: number }): number => {
-  if (typeof spec === "number") {
-    return spec;
-  }
-  // random integer between since and until (includes both endpoint)
-  const d = Math.floor(Math.random() * (spec.until - spec.since + 1));
-  return spec.since + d;
-};
-
-const privkeyFromAuthorName = (name: string) => bytesToHex(sha256(name));
-const pubkeyFromAuthorName = (name: string) => getPublicKey(privkeyFromAuthorName(name));
-
-const generateFakeEvents = (spec: FakeEventsSpec): NostrEvent[] => {
-  const { content, createdAtSpec, authorName, invalidSig, n } = {
-    ...{ authorName: "test", invalidSig: false, n: 1 },
-    ...spec,
-  };
-  const privkey = privkeyFromAuthorName(authorName);
-
-  const res: NostrEvent[] = [];
-  for (let i = 0; i < n; i++) {
-    const ev = {
-      kind: 1,
-      tags: [],
-      content: `${content} ${i}`,
-      created_at: genCreatedAt(createdAtSpec),
-    };
-    const signed = finishEvent(ev, privkey);
-
-    if (invalidSig) {
-      signed.sig = "";
-    }
-    res.push(signed);
-  }
-  return res;
-};
-
-type FakeRelaySpec = {
-  eventsSpec: FakeEventsSpec[];
-  connectable?: boolean;
-  connectDurMs?: number;
-  supportedNips?: number[];
-  sendEventInterval?: number;
-  exclusiveInterval?: boolean;
-};
-
-const afterSince = (ev: NostrEvent, since: number, exclusiveInterval: boolean): boolean =>
-  (exclusiveInterval && ev.created_at > since) || (!exclusiveInterval && ev.created_at >= since);
-
-const beforeUntil = (ev: NostrEvent, until: number, exclusiveInterval: boolean): boolean =>
-  (exclusiveInterval && ev.created_at < until) || (!exclusiveInterval && ev.created_at <= until);
-
-const matchEvent = (ev: NostrEvent, f: Filter, exclusiveInterval: boolean): boolean => {
-  if (f.ids !== undefined && !f.ids.includes(ev.id)) {
-    return false;
-  }
-  if (f.authors !== undefined && !f.authors.includes(ev.pubkey)) {
-    return false;
-  }
-  if (f.kinds !== undefined && !f.kinds.includes(ev.kind)) {
-    return false;
-  }
-  if (f.search !== undefined && !ev.content.includes(f.search)) {
-    return false;
-  }
-  if (f.since !== undefined && !afterSince(ev, f.since, exclusiveInterval)) {
-    return false;
-  }
-  if (f.until !== undefined && !beforeUntil(ev, f.until, exclusiveInterval)) {
-    return false;
-  }
-  return true;
-};
-
-class FakeRelay {
-  #spec: Required<FakeRelaySpec>;
-  #events: NostrEvent[] = [];
-
-  #subs: Set<string> = new Set();
-
-  constructor(spec: FakeRelaySpec) {
-    this.#spec = {
-      ...{
-        connectable: true,
-        connectDurMs: 0,
-        supportedNips: [],
-        sendEventInterval: 0,
-        exclusiveInterval: false,
-      },
-      ...spec,
-    };
-
-    const evs = spec.eventsSpec.flatMap((spec) => generateFakeEvents(spec));
-    this.#events = evs.sort(createdAtDesc);
-  }
-
-  async connect(): Promise<void> {
-    if (this.#spec.connectDurMs > 0) {
-      await delay(this.#spec.connectDurMs);
-    }
-
-    if (this.#spec.connectable) {
-      return Promise.resolve();
-    } else {
-      return Promise.reject(Error("failed to connect to the relay"));
-    }
-  }
-
-  req(
-    filter: Filter,
-    subId: string,
-    onEvent: (ev: NostrEvent) => void,
-    onEose: () => void
-  ): () => void {
-    this.#subs.add(subId);
-
-    (async () => {
-      let n = 0;
-
-      for (const ev of this.#events) {
-        if (!this.#subs.has(subId)) {
-          return;
-        }
-        if (n >= (filter.limit ?? 500)) {
-          onEose();
-          return;
-        }
-        if (
-          filter.since !== undefined &&
-          !afterSince(ev, filter.since, this.#spec.exclusiveInterval)
-        ) {
-          onEose();
-          return;
-        }
-
-        if (matchEvent(ev, filter, this.#spec.exclusiveInterval)) {
-          if (this.#spec.sendEventInterval > 0) {
-            await delay(this.#spec.sendEventInterval);
-          }
-          onEvent(ev);
-          n++;
-        }
-      }
-      // events exhausted
-      onEose();
-    })();
-
-    return () => {
-      this.#subs.delete(subId);
-    };
-  }
-
-  close(subId: string): void {
-    this.#subs.delete(subId);
-  }
-}
-
-class FakeFetcherBase implements NostrFetcherBase {
-  #mapFakeRelay: Map<string, FakeRelay> = new Map();
-
-  #calledShutdown = false;
-
-  constructor(relaySpecs: Map<string, FakeRelaySpec>) {
-    this.#mapFakeRelay = new Map(
-      [...relaySpecs.entries()].map(([rurl, spec]) => [rurl, new FakeRelay(spec)])
-    );
-  }
-
-  async ensureRelays(relayUrls: string[], options: EnsureRelaysOptions): Promise<string[]> {
-    const connected: string[] = [];
-    const normalizedUrls = normalizeRelayUrls(relayUrls);
-    await Promise.all(
-      normalizedUrls.map(async (rurl) => {
-        const relay = this.#mapFakeRelay.get(rurl);
-        if (relay === undefined) {
-          console.error("relay not found");
-          return;
-        }
-
-        try {
-          await withTimeout(relay.connect(), options.connectTimeoutMs, "connection timed out");
-          connected.push(rurl);
-        } catch (err) {
-          console.error(err);
-        }
-      })
-    );
-    return connected;
-  }
-
-  fetchTillEose(
-    relayUrl: string,
-    filter: Filter,
-    options: FetchTillEoseOptions
-  ): AsyncIterable<NostrEvent> {
-    const relay = this.#mapFakeRelay.get(normalizeRelayUrl(relayUrl));
-    if (relay === undefined) {
-      return emptyAsyncGen();
-    }
-
-    const [tx, iter] = Channel.make<NostrEvent>();
-    const onEvent = (ev: NostrEvent) => {
-      if (options.skipVerification || verifySignature(ev)) {
-        tx.send(ev);
-      }
-    };
-    const onEose = () => {
-      tx.close();
-    };
-
-    const unsub = relay.req(filter, generateSubId(), onEvent, onEose);
-
-    const abortSub = () => {
-      unsub();
-      tx.close();
-    };
-
-    // auto abortion
-    let subAutoAbortTimer: NodeJS.Timer | undefined;
-    const resetAutoAbortTimer = () => {
-      if (subAutoAbortTimer !== undefined) {
-        clearTimeout(subAutoAbortTimer);
-        subAutoAbortTimer = undefined;
-      }
-      subAutoAbortTimer = setTimeout(() => abortSub(), options.abortSubBeforeEoseTimeoutMs);
-    };
-    resetAutoAbortTimer(); // initiate subscription auto abortion timer
-
-    // handle abortion by AbortController
-    if (options.abortSignal?.aborted) {
-      abortSub();
-    }
-    options.abortSignal?.addEventListener("abort", () => abortSub());
-
-    return iter;
-  }
-
-  shutdown(): void {
-    this.#calledShutdown = true;
-  }
-  get calledShutdown(): boolean {
-    return this.#calledShutdown;
-  }
-}
-
-class FakeRelayCapChecker implements RelayCapabilityChecker {
-  #mapSupportedNips: Map<string, Set<number>>;
-
-  constructor(relaySpecs: Map<string, FakeRelaySpec>) {
-    this.#mapSupportedNips = new Map();
-    for (const [rurl, spec] of relaySpecs) {
-      this.#mapSupportedNips.set(rurl, new Set(spec.supportedNips ?? []));
-    }
-  }
-
-  async relaySupportsNips(relayUrl: string, requiredNips: number[]): Promise<boolean> {
-    const supportSet = this.#mapSupportedNips.get(normalizeRelayUrl(relayUrl));
-    return supportSet !== undefined && requiredNips.every((nip) => supportSet.has(nip));
-  }
-}
-
-class FakedFetcherBuilder {
-  #mapFakeRelaySpec: Map<string, FakeRelaySpec> = new Map();
-
-  addRelay(relayUrl: string, spec: FakeRelaySpec): FakedFetcherBuilder {
-    this.#mapFakeRelaySpec.set(normalizeRelayUrl(relayUrl), spec);
-    return this;
-  }
-
-  buildFetcher(opts: NostrFetcherCommonOptions = {}): NostrFetcher {
-    const base = () => new FakeFetcherBase(this.#mapFakeRelaySpec);
-    const capChecker = () => new FakeRelayCapChecker(this.#mapFakeRelaySpec);
-    return NostrFetcher.withCustomPool(base, opts, capChecker);
-  }
-}
 
 const collectAsyncIter = async <T>(iter: AsyncIterable<T>): Promise<T[]> => {
   const res: T[] = [];
@@ -322,17 +20,17 @@ describe.concurrent("NostrFetcher", () => {
       eventsSpec: [
         {
           content: "test1 early",
-          createdAtSpec: { since: 0, until: 999 },
+          createdAt: { since: 0, until: 999 },
           n: 10,
         },
         {
           content: "test1 within range",
-          createdAtSpec: { since: 1000, until: 2000 },
+          createdAt: { since: 1000, until: 2000 },
           n: 10,
         },
         {
           content: "test1 late",
-          createdAtSpec: { since: 2001, until: 3000 },
+          createdAt: { since: 2001, until: 3000 },
           n: 10,
         },
       ],
@@ -341,17 +39,17 @@ describe.concurrent("NostrFetcher", () => {
       eventsSpec: [
         {
           content: "test2 early",
-          createdAtSpec: { since: 0, until: 999 },
+          createdAt: { since: 0, until: 999 },
           n: 10,
         },
         {
           content: "test2 within range",
-          createdAtSpec: { since: 1000, until: 2000 },
+          createdAt: { since: 1000, until: 2000 },
           n: 10,
         },
         {
           content: "test2 late",
-          createdAtSpec: { since: 2001, until: 3000 },
+          createdAt: { since: 2001, until: 3000 },
           n: 10,
         },
       ],
@@ -360,76 +58,76 @@ describe.concurrent("NostrFetcher", () => {
       eventsSpec: [
         {
           content: "test3 early",
-          createdAtSpec: { since: 0, until: 1000 },
+          createdAt: { since: 0, until: 1000 },
           n: 10,
         },
         {
           content: "test3 within range",
-          createdAtSpec: { since: 1001, until: 1999 }, // it's correct bacause this relay is "exclusive" wrt since/until
+          createdAt: { since: 1001, until: 1999 }, // it's correct bacause this relay is "exclusive" wrt since/until
           n: 10,
         },
         {
           content: "test3 late",
-          createdAtSpec: { since: 2000, until: 3000 },
+          createdAt: { since: 2000, until: 3000 },
           n: 10,
         },
       ],
       exclusiveInterval: true,
     })
     .addRelay("wss://dup1", {
-      eventsSpec: [{ content: "dup", createdAtSpec: 0 }],
+      eventsSpec: [{ content: "dup" }],
     })
     .addRelay("wss://dup2", {
-      eventsSpec: [{ content: "dup", createdAtSpec: 0 }],
+      eventsSpec: [{ content: "dup" }],
     })
     .addRelay("wss://healthy", {
-      eventsSpec: [{ content: "healthy", createdAtSpec: 0, n: 10 }],
+      eventsSpec: [{ content: "healthy", n: 10 }],
     })
     .addRelay("wss://invalid-sig", {
-      eventsSpec: [{ content: "invalid sig", createdAtSpec: 0, invalidSig: true }],
+      eventsSpec: [{ content: "invalid sig", invalidSig: true }],
     })
     .addRelay("wss://unreachable", {
-      eventsSpec: [{ content: "unreachable", createdAtSpec: 0 }],
+      eventsSpec: [{ content: "unreachable" }],
       connectable: false,
     })
     .addRelay("wss://slow-to-connect", {
-      eventsSpec: [{ content: "slow to connect", createdAtSpec: 0 }],
+      eventsSpec: [{ content: "slow to connect" }],
       connectDurMs: 2000,
     })
     .addRelay("wss://slow-to-return-events", {
-      eventsSpec: [{ content: "slow to return events", createdAtSpec: 0 }],
+      eventsSpec: [{ content: "slow to return events" }],
       sendEventInterval: 1000,
     })
     .addRelay("wss://delayed", {
-      eventsSpec: [{ content: "delayed", createdAtSpec: 0, n: 10 }],
+      eventsSpec: [{ content: "delayed", n: 10 }],
       sendEventInterval: 100,
     })
     .addRelay("wss://search", {
-      eventsSpec: [{ content: "search", createdAtSpec: 0, n: 10 }],
+      eventsSpec: [{ content: "search", n: 10 }],
       supportedNips: [50],
     })
     .addRelay("wss://latest1", {
       eventsSpec: [
-        { content: "test1 old", createdAtSpec: { since: 0, until: 500 }, n: 10 },
-        { content: "test1 latest", createdAtSpec: { since: 1000, until: 2000 }, n: 10 },
+        { content: "test1 old", createdAt: { since: 0, until: 500 }, n: 10 },
+        { content: "test1 latest", createdAt: { since: 1000, until: 2000 }, n: 10 },
       ],
       sendEventInterval: 5,
     })
     .addRelay("wss://latest2", {
       eventsSpec: [
-        { content: "test2 old", createdAtSpec: { since: 0, until: 500 }, n: 10 },
-        { content: "test2 latest", createdAtSpec: { since: 1000, until: 2000 }, n: 10 },
+        { content: "test2 old", createdAt: { since: 0, until: 500 }, n: 10 },
+        { content: "test2 latest", createdAt: { since: 1000, until: 2000 }, n: 10 },
       ],
       sendEventInterval: 10,
     })
     .addRelay("wss://latest3-with-invalid-sig", {
       eventsSpec: [
-        { content: "test3 old", createdAtSpec: { since: 0, until: 500 }, n: 10 },
-        { content: "test3 near-latest", createdAtSpec: 750, n: 1 },
-        { content: "test3 latest", createdAtSpec: { since: 1000, until: 2000 }, n: 9 },
+        { content: "test3 old", createdAt: { since: 0, until: 500 }, n: 10 },
+        { content: "test3 near-latest", createdAt: 750, n: 1 },
+        { content: "test3 latest", createdAt: { since: 1000, until: 2000 }, n: 9 },
         {
           content: "test3 invalid",
-          createdAtSpec: { since: 1000, until: 2000 },
+          createdAt: { since: 1000, until: 2000 },
           invalidSig: true,
           n: 1,
         },
@@ -437,35 +135,35 @@ describe.concurrent("NostrFetcher", () => {
       sendEventInterval: 10,
     })
     .addRelay("wss://last-has-invalid-sig", {
-      eventsSpec: [{ content: "invalid", createdAtSpec: 2001, invalidSig: true }],
+      eventsSpec: [{ content: "invalid", createdAt: 2001, invalidSig: true }],
     })
     .addRelay("wss://per-author1", {
       eventsSpec: [
-        { content: "test1", authorName: "alice", createdAtSpec: { since: 0, until: 999 }, n: 10 },
-        { content: "test1", authorName: "bob", createdAtSpec: { since: 1000, until: 1999 }, n: 10 },
-        { content: "test1", authorName: "cat", createdAtSpec: { since: 2000, until: 2999 }, n: 10 },
-        { content: "test1 bob last", authorName: "bob", createdAtSpec: 5000 },
-        { content: "test1 alice 2nd", authorName: "alice", createdAtSpec: 4999 },
+        { content: "test1", authorName: "alice", createdAt: { since: 0, until: 999 }, n: 10 },
+        { content: "test1", authorName: "bob", createdAt: { since: 1000, until: 1999 }, n: 10 },
+        { content: "test1", authorName: "cat", createdAt: { since: 2000, until: 2999 }, n: 10 },
+        { content: "test1 bob last", authorName: "bob", createdAt: 5000 },
+        { content: "test1 alice 2nd", authorName: "alice", createdAt: 4999 },
       ],
       sendEventInterval: 5,
     })
     .addRelay("wss://per-author2", {
       eventsSpec: [
-        { content: "test2", authorName: "alice", createdAtSpec: { since: 0, until: 999 }, n: 10 },
-        { content: "test2", authorName: "bob", createdAtSpec: { since: 1000, until: 1999 }, n: 10 },
-        { content: "test2", authorName: "cat", createdAtSpec: { since: 2000, until: 2999 }, n: 10 },
-        { content: "test2 cat last", authorName: "cat", createdAtSpec: 5000 },
-        { content: "test2 bob 2nd", authorName: "bob", createdAtSpec: 4999 },
+        { content: "test2", authorName: "alice", createdAt: { since: 0, until: 999 }, n: 10 },
+        { content: "test2", authorName: "bob", createdAt: { since: 1000, until: 1999 }, n: 10 },
+        { content: "test2", authorName: "cat", createdAt: { since: 2000, until: 2999 }, n: 10 },
+        { content: "test2 cat last", authorName: "cat", createdAt: 5000 },
+        { content: "test2 bob 2nd", authorName: "bob", createdAt: 4999 },
       ],
       sendEventInterval: 5,
     })
     .addRelay("wss://per-author3", {
       eventsSpec: [
-        { content: "test3", authorName: "alice", createdAtSpec: { since: 0, until: 999 }, n: 10 },
-        { content: "test3", authorName: "bob", createdAtSpec: { since: 1000, until: 1999 }, n: 10 },
-        { content: "test3", authorName: "cat", createdAtSpec: { since: 2000, until: 2999 }, n: 10 },
-        { content: "test3 alice last", authorName: "alice", createdAtSpec: 5000 },
-        { content: "test3 cat 2nd", authorName: "cat", createdAtSpec: 4999 },
+        { content: "test3", authorName: "alice", createdAt: { since: 0, until: 999 }, n: 10 },
+        { content: "test3", authorName: "bob", createdAt: { since: 1000, until: 1999 }, n: 10 },
+        { content: "test3", authorName: "cat", createdAt: { since: 2000, until: 2999 }, n: 10 },
+        { content: "test3 alice last", authorName: "alice", createdAt: 5000 },
+        { content: "test3 cat 2nd", authorName: "cat", createdAt: 4999 },
       ],
       sendEventInterval: 5,
     })
@@ -627,7 +325,7 @@ describe.concurrent("NostrFetcher", () => {
 
     test("uses only searchable relays (supports NIP-50) if the filter contains search field", async () => {
       const evIter = await fetcher.allEventsIterator(
-        ["wss://healty", "wss://search"],
+        ["wss://healthy", "wss://search"],
         { search: "search" },
         {}
       );

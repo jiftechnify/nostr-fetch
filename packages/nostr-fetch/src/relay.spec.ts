@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
 import { Deferred } from "@nostr-fetch/kernel/channel";
 import { initRelay } from "./relay";
 import {
@@ -7,72 +8,14 @@ import {
   RelayNoticeCb,
   SubEoseCb,
   SubEventCb,
+  WSCloseEvent,
 } from "./relayTypes";
+import { setupMockRelayServer } from "./testutil/mockRelayServer";
 
 import { setTimeout as delay } from "node:timers/promises";
-import { finishEvent } from "nostr-tools";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import WS from "vitest-websocket-mock";
 import "websocket-polyfill";
-
-// sha256("test")
-const dummyPrivkey = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08";
-
-type MockRelayServerOptions = {
-  sendEventDelayMs?: number;
-  sendInvalidEvent?: boolean;
-};
-
-const setupMockRelayServer = (ws: WS, opts: MockRelayServerOptions = {}) => {
-  const { sendEventDelayMs, sendInvalidEvent } = {
-    ...{ sendEventDelayMs: 0, sendInvalidEvent: false },
-    ...opts,
-  };
-
-  const evs = [
-    { kind: 1, tags: [], content: "test1", created_at: 1000 },
-    { kind: 1, tags: [], content: "test2", created_at: 0 },
-  ];
-  const invalidEv = (() => {
-    const ev = finishEvent(
-      { kind: 1, tags: [], content: "invalid", created_at: 2000 },
-      dummyPrivkey
-    );
-    // change first char of the signature
-    ev.sig = `${ev.sig[0] === "0" ? "1" : "0"}${ev.sig.slice(1)}`;
-    return ev;
-  })();
-
-  ws.on("connection", (socket) => {
-    socket.on("message", async (msg) => {
-      if (typeof msg !== "string") {
-        return;
-      }
-      try {
-        const parsed = JSON.parse(msg);
-        if (!Array.isArray(parsed) || parsed.length === 0) {
-          return;
-        }
-        switch (parsed[0]) {
-          case "REQ": {
-            const subId = parsed[1] as string;
-
-            if (sendInvalidEvent) {
-              socket.send(JSON.stringify(["EVENT", subId, invalidEv]));
-            }
-            for (const ev of evs) {
-              await delay(sendEventDelayMs);
-              socket.send(JSON.stringify(["EVENT", subId, finishEvent(ev, dummyPrivkey)]));
-            }
-            socket.send(JSON.stringify(["EOSE", subId]));
-          }
-        }
-      } catch {
-        return;
-      }
-    });
-  });
-};
 
 describe("Relay", () => {
   test(".url returns relay's URL", () => {
@@ -125,18 +68,10 @@ describe("Relay", () => {
     beforeEach(() => {
       ws = new WS(rurl, { jsonProtocol: true });
       spyCbs = {
-        connect: vi.fn(() => {
-          /* */
-        }),
-        disconnect: vi.fn(() => {
-          /* */
-        }),
-        error: vi.fn(() => {
-          /* */
-        }),
-        notice: vi.fn((n: unknown) => {
-          console.info("notice:", n);
-        }),
+        connect: vi.fn(() => {}),
+        disconnect: vi.fn((_: WSCloseEvent) => {}),
+        error: vi.fn(() => {}),
+        notice: vi.fn((_) => {}),
       };
     });
     afterEach(() => {
@@ -218,12 +153,8 @@ describe("Relay", () => {
     beforeEach(() => {
       server = new WS(rurl, { jsonProtocol: true });
       spyCbs = {
-        event: vi.fn((_) => {
-          /* */
-        }),
-        eose: vi.fn((_) => {
-          /* */
-        }),
+        event: vi.fn((_) => {}),
+        eose: vi.fn((_) => {}),
       };
     });
     afterEach(() => {
@@ -232,7 +163,7 @@ describe("Relay", () => {
 
     test("normal case", async () => {
       const r = initRelay(rurl, { connectTimeoutMs: 5000 });
-      setupMockRelayServer(server);
+      setupMockRelayServer(server, [{ type: "events", eventsSpec: { content: "test", n: 5 } }]);
 
       await r.connect();
 
@@ -254,14 +185,18 @@ describe("Relay", () => {
       sub.close();
       await expect(server).toReceiveMessage(["CLOSE", "normal"]);
 
-      // mock relay should send 2 EVENTs then EOSE
-      expect(spyCbs.event).toBeCalledTimes(2);
+      // mock relay sends: 5 EVENTs then EOSE
+      expect(spyCbs.event).toBeCalledTimes(5);
       expect(spyCbs.eose).toBeCalledTimes(1);
     });
 
-    test("abort before EOSE", async () => {
+    test("aborts before EOSE if relay doesn't return events for a while", async () => {
       const r = initRelay(rurl, { connectTimeoutMs: 5000 });
-      setupMockRelayServer(server, { sendEventDelayMs: 2000 });
+      setupMockRelayServer(server, [
+        { type: "events", eventsSpec: { content: "test" } },
+        { type: "delay", delayMs: 2000 },
+        { type: "events", eventsSpec: { content: "delayed" } },
+      ]);
 
       await r.connect();
 
@@ -278,14 +213,41 @@ describe("Relay", () => {
       await waitEose.promise;
       sub.close();
 
-      // the subscription should be aborted before sending events
-      expect(spyCbs.event).not.toBeCalled();
+      // the subscription should be aborted before 2nd event is sent
+      expect(spyCbs.event).toBeCalledTimes(1);
       expect(spyCbs.eose).toBeCalledTimes(1);
     });
 
-    test("skip verification", async () => {
+    test("verifies signature by default", async () => {
       const r = initRelay(rurl, { connectTimeoutMs: 5000 });
-      setupMockRelayServer(server, { sendInvalidEvent: true });
+      setupMockRelayServer(server, [
+        { type: "events", eventsSpec: { content: "test", n: 5 } },
+        { type: "events", eventsSpec: { content: "invalid", invalidSig: true } },
+      ]);
+      await r.connect();
+
+      const waitEose = new Deferred<void>();
+      const sub = r.prepareSub([{}], {
+        skipVerification: false,
+        abortSubBeforeEoseTimeoutMs: 1000,
+      });
+      sub.on("event", spyCbs.event);
+      sub.on("eose", () => waitEose.resolve());
+
+      sub.req();
+      await waitEose.promise;
+      sub.close();
+
+      // 5 valid events only
+      expect(spyCbs.event).toBeCalledTimes(5);
+    });
+
+    test("skips signature verification if enabled", async () => {
+      const r = initRelay(rurl, { connectTimeoutMs: 5000 });
+      setupMockRelayServer(server, [
+        { type: "events", eventsSpec: { content: "test", n: 5 } },
+        { type: "events", eventsSpec: { content: "invalid", invalidSig: true } },
+      ]);
       await r.connect();
 
       const waitEose = new Deferred<void>();
@@ -300,8 +262,8 @@ describe("Relay", () => {
       await waitEose.promise;
       sub.close();
 
-      // 1 invalid event + 2 valid events
-      expect(spyCbs.event).toBeCalledTimes(3);
+      // 5 valid events + 1 invalid event
+      expect(spyCbs.event).toBeCalledTimes(6);
     });
   });
 });

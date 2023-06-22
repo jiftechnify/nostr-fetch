@@ -66,12 +66,18 @@ export class DefaultFetcherBase implements NostrFetcherBase {
 
     const [tx, chIter] = Channel.make<NostrEvent>();
 
-    // error handlings
+    // relay error handlings
     const onNotice = (n: unknown) => {
       tx.error(Error(`NOTICE: ${JSON.stringify(n)}`));
+      try {
+        sub.close();
+      } catch (err) {
+        logger?.log("error", `failed to close subscription (id: ${sub.subId}): ${err}`);
+      }
       removeRelayListeners();
     };
     const onError = () => {
+      // WebSocket error closes the connection, so calling close() is meaningless
       tx.error(Error("ERROR"));
       removeRelayListeners();
     };
@@ -96,12 +102,7 @@ export class DefaultFetcherBase implements NostrFetcherBase {
       }
       closeSub();
     });
-    sub.on("eose", ({ aborted }) => {
-      if (aborted) {
-        logger?.log("info", `subscription (id: ${sub.subId}) aborted before EOSE due to timeout`);
-      }
-      closeSub();
-    });
+
     // common process to close subscription
     const closeSub = () => {
       try {
