@@ -1,8 +1,8 @@
+import { NostrEvent } from "@nostr-fetch/kernel/nostr";
+import { pubkeyFromAuthorName } from "@nostr-fetch/testutil/fakeEvent";
 import { createdAtDesc } from "./fetcherHelper";
 import { FakedFetcherBuilder } from "./testutil/fakedFetcher";
-import { pubkeyFromAuthorName } from "./testutil/fakeEvent";
 
-import { NostrEvent } from "@nostr-fetch/kernel/nostr";
 import { assert, describe, expect, test } from "vitest";
 
 const collectAsyncIter = async <T>(iter: AsyncIterable<T>): Promise<T[]> => {

@@ -1,6 +1,6 @@
 import { FetchTillEoseOptions, NostrFetcherBase } from "@nostr-fetch/kernel/fetcherBase";
+import { setupMockRelayServer } from "@nostr-fetch/testutil/mockRelayServer";
 import { DefaultFetcherBase } from "./fetcherBase";
-import { setupMockRelayServer } from "./testutil/mockRelayServer";
 
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { WS } from "vitest-websocket-mock";

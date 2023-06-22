@@ -1,8 +1,5 @@
-import { NostrFetcher } from "../fetcher";
-import { RelayCapabilityChecker, createdAtDesc } from "../fetcherHelper";
-import { FakeEventsSpec, generateFakeEvents } from "./fakeEvent";
-
 import { Channel } from "@nostr-fetch/kernel/channel";
+import { verifyEventSig } from "@nostr-fetch/kernel/crypto";
 import {
   EnsureRelaysOptions,
   FetchTillEoseOptions,
@@ -16,9 +13,11 @@ import {
   normalizeRelayUrls,
   withTimeout,
 } from "@nostr-fetch/kernel/utils";
+import { FakeEventsSpec, generateFakeEvents } from "@nostr-fetch/testutil/fakeEvent";
+import { NostrFetcher } from "../fetcher";
+import { RelayCapabilityChecker, createdAtDesc } from "../fetcherHelper";
 
 import { setTimeout as delay } from "node:timers/promises";
-import { verifySignature } from "nostr-tools";
 
 /**
  * Faking NostrFetcherBase and RelayCapabilityChecker for testing NostrFetcher
@@ -189,7 +188,7 @@ class FakeFetcherBase implements NostrFetcherBase {
 
     const [tx, iter] = Channel.make<NostrEvent>();
     const onEvent = (ev: NostrEvent) => {
-      if (options.skipVerification || verifySignature(ev)) {
+      if (options.skipVerification || verifyEventSig(ev)) {
         tx.send(ev);
       }
     };

@@ -1,6 +1,7 @@
+import { RelayPool, initRelayPool } from "./relayPool";
+
 import { afterEach, assert, beforeEach, describe, expect, test } from "vitest";
 import { WS } from "vitest-websocket-mock";
-import { RelayPool, initRelayPool } from "./relayPool";
 
 class MockRelayServer {
   #ws: WS;

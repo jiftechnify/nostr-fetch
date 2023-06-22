@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import { Deferred } from "@nostr-fetch/kernel/channel";
+import { setupMockRelayServer } from "@nostr-fetch/testutil/mockRelayServer";
 import { initRelay } from "./relay";
 import {
   RelayConnectCb,
@@ -10,7 +11,6 @@ import {
   SubEventCb,
   WSCloseEvent,
 } from "./relayTypes";
-import { setupMockRelayServer } from "./testutil/mockRelayServer";
 
 import { setTimeout as delay } from "node:timers/promises";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
