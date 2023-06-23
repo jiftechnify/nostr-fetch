@@ -1,5 +1,5 @@
-import { Relay, initRelay } from "./relay";
-import type { RelayOptions } from "./relayTypes";
+import type { Relay, RelayOptions } from "./relay";
+import { initRelay } from "./relay";
 
 import { Deferred } from "@nostr-fetch/kernel/channel";
 import { DebugLogger, LogLevel } from "@nostr-fetch/kernel/debugLogger";
