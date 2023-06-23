@@ -8,13 +8,12 @@
     "packages/*"
   ],
   "scripts": {
-    "lint": "turbo lint",
-    "fix": "turbo fix",
-    "test": "turbo test",
-    "build": "turbo build",
-    "lint-gha": "turbo lint --cache-dir .turbo",
-    "test-gha": "turbo test --cache-dir .turbo",
-    "build-gha": "turbo build --cache-dir .turbo",
+    "lint": "turbo lint --filter=!@nostr-fetch/examples",
+    "fix": "turbo fix --filter=!@nostr-fetch/examples",
+    "test": "turbo test --filter=!@nostr-fetch/examples",
+    "build": "turbo build --filter=!@nostr-fetch/examples",
+    "run-all": "turbo lint",
+    "run-all-gha": "turbo lint --cache-dir .turbo",
     "bump-version": "lerna version --conventional-commits --allow-peer-dependencies-update",
     "release": "lerna publish from-package",
     "example": "node scripts/runExample.js"
@@ -41,6 +40,7 @@
     "turbo": "^1.9.3",
     "typescript": "^5.1.0",
     "vitest": "^0.32.0",
+    "vitest-websocket-mock": "^0.2.0",
     "websocket-polyfill": "^0.0.3"
   },
   "volta": {
