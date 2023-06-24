@@ -28,9 +28,6 @@ type MockRelaySubResponseAction =
       delayMs: number;
     };
 type MockRelaySubResponseScenario = MockRelaySubResponseAction[];
-const defaultSubRespScenario: MockRelaySubResponseScenario = [
-  { type: "events", eventsSpec: { content: "test", createdAt: 0 } },
-];
 
 const r2cEventMsg = (subId: string, ev: NostrEvent) => JSON.stringify(["EVENT", subId, ev]);
 const r2cEoseMsg = (subId: string) => JSON.stringify(["EOSE", subId]);
@@ -76,10 +73,7 @@ const playSubScenario = async (
  *
  * please call it before connecting to the mock WebSocket server!
  */
-export const setupMockRelayServer = (
-  ws: WS,
-  scenario: MockRelaySubResponseScenario = defaultSubRespScenario
-) => {
+export const setupMockRelayServer = (ws: WS, scenario: MockRelaySubResponseScenario) => {
   ws.on("connection", (socket) => {
     socket.on("message", async (msg) => {
       if (typeof msg !== "string") {
