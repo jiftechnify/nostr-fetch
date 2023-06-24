@@ -108,8 +108,15 @@ export class SimplePoolExt implements NostrFetcherBase {
 
     const [tx, chIter] = Channel.make<NostrEvent>();
 
+    // start a subscription
+    const sub = relay.sub([filter], {
+      skipVerification: options.skipVerification,
+      ...(options.subId !== undefined ? { id: options.subId } : {}),
+    });
+
     // error handlings
     const onNotice = (n: unknown) => {
+      sub.unsub();
       tx.error(Error(`NOTICE: ${JSON.stringify(n)}`));
       removeRelayListeners();
     };
@@ -124,12 +131,6 @@ export class SimplePoolExt implements NostrFetcherBase {
 
     relay.on("notice", onNotice);
     relay.on("error", onError);
-
-    // start a subscription
-    const sub = relay.sub([filter], {
-      skipVerification: options.skipVerification,
-      ...(options.subId !== undefined ? { id: options.subId } : {}),
-    });
 
     // handle subscription events
     sub.on("event", (ev: NostrEvent) => {
