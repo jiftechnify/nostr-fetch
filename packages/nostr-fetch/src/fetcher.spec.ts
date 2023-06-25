@@ -284,7 +284,7 @@ describe.concurrent("NostrFetcher", () => {
         ["wss://healthy", "wss://slow-to-return-events"],
         {},
         {},
-        { abortSubBeforeEoseTimeoutMs: 500 }
+        { abortSubBeforeEoseTimeoutMs: 100 }
       );
       const evs = await collectAsyncIter(evIter);
       expect(evs.length).toBe(10);
