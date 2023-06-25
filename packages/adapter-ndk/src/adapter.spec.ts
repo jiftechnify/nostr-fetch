@@ -21,6 +21,7 @@ const collectAsyncIter = async <T>(iter: AsyncIterable<T>): Promise<T[]> => {
 
 describe("NDKAdapter", () => {
   describe("fetchTillEose", () => {
+    // `skipVerification` has no effect.
     const defaultOpts: FetchTillEoseOptions = {
       abortSignal: undefined,
       abortSubBeforeEoseTimeoutMs: 5000,
@@ -42,9 +43,10 @@ describe("NDKAdapter", () => {
       wsServer = new WS(url, { jsonProtocol: true });
 
       const ndk = new NDK();
-      fetcherBase = new NDKAdapter(ndk, { minLogLevel: "all" });
+      fetcherBase = new NDKAdapter(ndk, { minLogLevel: "none" });
     });
     afterEach(() => {
+      fetcherBase.shutdown(); // if we omit this line, a strange error occurs on the next line...
       WS.clean();
     });
 
@@ -55,8 +57,6 @@ describe("NDKAdapter", () => {
       const iter = fetcherBase.fetchTillEose(url, {}, defaultOpts);
       const evs = await collectAsyncIter(iter);
       expect(evs.length).toBe(10);
-
-      fetcherBase.shutdown();
 
       await expect(wsServer).toReceiveMessage(["REQ", expect.anything(), {}]);
       await expect(wsServer).toReceiveMessage(["CLOSE", expect.anything()]);
@@ -74,7 +74,7 @@ describe("NDKAdapter", () => {
       const evs = await collectAsyncIter(iter);
       expect(evs.length).toBe(9);
 
-      fetcherBase.shutdown();
+      expect.toHaveReceivedMessages([]);
 
       await expect(wsServer).toReceiveMessage(["REQ", expect.anything(), {}]);
       await expect(wsServer).toReceiveMessage(["CLOSE", expect.anything()]);
@@ -96,8 +96,6 @@ describe("NDKAdapter", () => {
       const evs = await collectAsyncIter(iter);
       expect(evs.length).toBe(9);
 
-      fetcherBase.shutdown();
-
       await expect(wsServer).toReceiveMessage(["REQ", expect.anything(), {}]);
       await expect(wsServer).toReceiveMessage(["CLOSE", expect.anything()]);
     });
@@ -116,8 +114,6 @@ describe("NDKAdapter", () => {
       const iter = fetcherBase.fetchTillEose(url, {}, optsWithDefault({ abortSignal: ac.signal }));
       const evs = await collectAsyncIter(iter);
       expect(evs.length).toBeLessThan(10);
-
-      fetcherBase.shutdown();
 
       await expect(wsServer).toReceiveMessage(["REQ", expect.anything(), {}]);
       await expect(wsServer).toReceiveMessage(["CLOSE", expect.anything()]);
