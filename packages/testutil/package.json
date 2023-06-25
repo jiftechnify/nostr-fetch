@@ -1,0 +1,31 @@
+{
+  "name": "@nostr-fetch/testutil",
+  "version": "0.9.0",
+  "description": "common test utilities for nostr-fetch",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    "./*": {
+      "module": "./src/*.ts",
+      "import": "./src/*.ts",
+      "types": "./src/*.ts"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "./src/*.ts"
+      ]
+    }
+  },
+  "devDependencies": {
+    "@nostr-fetch/kernel": "^0.9.0",
+    "@noble/hashes": "^1.3.1",
+    "nostr-tools": "^1.12.0"
+  },
+  "volta": {
+    "node": "18.14.2"
+  }
+}

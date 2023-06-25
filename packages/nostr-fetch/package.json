@@ -29,6 +29,8 @@
   "scripts": {
     "prepack": "yarn build",
     "tsc": "tsc",
+    "test": "vitest run",
+    "testw": "vitest",
     "lint": "run-p tsc lint:*",
     "lint:format": "prettier --check --loglevel warn src/**/*.ts",
     "lint:js": "eslint --max-warnings 0 src/",
@@ -42,6 +44,9 @@
   },
   "dependencies": {
     "@nostr-fetch/kernel": "^0.9.0"
+  },
+  "devDependencies": {
+    "@nostr-fetch/testutil": "^0.9.0"
   },
   "volta": {
     "node": "18.14.2"

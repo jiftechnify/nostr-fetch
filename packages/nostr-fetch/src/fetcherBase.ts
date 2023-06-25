@@ -3,12 +3,12 @@ import type {
   EnsureRelaysOptions,
   FetchTillEoseOptions,
   NostrFetcherBase,
+  NostrFetcherCommonOptions,
 } from "@nostr-fetch/kernel/fetcherBase";
 import type { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
 import { emptyAsyncGen } from "@nostr-fetch/kernel/utils";
 
 import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
-import type { RelayPoolOptions } from "./relayPool";
 import { RelayPool, initRelayPool } from "./relayPool";
 
 /**
@@ -18,10 +18,10 @@ export class DefaultFetcherBase implements NostrFetcherBase {
   #relayPool: RelayPool;
   #debugLogger: DebugLogger | undefined;
 
-  public constructor(options: RelayPoolOptions) {
-    this.#relayPool = initRelayPool(options);
-    if (options.minLogLevel !== "none") {
-      this.#debugLogger = new DebugLogger(options.minLogLevel);
+  public constructor(commonOpts: Required<NostrFetcherCommonOptions>) {
+    this.#relayPool = initRelayPool(commonOpts);
+    if (commonOpts.minLogLevel !== "none") {
+      this.#debugLogger = new DebugLogger(commonOpts.minLogLevel);
     }
   }
 
@@ -66,12 +66,18 @@ export class DefaultFetcherBase implements NostrFetcherBase {
 
     const [tx, chIter] = Channel.make<NostrEvent>();
 
-    // error handlings
+    // relay error handlings
     const onNotice = (n: unknown) => {
       tx.error(Error(`NOTICE: ${JSON.stringify(n)}`));
+      try {
+        sub.close();
+      } catch (err) {
+        logger?.log("error", `failed to close subscription (id: ${sub.subId}): ${err}`);
+      }
       removeRelayListeners();
     };
     const onError = () => {
+      // WebSocket error closes the connection, so calling close() is meaningless
       tx.error(Error("ERROR"));
       removeRelayListeners();
     };
@@ -96,12 +102,7 @@ export class DefaultFetcherBase implements NostrFetcherBase {
       }
       closeSub();
     });
-    sub.on("eose", ({ aborted }) => {
-      if (aborted) {
-        logger?.log("info", `subscription (id: ${sub.subId}) aborted before EOSE due to timeout`);
-      }
-      closeSub();
-    });
+
     // common process to close subscription
     const closeSub = () => {
       try {

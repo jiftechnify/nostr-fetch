@@ -1,5 +1,6 @@
 import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
-import { NostrEvent } from "@nostr-fetch/kernel/nostr";
+import { NostrFetcherCommonOptions } from "@nostr-fetch/kernel/fetcherBase";
+import { NostrEvent, querySupportedNips } from "@nostr-fetch/kernel/nostr";
 
 /**
  * Type of errors that can be thrown from methods of `NostrFetcher`.
@@ -178,3 +179,45 @@ export class KeyRelayMatrix<K extends string | number, V> {
     return this.#byKey.get(key);
   }
 }
+
+export interface RelayCapabilityChecker {
+  relaySupportsNips(relayUrl: string, requiredNips: number[]): Promise<boolean>;
+}
+
+class DefaultRelayCapChecker implements RelayCapabilityChecker {
+  #supportedNipsCache: Map<string, Set<number>> = new Map();
+  #debugLogger: DebugLogger | undefined;
+
+  constructor(opts: Required<NostrFetcherCommonOptions>) {
+    if (opts.minLogLevel !== "none") {
+      this.#debugLogger = new DebugLogger(opts.minLogLevel);
+    }
+  }
+
+  async relaySupportsNips(relayUrl: string, requiredNips: number[]): Promise<boolean> {
+    const logger = this.#debugLogger?.subLogger(relayUrl);
+
+    if (requiredNips.length === 0) {
+      return true;
+    }
+
+    const supportSetFromCache = this.#supportedNipsCache.get(relayUrl);
+    if (supportSetFromCache !== undefined) {
+      return requiredNips.every((nip) => supportSetFromCache.has(nip));
+    }
+
+    // query supported NIP's of the relay if cache doesn't have information
+    const supportSet = await querySupportedNips(relayUrl);
+    logger?.log("info", `supported NIPs: ${supportSet}`);
+
+    this.#supportedNipsCache.set(relayUrl, supportSet);
+    return requiredNips.every((nip) => supportSet.has(nip));
+  }
+}
+
+export type RelayCapCheckerInitializer = (
+  opts: Required<NostrFetcherCommonOptions>
+) => RelayCapabilityChecker;
+
+export const initDefaultRelayCapChecker = (opts: Required<NostrFetcherCommonOptions>) =>
+  new DefaultRelayCapChecker(opts);

@@ -8,13 +8,12 @@
     "packages/*"
   ],
   "scripts": {
-    "lint": "turbo lint",
-    "fix": "turbo fix",
-    "test": "turbo test",
-    "build": "turbo build",
-    "lint-gha": "turbo lint --cache-dir .turbo",
-    "test-gha": "turbo test --cache-dir .turbo",
-    "build-gha": "turbo build --cache-dir .turbo",
+    "lint": "turbo lint --filter=!@nostr-fetch/examples",
+    "fix": "turbo fix --filter=!@nostr-fetch/examples",
+    "test": "turbo test --filter=!@nostr-fetch/examples",
+    "build": "turbo build --filter=!@nostr-fetch/examples",
+    "run-all": "turbo lint",
+    "run-all-gha": "turbo lint --cache-dir .turbo",
     "bump-version": "lerna version --conventional-commits --allow-peer-dependencies-update",
     "release": "lerna publish from-package",
     "example": "node scripts/runExample.js"
@@ -26,8 +25,8 @@
     "@tsconfig/strictest": "^2.0.1",
     "@types/fs-extra": "^11.0.1",
     "@types/node": "^18.14.2",
-    "@typescript-eslint/eslint-plugin": "^5.30.0",
-    "@typescript-eslint/parser": "^5.30.4",
+    "@typescript-eslint/eslint-plugin": "^5.60.0",
+    "@typescript-eslint/parser": "^5.60.0",
     "conventional-changelog-cli": "^2.2.2",
     "copy-file-util": "^1.0.0",
     "esbuild": "^0.17.5",
@@ -39,8 +38,9 @@
     "npm-run-all": "^4.1.5",
     "prettier": "^2.8.8",
     "turbo": "^1.9.3",
-    "typescript": "^5.0.4",
-    "vitest": "^0.29.2",
+    "typescript": "^5.1.0",
+    "vitest": "^0.32.0",
+    "vitest-websocket-mock": "^0.2.0",
     "websocket-polyfill": "^0.0.3"
   },
   "volta": {

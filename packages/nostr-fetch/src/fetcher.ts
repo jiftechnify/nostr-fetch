@@ -9,7 +9,7 @@ import {
   NostrFetcherCommonOptions,
   defaultFetcherCommonOptions,
 } from "@nostr-fetch/kernel/fetcherBase";
-import { Filter, NostrEvent, querySupportedNips } from "@nostr-fetch/kernel/nostr";
+import { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
 import { abbreviate, currUnixtimeSec, normalizeRelayUrls } from "@nostr-fetch/kernel/utils";
 
 import { DefaultFetcherBase } from "./fetcherBase";
@@ -17,10 +17,13 @@ import {
   EventBuckets,
   KeyRelayMatrix,
   NostrFetchError,
+  RelayCapCheckerInitializer,
+  RelayCapabilityChecker,
   assertReq,
   checkIfNonEmpty,
   checkIfTrue,
   createdAtDesc,
+  initDefaultRelayCapChecker,
 } from "./fetcherHelper";
 
 export type FetchFilter = Omit<Filter, "limit" | "since" | "until">;
@@ -101,15 +104,16 @@ const isRelaySetsPerAuthor = (a2rs: AuthorsAndRelays): a2rs is RelaySetsPerAutho
 
 export class NostrFetcher {
   #fetcherBase: NostrFetcherBase;
+  #relayCapChecker: RelayCapabilityChecker;
   #debugLogger: DebugLogger | undefined;
-
-  #supportedNipsCache: Map<string, Set<number>> = new Map();
 
   private constructor(
     fetcherBase: NostrFetcherBase,
+    relayCapChecker: RelayCapabilityChecker,
     initOpts: Required<NostrFetcherCommonOptions>
   ) {
     this.#fetcherBase = fetcherBase;
+    this.#relayCapChecker = relayCapChecker;
 
     if (initOpts.minLogLevel !== "none") {
       this.#debugLogger = new DebugLogger(initOpts.minLogLevel);
@@ -119,10 +123,14 @@ export class NostrFetcher {
   /**
    * Initializes `NostrFetcher` with the default relay pool implementation.
    */
-  public static init(initOpts: NostrFetcherCommonOptions = {}): NostrFetcher {
-    const finalOpts = { ...defaultFetcherCommonOptions, ...initOpts };
+  public static init(
+    options: NostrFetcherCommonOptions = {},
+    initRelayCapChecker: RelayCapCheckerInitializer = initDefaultRelayCapChecker
+  ): NostrFetcher {
+    const finalOpts = { ...defaultFetcherCommonOptions, ...options };
     const base = new DefaultFetcherBase(finalOpts);
-    return new NostrFetcher(base, finalOpts);
+    const relayCapChecker = initRelayCapChecker(finalOpts);
+    return new NostrFetcher(base, relayCapChecker, finalOpts);
   }
 
   /**
@@ -137,10 +145,12 @@ export class NostrFetcher {
    */
   public static withCustomPool(
     poolAdapter: NostrFetcherBaseInitializer,
-    initOpts: NostrFetcherCommonOptions = {}
+    options: NostrFetcherCommonOptions = {},
+    initRelayCapChecker: RelayCapCheckerInitializer = initDefaultRelayCapChecker
   ): NostrFetcher {
-    const finalOpts = { ...defaultFetcherCommonOptions, ...initOpts };
-    return new NostrFetcher(poolAdapter(finalOpts), finalOpts);
+    const finalOpts = { ...defaultFetcherCommonOptions, ...options };
+    const relayCapChecker = initRelayCapChecker(finalOpts);
+    return new NostrFetcher(poolAdapter(finalOpts), relayCapChecker, finalOpts);
   }
 
   async #ensureRelaysWithCapCheck(
@@ -160,24 +170,9 @@ export class NostrFetcher {
     const res: string[] = [];
     await Promise.all(
       connectedRelays.map(async (rurl) => {
-        const logger = this.#debugLogger?.subLogger(rurl);
-
-        const supportSetFromCache = this.#supportedNipsCache.get(rurl);
-        if (supportSetFromCache !== undefined) {
-          if (requiredNips.every((nip) => supportSetFromCache.has(nip))) {
-            res.push(rurl);
-          }
-          return;
-        }
-
-        // query supported NIP's of the relay if cache doesn't have information
-        const supportSet = await querySupportedNips(rurl);
-        logger?.log("verbose", `supported NIPs: ${supportSet}`);
-
-        if (requiredNips.every((nip) => supportSet.has(nip))) {
+        if (await this.#relayCapChecker.relaySupportsNips(rurl, requiredNips)) {
           res.push(rurl);
         }
-        this.#supportedNipsCache.set(rurl, supportSet);
       })
     );
 

@@ -35,4 +35,4 @@ jobs:
         run: yarn
 
       - name: Lint, Test and Build
-        run: yarn build-gha
+        run: yarn run-all-gha

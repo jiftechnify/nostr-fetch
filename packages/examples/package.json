@@ -15,7 +15,7 @@
     "exec-ts": "node --loader esbuild-register/loader -r esbuild-register"
   },
   "dependencies": {
-    "@nostr-dev-kit/ndk": "^0.4.6",
+    "@nostr-dev-kit/ndk": "^0.5.0",
     "@nostr-fetch/adapter-ndk": "^0.9.0",
     "@nostr-fetch/adapter-nostr-relaypool": "^0.9.0",
     "@nostr-fetch/adapter-nostr-tools": "^0.9.0",

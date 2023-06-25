@@ -86,13 +86,10 @@ export const withTimeout = async <T>(
   timeoutMs: number,
   msgOnTimeout: string
 ): Promise<T> => {
-  const timeoutAborter = new AbortController();
-  const timeout = new Promise<T>((_, reject) => {
-    setTimeout(() => reject(Error(msgOnTimeout)), timeoutMs);
-    timeoutAborter.signal.addEventListener("abort", () => reject());
+  let timer: NodeJS.Timeout;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(Error(msgOnTimeout)), timeoutMs);
   });
 
-  const t = await Promise.race([promise, timeout]);
-  timeoutAborter.abort();
-  return t;
+  return Promise.race([promise.finally(() => clearTimeout(timer)), timeout]);
 };

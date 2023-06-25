@@ -29,6 +29,8 @@
   "scripts": {
     "prepack": "yarn build",
     "check-type": "tsc -p tsconfig.lint.json || exit 0",
+    "test": "vitest run",
+    "testw": "vitest",
     "lint": "run-p check-type lint:*",
     "lint:format": "prettier --check --loglevel warn src/**/*.ts",
     "lint:js": "eslint --max-warnings 0 src/",
@@ -43,7 +45,6 @@
     "@nostr-fetch/kernel": "^0.9.0"
   },
   "devDependencies": {
-    "nostr-fetch": "^0.9.0",
     "nostr-relaypool": "^0.6.28"
   },
   "peerDependencies": {
