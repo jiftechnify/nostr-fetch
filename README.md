@@ -123,7 +123,7 @@ for await (const { author, event } of metadataPerAuthor ) {
 
 ### Working with custom relay pool implementations
 
-First, install the adapter package for the relay pool implementaion you want to use.
+First, install the adapter package for the relay pool implementation you want to use.
 For example, if you want to use nostr-fetch with nostr-tools' `SimplePool` :
 
 ```bash

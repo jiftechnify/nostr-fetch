@@ -82,14 +82,14 @@ class RelayPoolImpl implements RelayPool {
   // `relayUrls` should be normalized in advance.
   private async addRelays(relayUrls: string[], relayOpts: RelayOptions): Promise<void> {
     const relaysToConnect: string[] = [];
-    const waitsForConnnect: Promise<void>[] = [];
+    const waitsForConnect: Promise<void>[] = [];
 
     for (const rurl of relayUrls) {
       const r = this.#relays.get(rurl);
       if (r === undefined || this.#relayShouldBeReconnected(r)) {
         relaysToConnect.push(rurl);
       } else if (r.state === "connecting") {
-        waitsForConnnect.push(r.wait);
+        waitsForConnect.push(r.wait);
       }
     }
 
@@ -126,7 +126,7 @@ class RelayPoolImpl implements RelayPool {
           deferred.resolve();
         }
       }),
-      ...waitsForConnnect,
+      ...waitsForConnect,
     ]);
   }
 

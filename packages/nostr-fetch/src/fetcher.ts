@@ -254,7 +254,7 @@ export class NostrFetcher {
         // repeat subscription until one of the following conditions is met:
         // 1. the relay didn't return new event
         // 2. aborted by AbortController
-        // E. an error occured while fetching events
+        // E. an error occurred while fetching events
 
         const logger = this.#debugLogger?.subLogger(rurl);
 
@@ -292,7 +292,7 @@ export class NostrFetcher {
               }
             }
           } catch (err) {
-            // an error occured while fetching events
+            // an error occurred while fetching events
             logger?.log("error", err);
             break;
           }
@@ -433,7 +433,7 @@ export class NostrFetcher {
         // 1. got enough amount of events
         // 2. the relay didn't return new event
         // 3. aborted by AbortController
-        // E. an error occured while fetching events
+        // E. an error occurred while fetching events
 
         const logger = this.#debugLogger?.subLogger(rurl);
 
@@ -471,7 +471,7 @@ export class NostrFetcher {
               }
             }
           } catch (err) {
-            // an error occured while fetching events
+            // an error occurred while fetching events
             logger?.log("error", err);
             break;
           }
@@ -684,7 +684,7 @@ export class NostrFetcher {
         // 1. have fetched required number of events for all authors
         // 2. the relay didn't return new event
         // 3. aborted by AbortController
-        // E. an error occured while fetching events
+        // E. an error occurred while fetching events
 
         const logger = this.#debugLogger?.subLogger(rurl);
 
@@ -743,7 +743,7 @@ export class NostrFetcher {
               }
             }
           } catch (err) {
-            // an error occured while fetching events
+            // an error occurred while fetching events
             logger?.log("error", err);
             resolveAllOnEarlyBreak();
             break;

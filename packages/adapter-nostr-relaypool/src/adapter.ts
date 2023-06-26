@@ -14,7 +14,7 @@ import type { RelayPool } from "nostr-relaypool";
 type NRTPoolNoticeCb = (msg: string) => void;
 type NRTPoolErrorCb = (err: string) => void;
 type NRTPoolDisconnectCb = (msg: string) => void;
-type NRTPoolAuthCb = () => void; // actually "challange" will be passed here but ignoring
+type NRTPoolAuthCb = () => void; // actually "challenge" will be passed here but ignoring
 
 type NRTPoolEventCbs = {
   notice: NRTPoolNoticeCb;
@@ -110,7 +110,7 @@ export class NRTPoolAdapter implements NostrFetcherBase {
             logger?.log("warn", `NOTICE: ${msg}`);
           });
           this.addListener(rurl, "auth", () =>
-            logger?.log("warn", "received AUTH challange (ignoring)")
+            logger?.log("warn", "received AUTH challenge (ignoring)")
           );
           resolve(rurl);
         });
