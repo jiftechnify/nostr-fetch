@@ -65,7 +65,7 @@ describe("parseR2CMessage", () => {
   });
 
   test("fails on unknown/ignored message type", () => {
-    const unknownMsgJSON = [`["UNKNOWN"]`, `["OK", "event_id", true, ""]`, `["AUTH", "challange"]`];
+    const unknownMsgJSON = [`["UNKNOWN"]`, `["OK", "event_id", true, ""]`, `["AUTH", "challenge"]`];
 
     for (const msgJSON of unknownMsgJSON) {
       expect(parseR2CMessage(msgJSON)).toBeUndefined();

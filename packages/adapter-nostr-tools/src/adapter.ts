@@ -54,7 +54,7 @@ export class SimplePoolExt implements NostrFetcherBase {
       r.on("disconnect", () => logger?.log("info", `disconnected`));
       r.on("error", () => logger?.log("error", `WebSocket error`));
       r.on("notice", (notice) => logger?.log("warn", `NOTICE: ${notice}`));
-      r.on("auth", () => logger?.log("warn", `received AUTH challange (ignoring)`));
+      r.on("auth", () => logger?.log("warn", `received AUTH challenge (ignoring)`));
 
       return r;
     };

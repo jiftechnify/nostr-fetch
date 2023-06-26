@@ -30,7 +30,7 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 * add adapter for NDK ([6eaaf82](https://github.com/jiftechnify/nostr-fetch/commit/6eaaf82b2e98d0b5aacae3b4d24ec986f6bccf85))
 * add DebugLogger class with minimum log level support ([086b139](https://github.com/jiftechnify/nostr-fetch/commit/086b1399abfc432951cb19e4767ed4a29da3370e))
 * add NDK adapter example ([f8891bb](https://github.com/jiftechnify/nostr-fetch/commit/f8891bbc82739e597b3ef164185c7eececbad10f))
-* fetchers now allow only signle filters per request ([dbceb8d](https://github.com/jiftechnify/nostr-fetch/commit/dbceb8da3456a3c410b0f97a5d1f50d75fbf6c85))
+* fetchers now allow only single filters per request ([dbceb8d](https://github.com/jiftechnify/nostr-fetch/commit/dbceb8da3456a3c410b0f97a5d1f50d75fbf6c85))
 * improve ergonomics of initializing fetchers ([2a2070e](https://github.com/jiftechnify/nostr-fetch/commit/2a2070e691a08d57eb22d50a3cfb491e414c6a4b))
 * rename closeAll -> shutdown ([7c625e3](https://github.com/jiftechnify/nostr-fetch/commit/7c625e3c347977d64368d670e34d885fcf7af9de))
 
@@ -88,5 +88,5 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 * **adapter-nostr-tools:** add means to log irregular events for debug to SimplePoolAdapter ([6ba741d](https://github.com/jiftechnify/nostr-fetch/commit/6ba741dfce3e63d73a578943c1f9acc2ed3e8839))
 * **adapter-nostr-tools:** minimize nostr-tools version as peer dep ([68ed56f](https://github.com/jiftechnify/nostr-fetch/commit/68ed56fc3f513761088e8da625e9f8fd907e9443))
-* **adapter-nostr-tools:** subs from SimplePoolAdatper now support auto abortion ([06e8110](https://github.com/jiftechnify/nostr-fetch/commit/06e8110bd69ae93951b47bbeb533cedfb6155a6f))
-* SimplePoolAdapter now respects conenctTimeoutMs ([15034c8](https://github.com/jiftechnify/nostr-fetch/commit/15034c84ec139d6f72a18e1cc884afb53695078e))
+* **adapter-nostr-tools:** subs from SimplePoolAdapter now support auto abortion ([06e8110](https://github.com/jiftechnify/nostr-fetch/commit/06e8110bd69ae93951b47bbeb533cedfb6155a6f))
+* SimplePoolAdapter now respects connenctTimeoutMs ([15034c8](https://github.com/jiftechnify/nostr-fetch/commit/15034c84ec139d6f72a18e1cc884afb53695078e))

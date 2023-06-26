@@ -9,7 +9,7 @@ if (process.argv.length <= 2) {
   console.error("usage: search <query>");
   process.exit(1);
 }
-const serachQuery = process.argv[2] as string;
+const searchQuery = process.argv[2] as string;
 
 const main = async () => {
   const fetcher = NostrFetcher.init();
@@ -19,7 +19,7 @@ const main = async () => {
     searchRelays,
     {
       kinds: [eventKind.text],
-      search: serachQuery,
+      search: searchQuery,
     },
     {
       since: nHoursAgo(24),

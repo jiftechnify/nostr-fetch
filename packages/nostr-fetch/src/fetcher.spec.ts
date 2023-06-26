@@ -63,7 +63,7 @@ describe.concurrent("NostrFetcher", () => {
         },
         {
           content: "test3 within range",
-          createdAt: { since: 1001, until: 1999 }, // it's correct bacause this relay is "exclusive" wrt since/until
+          createdAt: { since: 1001, until: 1999 }, // it's correct because this relay is "exclusive" wrt since/until
           n: 10,
         },
         {
