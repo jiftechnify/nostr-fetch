@@ -21,6 +21,7 @@ import {
   RelayCapabilityChecker,
   assertReq,
   checkIfNonEmpty,
+  checkIfTimeRangeIsValid,
   checkIfTrue,
   createdAtDesc,
   initDefaultRelayCapChecker,
@@ -195,6 +196,8 @@ export class NostrFetcher {
    *
    * Note: there are no guarantees about the order of returned events.
    *
+   * Throws {@linkcode NostrFetchError} if `timeRangeFilter` is invalid (`since` > `until`).
+   *
    * @param relayUrls
    * @param filter
    * @param timeRangeFilter
@@ -208,8 +211,15 @@ export class NostrFetcher {
     options: AllEventsIterOptions = {}
   ): Promise<AsyncIterable<NostrEvent>> {
     assertReq(
-      { relayUrls },
-      [checkIfNonEmpty((r) => r.relayUrls, "warn", "Specify at least 1 relay URL")],
+      { relayUrls, timeRangeFilter },
+      [
+        checkIfNonEmpty((r) => r.relayUrls, "warn", "Specify at least 1 relay URL"),
+        checkIfTimeRangeIsValid(
+          (r) => r.timeRangeFilter,
+          "error",
+          "Invalid time range (since > until)"
+        ),
+      ],
       this.#debugLogger
     );
 
@@ -319,6 +329,8 @@ export class NostrFetcher {
    *
    * Note: there are no guarantees about the order of returned events if `sort` options is not specified.
    *
+   * Throws {@linkcode NostrFetchError} if `timeRangeFilter` is invalid (`since` > `until`).
+   *
    * @param relayUrls
    * @param filter
    * @param timeRangeFilter
@@ -332,8 +344,15 @@ export class NostrFetcher {
     options: FetchAllOptions = {}
   ): Promise<NostrEvent[]> {
     assertReq(
-      { relayUrls },
-      [checkIfNonEmpty((r) => r.relayUrls, "warn", "Specify at least 1 relay URL")],
+      { relayUrls, timeRangeFilter },
+      [
+        checkIfNonEmpty((r) => r.relayUrls, "warn", "Specify at least 1 relay URL"),
+        checkIfTimeRangeIsValid(
+          (r) => r.timeRangeFilter,
+          "error",
+          "Invalid time range (since > until)"
+        ),
+      ],
       this.#debugLogger
     );
 
