@@ -209,6 +209,12 @@ describe.concurrent("NostrFetcher", () => {
       assert(evs.every(({ content }) => content.includes("within range")));
     });
 
+    test("throws error if time range is invalid", async () => {
+      await expect(
+        fetcher.allEventsIterator(["wss://healthy"], {}, { since: 1, until: 0 })
+      ).rejects.toThrow("Invalid time range (since > until)");
+    });
+
     test("dedups events based on event id", async () => {
       const evIter = await fetcher.allEventsIterator(["wss://dup1", "wss://dup2"], {}, {});
       const evs = await collectAsyncIter(evIter);
@@ -345,6 +351,12 @@ describe.concurrent("NostrFetcher", () => {
       );
       const sorted = evs.slice().sort(createdAtDesc);
       expect(evs).toStrictEqual(sorted);
+    });
+
+    test("throws error if time range is invalid", async () => {
+      await expect(
+        fetcher.fetchAllEvents(["wss://healthy"], {}, { since: 1, until: 0 })
+      ).rejects.toThrow("Invalid time range (since > until)");
     });
   });
 

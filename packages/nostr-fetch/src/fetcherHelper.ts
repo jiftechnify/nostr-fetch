@@ -67,6 +67,22 @@ export function checkIfNonEmpty<T, U>(
   return (req: T) => (getArray(req).length !== 0 ? { severity: "none" } : { severity, msg });
 }
 
+export function checkIfTimeRangeIsValid<T>(
+  getTimeRange: (req: T) => { since?: number; until?: number },
+  severity: "error" | "warn",
+  msg: string
+): (req: T) => AssertionResult {
+  return (req: T) => {
+    const { since, until } = getTimeRange(req);
+
+    if (since === undefined || until === undefined) {
+      // time range is always valid if at least one of the bounds is unbounded.
+      return { severity: "none" };
+    }
+    return since <= until ? { severity: "none" } : { severity, msg };
+  };
+}
+
 /**
  * comparator represents descending order by `created_at` of events (a.k.a. "newest to oldest" order)
  */
