@@ -62,7 +62,7 @@ export type Filter = {
   until?: number;
   limit?: number;
   search?: string;
-  [key: `#${string}`]: string[];
+  [tag: `#${string}`]: string[] | undefined;
 };
 
 // client to relay messages
