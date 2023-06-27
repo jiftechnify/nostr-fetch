@@ -3,9 +3,9 @@ import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
 import type {
   EnsureRelaysOptions,
   FetchTillEoseOptions,
-  NostrFetcherBase,
+  NostrFetcherBackend,
   NostrFetcherCommonOptions,
-} from "@nostr-fetch/kernel/fetcherBase";
+} from "@nostr-fetch/kernel/fetcherBackend";
 import { NostrEvent, type Filter } from "@nostr-fetch/kernel/nostr";
 import {
   emptyAsyncGen,
@@ -16,7 +16,7 @@ import {
 
 import type { SimplePool, Relay as ToolsRelay } from "nostr-tools";
 
-export class SimplePoolExt implements NostrFetcherBase {
+export class SimplePoolExt implements NostrFetcherBackend {
   #simplePool: SimplePool;
 
   // storing refs to `ToolsRelay`s to allow to take out them synchronously.

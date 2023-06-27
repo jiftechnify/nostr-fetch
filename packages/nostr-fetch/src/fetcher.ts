@@ -4,15 +4,15 @@ import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
 import {
   EnsureRelaysOptions,
   FetchTillEoseOptions,
-  NostrFetcherBase,
-  NostrFetcherBaseInitializer,
+  NostrFetcherBackend,
+  NostrFetcherBackendInitializer,
   NostrFetcherCommonOptions,
   defaultFetcherCommonOptions,
-} from "@nostr-fetch/kernel/fetcherBase";
+} from "@nostr-fetch/kernel/fetcherBackend";
 import { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
 import { abbreviate, currUnixtimeSec, normalizeRelayUrls } from "@nostr-fetch/kernel/utils";
 
-import { DefaultFetcherBase } from "./fetcherBase";
+import { DefaultFetcherBackend } from "./fetcherBackend";
 import {
   EventBuckets,
   KeyRelayMatrix,
@@ -104,16 +104,16 @@ const isRelaySetsPerAuthor = (a2rs: AuthorsAndRelays): a2rs is RelaySetsPerAutho
 };
 
 export class NostrFetcher {
-  #fetcherBase: NostrFetcherBase;
+  #backend: NostrFetcherBackend;
   #relayCapChecker: RelayCapabilityChecker;
   #debugLogger: DebugLogger | undefined;
 
   private constructor(
-    fetcherBase: NostrFetcherBase,
+    backend: NostrFetcherBackend,
     relayCapChecker: RelayCapabilityChecker,
     initOpts: Required<NostrFetcherCommonOptions>
   ) {
-    this.#fetcherBase = fetcherBase;
+    this.#backend = backend;
     this.#relayCapChecker = relayCapChecker;
 
     if (initOpts.minLogLevel !== "none") {
@@ -129,9 +129,9 @@ export class NostrFetcher {
     initRelayCapChecker: RelayCapCheckerInitializer = initDefaultRelayCapChecker
   ): NostrFetcher {
     const finalOpts = { ...defaultFetcherCommonOptions, ...options };
-    const base = new DefaultFetcherBase(finalOpts);
+    const backend = new DefaultFetcherBackend(finalOpts);
     const relayCapChecker = initRelayCapChecker(finalOpts);
-    return new NostrFetcher(base, relayCapChecker, finalOpts);
+    return new NostrFetcher(backend, relayCapChecker, finalOpts);
   }
 
   /**
@@ -145,7 +145,7 @@ export class NostrFetcher {
    * ```
    */
   public static withCustomPool(
-    poolAdapter: NostrFetcherBaseInitializer,
+    poolAdapter: NostrFetcherBackendInitializer,
     options: NostrFetcherCommonOptions = {},
     initRelayCapChecker: RelayCapCheckerInitializer = initDefaultRelayCapChecker
   ): NostrFetcher {
@@ -159,7 +159,7 @@ export class NostrFetcher {
     opts: EnsureRelaysOptions,
     requiredNips: number[]
   ): Promise<string[]> {
-    const connectedRelays = await this.#fetcherBase.ensureRelays(relayUrls, opts);
+    const connectedRelays = await this.#backend.ensureRelays(relayUrls, opts);
 
     if (requiredNips.length === 0) {
       // if capability check is not needed, return early
@@ -276,7 +276,7 @@ export class NostrFetcher {
           let oldestCreatedAt = Number.MAX_SAFE_INTEGER;
 
           try {
-            for await (const e of this.#fetcherBase.fetchTillEose(rurl, refinedFilter, finalOpts)) {
+            for await (const e of this.#backend.fetchTillEose(rurl, refinedFilter, finalOpts)) {
               // eliminate duplicated events
               if (!localSeenEventIds.has(e.id)) {
                 gotNewEvent = true;
@@ -455,7 +455,7 @@ export class NostrFetcher {
           let oldestCreatedAt = Number.MAX_SAFE_INTEGER;
 
           try {
-            for await (const e of this.#fetcherBase.fetchTillEose(rurl, refinedFilter, subOpts)) {
+            for await (const e of this.#backend.fetchTillEose(rurl, refinedFilter, subOpts)) {
               // eliminate duplicated events
               if (!localSeenEventIds.has(e.id)) {
                 numNewEvents++;
@@ -723,7 +723,7 @@ export class NostrFetcher {
           let oldestCreatedAt = Number.MAX_SAFE_INTEGER;
 
           try {
-            for await (const e of this.#fetcherBase.fetchTillEose(rurl, refinedFilter, subOpts)) {
+            for await (const e of this.#backend.fetchTillEose(rurl, refinedFilter, subOpts)) {
               if (!localSeenEventIds.has(e.id)) {
                 gotNewEvent = true;
                 localSeenEventIds.add(e.id);
@@ -873,6 +873,6 @@ export class NostrFetcher {
    * Cleans up all the internal states of the fetcher.
    */
   public shutdown() {
-    this.#fetcherBase.shutdown();
+    this.#backend.shutdown();
   }
 }

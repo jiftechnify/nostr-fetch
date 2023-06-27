@@ -1,4 +1,4 @@
-import { FetchTillEoseOptions, NostrFetcherBase } from "@nostr-fetch/kernel/fetcherBase";
+import { FetchTillEoseOptions, NostrFetcherBackend } from "@nostr-fetch/kernel/fetcherBackend";
 import { setupMockRelayServer } from "@nostr-fetch/testutil/mockRelayServer";
 import { SimplePoolExt } from "./adapter";
 
@@ -35,14 +35,14 @@ describe("SimplePoolExt", () => {
     };
 
     const url = "ws://localhost:8000";
-    let fetcherBase: NostrFetcherBase;
+    let backend: NostrFetcherBackend;
     let wsServer: WS;
 
     beforeEach(async () => {
       wsServer = new WS(url, { jsonProtocol: true });
 
       const simplePool = new SimplePool();
-      fetcherBase = new SimplePoolExt(simplePool, { minLogLevel: "none" });
+      backend = new SimplePoolExt(simplePool, { minLogLevel: "none" });
     });
     afterEach(() => {
       WS.clean();
@@ -51,8 +51,8 @@ describe("SimplePoolExt", () => {
     test("fetches events until EOSE", async () => {
       setupMockRelayServer(wsServer, [{ type: "events", eventsSpec: { content: "test", n: 10 } }]);
 
-      await fetcherBase.ensureRelays([url], { connectTimeoutMs: 1000 });
-      const iter = fetcherBase.fetchTillEose(url, {}, defaultOpts);
+      await backend.ensureRelays([url], { connectTimeoutMs: 1000 });
+      const iter = backend.fetchTillEose(url, {}, defaultOpts);
       const evs = await collectAsyncIter(iter);
       expect(evs.length).toBe(10);
 
@@ -67,8 +67,8 @@ describe("SimplePoolExt", () => {
         { type: "events", eventsSpec: { content: "after notice", n: 1 } },
       ]);
 
-      await fetcherBase.ensureRelays([url], { connectTimeoutMs: 1000 });
-      const iter = fetcherBase.fetchTillEose(url, {}, defaultOpts);
+      await backend.ensureRelays([url], { connectTimeoutMs: 1000 });
+      const iter = backend.fetchTillEose(url, {}, defaultOpts);
       const evs = await collectAsyncIter(iter);
       expect(evs.length).toBe(9);
 
@@ -83,8 +83,8 @@ describe("SimplePoolExt", () => {
         { type: "error" },
       ]);
 
-      await fetcherBase.ensureRelays([url], { connectTimeoutMs: 1000 });
-      const iter = fetcherBase.fetchTillEose(url, {}, defaultOpts);
+      await backend.ensureRelays([url], { connectTimeoutMs: 1000 });
+      const iter = backend.fetchTillEose(url, {}, defaultOpts);
       const evs = await collectAsyncIter(iter);
       expect(evs.length).toBe(5);
 
@@ -99,8 +99,8 @@ describe("SimplePoolExt", () => {
         { type: "events", eventsSpec: { content: "deleyed", n: 1 } },
       ]);
 
-      await fetcherBase.ensureRelays([url], { connectTimeoutMs: 1000 });
-      const iter = fetcherBase.fetchTillEose(
+      await backend.ensureRelays([url], { connectTimeoutMs: 1000 });
+      const iter = backend.fetchTillEose(
         url,
         {},
         optsWithDefault({ abortSubBeforeEoseTimeoutMs: 1000 })
@@ -122,8 +122,8 @@ describe("SimplePoolExt", () => {
         ac.abort();
       }, 500);
 
-      await fetcherBase.ensureRelays([url], { connectTimeoutMs: 1000 });
-      const iter = fetcherBase.fetchTillEose(url, {}, optsWithDefault({ abortSignal: ac.signal }));
+      await backend.ensureRelays([url], { connectTimeoutMs: 1000 });
+      const iter = backend.fetchTillEose(url, {}, optsWithDefault({ abortSignal: ac.signal }));
       const evs = await collectAsyncIter(iter);
       expect(evs.length).toBeLessThan(10);
 
@@ -137,8 +137,8 @@ describe("SimplePoolExt", () => {
         { type: "events", eventsSpec: { content: "invalid", invalidSig: true } },
       ]);
 
-      await fetcherBase.ensureRelays([url], { connectTimeoutMs: 1000 });
-      const iter = fetcherBase.fetchTillEose(url, {}, optsWithDefault({ skipVerification: true }));
+      await backend.ensureRelays([url], { connectTimeoutMs: 1000 });
+      const iter = backend.fetchTillEose(url, {}, optsWithDefault({ skipVerification: true }));
       const evs = await collectAsyncIter(iter);
       expect(evs.length).toBe(11);
 

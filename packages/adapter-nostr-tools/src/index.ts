@@ -1,9 +1,9 @@
 import { SimplePoolExt } from "./adapter";
 
 import type {
-  NostrFetcherBaseInitializer,
+  NostrFetcherBackendInitializer,
   NostrFetcherCommonOptions,
-} from "@nostr-fetch/kernel/fetcherBase";
+} from "@nostr-fetch/kernel/fetcherBackend";
 import type { SimplePool } from "nostr-tools";
 
 /**
@@ -19,7 +19,7 @@ import type { SimplePool } from "nostr-tools";
  * const fetcher = NostrFetcher.withCustomPool(simplePoolAdapter(pool));
  * ```
  */
-export const simplePoolAdapter = (pool: SimplePool): NostrFetcherBaseInitializer => {
+export const simplePoolAdapter = (pool: SimplePool): NostrFetcherBackendInitializer => {
   return (commonOpts: Required<NostrFetcherCommonOptions>) => {
     return new SimplePoolExt(pool, commonOpts);
   };

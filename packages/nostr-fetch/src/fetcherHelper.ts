@@ -1,5 +1,5 @@
 import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
-import { NostrFetcherCommonOptions } from "@nostr-fetch/kernel/fetcherBase";
+import { NostrFetcherCommonOptions } from "@nostr-fetch/kernel/fetcherBackend";
 import { NostrEvent, querySupportedNips } from "@nostr-fetch/kernel/nostr";
 
 /**

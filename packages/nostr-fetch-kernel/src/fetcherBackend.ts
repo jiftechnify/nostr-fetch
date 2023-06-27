@@ -18,7 +18,7 @@ export type FetchTillEoseOptions = {
  *
  * `NostrFetcher` implements its functions on top of this.
  */
-export interface NostrFetcherBase {
+export interface NostrFetcherBackend {
   /**
    * Ensures connections to the relays prior to an event subscription.
    *
@@ -57,7 +57,7 @@ export interface NostrFetcherBase {
 }
 
 /**
- * Common options for `NostrFetcher` and all `NostrFetcherBase` implementations.
+ * Common options for `NostrFetcher` and all `NostrFetcherBackend` implementations.
  */
 export type NostrFetcherCommonOptions = {
   minLogLevel?: LogLevel;
@@ -71,10 +71,10 @@ export const defaultFetcherCommonOptions: Required<NostrFetcherCommonOptions> = 
 };
 
 /**
- * Type of initializer functions of `NostrFetcherBase`s.  Takes `NostrFetcherCommonOptions` and initialize a `NostrFetcherBase` impl.
+ * Type of initializer functions of `NostrFetcherBackend`s.  Takes `NostrFetcherCommonOptions` and initialize a `NostrFetcherBackend` impl.
  *
  * A "relay pool adapter" should return initializer function of this type.
  */
-export type NostrFetcherBaseInitializer = (
+export type NostrFetcherBackendInitializer = (
   commonOpts: Required<NostrFetcherCommonOptions>
-) => NostrFetcherBase;
+) => NostrFetcherBackend;

@@ -1,9 +1,9 @@
 import { NRTPoolAdapter } from "./adapter";
 
 import type {
-  NostrFetcherBaseInitializer,
+  NostrFetcherBackendInitializer,
   NostrFetcherCommonOptions,
-} from "@nostr-fetch/kernel/fetcherBase";
+} from "@nostr-fetch/kernel/fetcherBackend";
 import type { RelayPool } from "nostr-relaypool";
 
 /**
@@ -24,7 +24,7 @@ import type { RelayPool } from "nostr-relaypool";
  * const fetcher = NostrFetcher.withCustomPool(relayPoolAdapter(pool));
  * ```
  */
-export const relayPoolAdapter = (pool: RelayPool): NostrFetcherBaseInitializer => {
+export const relayPoolAdapter = (pool: RelayPool): NostrFetcherBackendInitializer => {
   return (commonOpts: Required<NostrFetcherCommonOptions>) => {
     return new NRTPoolAdapter(pool, commonOpts);
   };

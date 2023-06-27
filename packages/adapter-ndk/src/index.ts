@@ -2,9 +2,9 @@ import { NDKAdapter } from "./adapter";
 
 import type NDK from "@nostr-dev-kit/ndk";
 import type {
-  NostrFetcherBaseInitializer,
+  NostrFetcherBackendInitializer,
   NostrFetcherCommonOptions,
-} from "@nostr-fetch/kernel/fetcherBase";
+} from "@nostr-fetch/kernel/fetcherBackend";
 
 /**
  * Wraps an NDK instance, allowing it to interoperate with nostr-fetch.
@@ -33,7 +33,7 @@ import type {
  * }
  * ```
  */
-export const ndkAdapter = (ndk: NDK): NostrFetcherBaseInitializer => {
+export const ndkAdapter = (ndk: NDK): NostrFetcherBackendInitializer => {
   return (commonOpts: Required<NostrFetcherCommonOptions>) => {
     return new NDKAdapter(ndk, commonOpts);
   };
