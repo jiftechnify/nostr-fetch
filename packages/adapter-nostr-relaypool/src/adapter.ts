@@ -3,9 +3,9 @@ import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
 import type {
   EnsureRelaysOptions,
   FetchTillEoseOptions,
-  NostrFetcherBase,
+  NostrFetcherBackend,
   NostrFetcherCommonOptions,
-} from "@nostr-fetch/kernel/fetcherBase";
+} from "@nostr-fetch/kernel/fetcherBackend";
 import type { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
 import { normalizeRelayUrls, withTimeout } from "@nostr-fetch/kernel/utils";
 
@@ -28,7 +28,7 @@ type NRTPoolListenersTable = {
   [E in keyof NRTPoolEventCbs]: Map<string, NRTPoolEventCbs[E]>;
 };
 
-export class NRTPoolAdapter implements NostrFetcherBase {
+export class NRTPoolAdapter implements NostrFetcherBackend {
   #pool: RelayPool;
 
   // we need to hold notice/error listeners here since we can't remove them from RelayPool.

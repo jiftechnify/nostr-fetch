@@ -24,6 +24,7 @@ export const eventKind = {
   repost: 6,
   reaction: 7,
   badgeAward: 8,
+  genericRepost: 16,
   channelCreation: 40,
   channelMetadata: 41,
   channelMessage: 42,
@@ -31,6 +32,7 @@ export const eventKind = {
   channelMuteUser: 44,
   fileMetadata: 1063,
   report: 1984,
+  label: 1985,
   zapRequest: 9734,
   zap: 9735,
   muteList: 10000,
@@ -41,6 +43,7 @@ export const eventKind = {
   walletRequest: 23194,
   walletResponse: 23195,
   nostrConnect: 24133,
+  httpAuth: 27235,
   categorizedPeopleList: 30000,
   categorizedBookmarkList: 30001,
   profileBadges: 30008,
@@ -49,6 +52,8 @@ export const eventKind = {
   marketplaceProduct: 30018,
   article: 30023,
   appSpecificData: 30078,
+  handlerRecommendation: 31989,
+  handlerInformation: 31990,
 } as const;
 
 /**
@@ -62,7 +67,7 @@ export type Filter = {
   until?: number;
   limit?: number;
   search?: string;
-  [key: `#${string}`]: string[];
+  [tag: `#${string}`]: string[];
 };
 
 // client to relay messages

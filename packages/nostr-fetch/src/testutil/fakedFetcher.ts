@@ -3,9 +3,9 @@ import { verifyEventSig } from "@nostr-fetch/kernel/crypto";
 import {
   EnsureRelaysOptions,
   FetchTillEoseOptions,
-  NostrFetcherBase,
+  NostrFetcherBackend,
   NostrFetcherCommonOptions,
-} from "@nostr-fetch/kernel/fetcherBase";
+} from "@nostr-fetch/kernel/fetcherBackend";
 import { Filter, NostrEvent, generateSubId } from "@nostr-fetch/kernel/nostr";
 import {
   emptyAsyncGen,
@@ -20,7 +20,7 @@ import { RelayCapabilityChecker, createdAtDesc } from "../fetcherHelper";
 import { setTimeout as delay } from "node:timers/promises";
 
 /**
- * Faking NostrFetcherBase and RelayCapabilityChecker for testing NostrFetcher
+ * Faking NostrFetcherBackend and RelayCapabilityChecker for testing NostrFetcher
  */
 
 export type FakeRelaySpec = {
@@ -143,7 +143,7 @@ class FakeRelay {
   }
 }
 
-class FakeFetcherBase implements NostrFetcherBase {
+class FakeFetcherBackend implements NostrFetcherBackend {
   #mapFakeRelay: Map<string, FakeRelay> = new Map();
 
   #calledShutdown = false;
@@ -256,8 +256,8 @@ export class FakedFetcherBuilder {
   }
 
   buildFetcher(opts: NostrFetcherCommonOptions = {}): NostrFetcher {
-    const base = () => new FakeFetcherBase(this.#mapFakeRelaySpec);
+    const backend = () => new FakeFetcherBackend(this.#mapFakeRelaySpec);
     const capChecker = () => new FakeRelayCapChecker(this.#mapFakeRelaySpec);
-    return NostrFetcher.withCustomPool(base, opts, capChecker);
+    return NostrFetcher.withCustomPool(backend, opts, capChecker);
   }
 }

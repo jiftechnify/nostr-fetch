@@ -3,9 +3,9 @@ import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
 import type {
   EnsureRelaysOptions,
   FetchTillEoseOptions,
-  NostrFetcherBase,
+  NostrFetcherBackend,
   NostrFetcherCommonOptions,
-} from "@nostr-fetch/kernel/fetcherBase";
+} from "@nostr-fetch/kernel/fetcherBackend";
 import type { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
 import {
   emptyAsyncGen,
@@ -17,7 +17,7 @@ import {
 import type NDK from "@nostr-dev-kit/ndk";
 import { NDKEvent, NDKRelay, NDKRelaySet, NDKRelayStatus } from "@nostr-dev-kit/ndk";
 
-export class NDKAdapter implements NostrFetcherBase {
+export class NDKAdapter implements NostrFetcherBackend {
   #ndk: NDK;
   #implicitRelays: Map<string, NDKRelay> = new Map();
 

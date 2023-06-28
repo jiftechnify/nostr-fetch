@@ -2,9 +2,9 @@ import { Channel } from "@nostr-fetch/kernel/channel";
 import type {
   EnsureRelaysOptions,
   FetchTillEoseOptions,
-  NostrFetcherBase,
+  NostrFetcherBackend,
   NostrFetcherCommonOptions,
-} from "@nostr-fetch/kernel/fetcherBase";
+} from "@nostr-fetch/kernel/fetcherBackend";
 import type { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
 import { emptyAsyncGen } from "@nostr-fetch/kernel/utils";
 
@@ -12,9 +12,9 @@ import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
 import { RelayPool, initRelayPool } from "./relayPool";
 
 /**
- * Default implementation of `NostrFetchBase`.
+ * Default implementation of `NostrFetchBackend`.
  */
-export class DefaultFetcherBase implements NostrFetcherBase {
+export class DefaultFetcherBackend implements NostrFetcherBackend {
   #relayPool: RelayPool;
   #debugLogger: DebugLogger | undefined;
 
