@@ -237,3 +237,52 @@ export type RelayCapCheckerInitializer = (
 
 export const initDefaultRelayCapChecker = (opts: Required<NostrFetcherCommonOptions>) =>
   new DefaultRelayCapChecker(opts);
+
+type SeenEventsReportResult<SeenOn extends boolean> = {
+  hasSeen: boolean;
+  seenOn: SeenOn extends true ? string[] : undefined;
+};
+
+export interface SeenEvents<SeenOn extends boolean> {
+  report(event: NostrEvent, relayUrl: string): SeenEventsReportResult<SeenOn>;
+  getSeenOn(eventId: string): string[];
+}
+
+export const initSeenEvents = <SeenOn extends boolean>(withSeenOn: SeenOn): SeenEvents<SeenOn> =>
+  withSeenOn
+    ? (new SeenOnTable() as SeenEvents<SeenOn>)
+    : (new SeenEventsSet() as SeenEvents<SeenOn>);
+
+class SeenOnTable implements SeenEvents<true> {
+  #table = new Map<string, Set<string>>();
+
+  report(event: NostrEvent, relayUrl: string): SeenEventsReportResult<true> {
+    const seenOn = this.#table.get(event.id);
+    if (seenOn !== undefined) {
+      const updated = seenOn.add(relayUrl);
+      return { hasSeen: true, seenOn: [...updated] };
+    }
+    this.#table.set(event.id, new Set([relayUrl]));
+    return { hasSeen: false, seenOn: [relayUrl] };
+  }
+
+  getSeenOn(eventId: string): string[] {
+    return [...(this.#table.get(eventId) ?? [])];
+  }
+}
+
+class SeenEventsSet implements SeenEvents<false> {
+  #seenIds = new Set<string>();
+
+  report(event: NostrEvent, _: string): SeenEventsReportResult<false> {
+    if (this.#seenIds.has(event.id)) {
+      return { hasSeen: true, seenOn: undefined };
+    }
+    this.#seenIds.add(event.id);
+    return { hasSeen: false, seenOn: undefined };
+  }
+
+  getSeenOn(_: string): string[] {
+    return [];
+  }
+}

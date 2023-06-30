@@ -25,18 +25,27 @@ import {
   checkIfTrue,
   createdAtDesc,
   initDefaultRelayCapChecker,
+  initSeenEvents,
 } from "./fetcherHelper";
-
-export type FetchFilter = Omit<Filter, "limit" | "since" | "until">;
-export type FetchTimeRangeFilter = Pick<Filter, "since" | "until">;
 
 const MAX_LIMIT_PER_REQ = 5000;
 const MAX_LIMIT_PER_REQ_IN_BACKPRESSURE = 500;
 
 const MIN_HIGH_WATER_MARK = 5000;
 
-export type FetchOptions = {
+export type FetchFilter = Omit<Filter, "limit" | "since" | "until">;
+export type FetchTimeRangeFilter = Pick<Filter, "since" | "until">;
+
+/**
+ * Nostr event with extra fields.
+ */
+export type NostrEventExt<SeenOn extends boolean = false> = NostrEvent & {
+  seenOn: SeenOn extends true ? string[] : undefined;
+};
+
+export type FetchOptions<SeenOn extends boolean = false> = {
   skipVerification?: boolean;
+  withSeenOn?: SeenOn;
   connectTimeoutMs?: number;
   abortSignal?: AbortSignal | undefined;
   abortSubBeforeEoseTimeoutMs?: number;
@@ -45,13 +54,14 @@ export type FetchOptions = {
 
 const defaultFetchOptions: Required<FetchOptions> = {
   skipVerification: false,
+  withSeenOn: false,
   connectTimeoutMs: 5000,
   abortSignal: undefined,
   abortSubBeforeEoseTimeoutMs: 10000,
   limitPerReq: MAX_LIMIT_PER_REQ,
 };
 
-export type AllEventsIterOptions = FetchOptions & {
+export type AllEventsIterOptions<SeenOn extends boolean = false> = FetchOptions<SeenOn> & {
   enableBackpressure?: boolean;
 };
 
@@ -60,7 +70,7 @@ const defaultAllEventsIterOptions: Required<AllEventsIterOptions> = {
   enableBackpressure: false,
 };
 
-export type FetchAllOptions = FetchOptions & {
+export type FetchAllOptions<SeenOn extends boolean = false> = FetchOptions<SeenOn> & {
   sort?: boolean;
 };
 
@@ -69,7 +79,7 @@ const defaultFetchAllOptions: Required<FetchAllOptions> = {
   sort: false,
 };
 
-export type FetchLatestOptions = FetchOptions & {
+export type FetchLatestOptions<SeenOn extends boolean = false> = FetchOptions<SeenOn> & {
   reduceVerification?: boolean;
 };
 
@@ -204,12 +214,12 @@ export class NostrFetcher {
    * @param options
    * @returns
    */
-  public async allEventsIterator(
+  public async allEventsIterator<SeenOn extends boolean = false>(
     relayUrls: string[],
     filter: FetchFilter,
     timeRangeFilter: FetchTimeRangeFilter,
-    options: AllEventsIterOptions = {}
-  ): Promise<AsyncIterable<NostrEvent>> {
+    options: AllEventsIterOptions<SeenOn> = {}
+  ): Promise<AsyncIterable<NostrEventExt<SeenOn>>> {
     assertReq(
       { relayUrls, timeRangeFilter },
       [
@@ -223,13 +233,13 @@ export class NostrFetcher {
       this.#debugLogger
     );
 
-    const filledOpts: Required<AllEventsIterOptions> = {
+    const filledOpts = {
       ...defaultAllEventsIterOptions,
       ...options,
-    };
+    } as Required<AllEventsIterOptions<SeenOn>>;
 
     // use smaller limit if backpressure is enabled
-    const finalOpts: Required<AllEventsIterOptions> = {
+    const finalOpts: Required<AllEventsIterOptions<SeenOn>> = {
       ...filledOpts,
       limitPerReq: filledOpts.enableBackpressure
         ? Math.min(filledOpts.limitPerReq, MAX_LIMIT_PER_REQ_IN_BACKPRESSURE)
@@ -243,9 +253,9 @@ export class NostrFetcher {
     const highWaterMark = finalOpts.enableBackpressure
       ? Math.max(finalOpts.limitPerReq * eligibleRelayUrls.length, MIN_HIGH_WATER_MARK)
       : undefined;
-    const [tx, chIter] = Channel.make<NostrEvent>({ highWaterMark });
+    const [tx, chIter] = Channel.make<NostrEventExt<SeenOn>>({ highWaterMark });
 
-    const globalSeenEventIds = new Set<string>();
+    const globalSeenEvents = initSeenEvents(filledOpts.withSeenOn);
     const initialUntil = timeRangeFilter.until ?? currUnixtimeSec();
 
     // fetch events from each relay
@@ -285,9 +295,11 @@ export class NostrFetcher {
                   oldestCreatedAt = e.created_at;
                 }
 
-                if (!globalSeenEventIds.has(e.id)) {
-                  globalSeenEventIds.add(e.id);
-                  tx.send(e);
+                const { hasSeen, seenOn } = globalSeenEvents.report(e, rurl);
+                // `withSeenOn`: true  -> send the event even if it has already seen in order to update seenOn
+                // `withSeenOn`: false -> send the event only if it hasn't seen yet
+                if (finalOpts.withSeenOn || !hasSeen) {
+                  tx.send({ ...e, seenOn });
                 }
               }
             }
@@ -337,12 +349,12 @@ export class NostrFetcher {
    * @param options
    * @returns
    */
-  public async fetchAllEvents(
+  public async fetchAllEvents<SeenOn extends boolean = false>(
     relayUrls: string[],
     filter: FetchFilter,
     timeRangeFilter: FetchTimeRangeFilter,
-    options: FetchAllOptions = {}
-  ): Promise<NostrEvent[]> {
+    options: FetchAllOptions<SeenOn> = {}
+  ): Promise<NostrEventExt<SeenOn>[]> {
     assertReq(
       { relayUrls, timeRangeFilter },
       [
@@ -359,17 +371,29 @@ export class NostrFetcher {
     const finalOpts = {
       ...defaultFetchAllOptions,
       ...options,
-    };
-
-    const res: NostrEvent[] = [];
+    } as Required<FetchAllOptions<SeenOn>>;
 
     const allEvents = await this.allEventsIterator(relayUrls, filter, timeRangeFilter, {
       ...finalOpts,
       enableBackpressure: false,
     });
-    for await (const ev of allEvents) {
-      res.push(ev);
-    }
+
+    // collect events
+    const res = await (async () => {
+      if (finalOpts.withSeenOn) {
+        const evs: Map<string, NostrEventExt<SeenOn>> = new Map();
+        for await (const ev of allEvents) {
+          evs.set(ev.id, ev);
+        }
+        return [...evs.values()];
+      }
+
+      const evs: NostrEventExt<SeenOn>[] = [];
+      for await (const ev of allEvents) {
+        evs.push(ev);
+      }
+      return evs;
+    })();
 
     // sort events in "newest to oldest" order if `sort` options is specified
     if (finalOpts.sort) {
@@ -391,12 +415,12 @@ export class NostrFetcher {
    * @param options
    * @returns
    */
-  public async fetchLatestEvents(
+  public async fetchLatestEvents<SeenOn extends boolean = false>(
     relayUrls: string[],
     filter: FetchFilter,
     limit: number,
-    options: FetchLatestOptions = {}
-  ): Promise<NostrEvent[]> {
+    options: FetchLatestOptions<SeenOn> = {}
+  ): Promise<NostrEventExt<SeenOn>[]> {
     assertReq(
       { relayUrls, limit },
       [
@@ -406,10 +430,10 @@ export class NostrFetcher {
       this.#debugLogger
     );
 
-    const finalOpts: Required<FetchLatestOptions> = {
+    const finalOpts = {
       ...defaultFetchLatestOptions,
       ...options,
-    };
+    } as Required<FetchLatestOptions<SeenOn>>;
     this.#debugLogger?.log("verbose", "finalOpts=%O", finalOpts);
 
     // options for subscription
@@ -423,7 +447,7 @@ export class NostrFetcher {
     const eligibleRelayUrls = await this.#ensureRelaysWithCapCheck(relayUrls, finalOpts, reqNips);
 
     const [tx, chIter] = Channel.make<NostrEvent>();
-    const globalSeenEventIds = new Set<string>();
+    const globalSeenEvents = initSeenEvents(finalOpts.withSeenOn);
     const initialUntil = currUnixtimeSec();
 
     // fetch at most `limit` events from each relay
@@ -464,8 +488,8 @@ export class NostrFetcher {
                   oldestCreatedAt = e.created_at;
                 }
 
-                if (!globalSeenEventIds.has(e.id)) {
-                  globalSeenEventIds.add(e.id);
+                const { hasSeen } = globalSeenEvents.report(e, rurl);
+                if (!hasSeen) {
                   tx.send(e);
                 }
               }
@@ -505,21 +529,32 @@ export class NostrFetcher {
     }
     evs.sort(createdAtDesc);
 
-    // return latest `limit` events if not "reduced verification mode"
-    if (finalOpts.skipVerification || !finalOpts.reduceVerification) {
-      return evs.slice(0, limit);
-    }
-    // reduced verification: return latest `limit` events whose signature is valid
-    const verified: NostrEvent[] = [];
-    for (const ev of evs) {
-      if (verifyEventSig(ev)) {
-        verified.push(ev);
-        if (verified.length >= limit) {
-          break;
+    // take latest events
+    const res = (() => {
+      // return latest `limit` events if not "reduced verification mode"
+      if (finalOpts.skipVerification || !finalOpts.reduceVerification) {
+        return evs.slice(0, limit);
+      }
+      // reduced verification: return latest `limit` events whose signature is valid
+      const verified: NostrEvent[] = [];
+      for (const ev of evs) {
+        if (verifyEventSig(ev)) {
+          verified.push(ev);
+          if (verified.length >= limit) {
+            break;
+          }
         }
       }
+      return verified;
+    })();
+
+    if (!finalOpts.withSeenOn) {
+      return res as NostrEventExt<SeenOn>[];
     }
-    return verified;
+    // append "seen on" data to events if `withSeenOn` is true.
+    return res.map((e) => {
+      return { ...e, seenOn: globalSeenEvents.getSeenOn(e.id) };
+    }) as NostrEventExt<SeenOn>[];
   }
 
   /**
@@ -532,19 +567,19 @@ export class NostrFetcher {
    * @param options
    * @returns
    */
-  public async fetchLastEvent(
+  public async fetchLastEvent<SeenOn extends boolean = false>(
     relayUrls: string[],
     filter: FetchFilter,
-    options: FetchLatestOptions = {}
-  ): Promise<NostrEvent | undefined> {
-    const finalOpts: FetchLatestOptions & { abortSubBeforeEoseTimeoutMs: number } = {
+    options: FetchLatestOptions<SeenOn> = {}
+  ): Promise<NostrEventExt<SeenOn> | undefined> {
+    const finalOpts = {
       ...defaultFetchLatestOptions,
       ...{
         // override default value of `abortSubBeforeEoseTimeoutMs` (10000 -> 1000)
         abortSubBeforeEoseTimeoutMs: 1000,
         ...options,
       },
-    };
+    } as Required<FetchLatestOptions<SeenOn>>;
     const latest1 = await this.fetchLatestEvents(relayUrls, filter, 1, finalOpts);
     return latest1[0];
   }
@@ -637,12 +672,12 @@ export class NostrFetcher {
    * @param options
    * @returns
    */
-  public async fetchLatestEventsPerAuthor(
+  public async fetchLatestEventsPerAuthor<SeenOn extends boolean = false>(
     authorsAndRelays: AuthorsAndRelays,
     otherFilter: Omit<FetchFilter, "authors">,
     limit: number,
-    options: FetchLatestOptions = {}
-  ): Promise<AsyncIterable<{ author: string; events: NostrEvent[] }>> {
+    options: FetchLatestOptions<SeenOn> = {}
+  ): Promise<AsyncIterable<{ author: string; events: NostrEventExt<SeenOn>[] }>> {
     assertReq(
       { limit },
       [checkIfTrue((r) => r.limit > 0, "error", '"limit" should be positive number')],
@@ -652,7 +687,7 @@ export class NostrFetcher {
     const finalOpts = {
       ...defaultFetchLatestOptions,
       ...options,
-    };
+    } as Required<FetchLatestOptions<SeenOn>>;
     this.#debugLogger?.log("verbose", "finalOpts=%O", finalOpts);
 
     // options for subscription
@@ -671,7 +706,8 @@ export class NostrFetcher {
     );
     this.#debugLogger?.log("verbose", "relayToAuthors=%O", relayToAuthors);
 
-    const [tx, chIter] = Channel.make<{ author: string; events: NostrEvent[] }>();
+    const [tx, chIter] = Channel.make<{ author: string; events: NostrEventExt<SeenOn>[] }>();
+    const globalSeenEvents = initSeenEvents(finalOpts.withSeenOn);
     const initialUntil = currUnixtimeSec();
 
     // for each pair of author and relay URL, create a promise that act as "latch", so that the "merger" can wait for a subscription to complete
@@ -731,6 +767,7 @@ export class NostrFetcher {
                 if (e.created_at < oldestCreatedAt) {
                   oldestCreatedAt = e.created_at;
                 }
+                globalSeenEvents.report(e, rurl);
 
                 // add the event to the bucket for the author(pubkey)
                 const addRes = evBucketsPerAuthor.add(e.pubkey, e);
@@ -796,6 +833,7 @@ export class NostrFetcher {
         })();
         evsDeduped.sort(createdAtDesc);
 
+        // take latest events
         const res = (() => {
           // return latest `limit` events if not "reduced verification mode"
           if (finalOpts.skipVerification || !finalOpts.reduceVerification) {
@@ -814,7 +852,19 @@ export class NostrFetcher {
           }
           return verified;
         })();
-        tx.send({ author: pubkey, events: res });
+
+        // send result
+        if (finalOpts.withSeenOn) {
+          // append "seen on" data to events if `withSeenOn` is true.
+          tx.send({
+            author: pubkey,
+            events: res.map((e) => {
+              return { ...e, seenOn: globalSeenEvents.getSeenOn(e.id) };
+            }) as NostrEventExt<SeenOn>[],
+          });
+        } else {
+          tx.send({ author: pubkey, events: res as NostrEventExt<SeenOn>[] });
+        }
       })
     ).then(() => {
       // finished to fetch events for all authors
@@ -841,19 +891,19 @@ export class NostrFetcher {
    * @param options
    * @returns
    */
-  public async fetchLastEventPerAuthor(
+  public async fetchLastEventPerAuthor<SeenOn extends boolean = false>(
     authorsAndRelays: AuthorsAndRelays,
     otherFilter: Omit<FetchFilter, "authors">,
-    options: FetchLatestOptions = {}
-  ): Promise<AsyncIterable<{ author: string; event: NostrEvent | undefined }>> {
-    const finalOpts: FetchLatestOptions & { abortSubBeforeEoseTimeoutMs: number } = {
+    options: FetchLatestOptions<SeenOn> = {}
+  ): Promise<AsyncIterable<{ author: string; event: NostrEventExt<SeenOn> | undefined }>> {
+    const finalOpts = {
       ...defaultFetchLatestOptions,
       ...{
         // override default value of `abortSubBeforeEoseTimeoutMs` (10000 -> 1000)
         abortSubBeforeEoseTimeoutMs: 1000,
         ...options,
       },
-    };
+    } as Required<FetchLatestOptions<SeenOn>>;
 
     const latest1Iter = await this.fetchLatestEventsPerAuthor(
       authorsAndRelays,

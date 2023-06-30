@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { EventBuckets, KeyRelayMatrix } from "./fetcherHelper";
+import { EventBuckets, KeyRelayMatrix, initSeenEvents } from "./fetcherHelper";
 
 const dummyEvent = (id: string) => {
   return {
@@ -104,5 +104,41 @@ describe("KeyRelayMatrix", () => {
     expect(matrix.itemsByKey(1)?.length ?? -1).toBe(1);
     expect(matrix.itemsByKey(2)?.length ?? -1).toBe(2);
     expect(matrix.itemsByKey(3)?.length ?? -1).toBe(3);
+  });
+});
+
+describe("SeenEvents", () => {
+  test("SeenOnTable (withSeenOn = true) works", () => {
+    const seenEvents = initSeenEvents(true);
+
+    const res1 = seenEvents.report(dummyEvent("1"), "relay1");
+    expect(res1.hasSeen).toBe(false);
+    expect(res1.seenOn).toEqual(["relay1"]);
+
+    const res2 = seenEvents.report(dummyEvent("2"), "relay2");
+    expect(res2.hasSeen).toBe(false);
+    expect(res2.seenOn).toEqual(["relay2"]);
+
+    const res3 = seenEvents.report(dummyEvent("1"), "relay2");
+    expect(res3.hasSeen).toBe(true);
+    expect(res3.seenOn).toEqual(["relay1", "relay2"]);
+
+    expect(seenEvents.getSeenOn("1")).toEqual(["relay1", "relay2"]);
+    expect(seenEvents.getSeenOn("2")).toEqual(["relay2"]);
+    expect(seenEvents.getSeenOn("3")).toEqual([]);
+  });
+
+  test("SeenEventsSet (withSeenOn = false) works", () => {
+    const seenEvents = initSeenEvents(false);
+
+    const res1 = seenEvents.report(dummyEvent("1"), "relay1");
+    expect(res1.hasSeen).toBe(false);
+    expect(res1.seenOn).toBeUndefined();
+
+    const res2 = seenEvents.report(dummyEvent("2"), "relay2");
+    expect(res2.hasSeen).toBe(false);
+
+    const res3 = seenEvents.report(dummyEvent("1"), "relay2");
+    expect(res3.hasSeen).toBe(true);
   });
 });

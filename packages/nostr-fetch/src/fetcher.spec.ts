@@ -221,6 +221,21 @@ describe.concurrent("NostrFetcher", () => {
       expect(evs.length).toBe(1);
     });
 
+    test("sends the same event multiple times with updated seenOn", async () => {
+      const evIter = await fetcher.allEventsIterator(
+        ["wss://dup1", "wss://dup2"],
+        {},
+        {},
+        { withSeenOn: true }
+      );
+      const evs = await collectAsyncIter(evIter);
+      expect(evs.length).toBe(2);
+
+      const [fst, snd] = evs.map((ev) => ev.seenOn) as [string[], string[]];
+      assert(fst.length === 1 && (fst.includes("wss://dup1/") || fst.includes("wss://dup2/")));
+      expect(snd).toEqual(expect.arrayContaining(["wss://dup1/", "wss://dup2/"]));
+    });
+
     test("verifies signature by default", async () => {
       const evIter = await fetcher.allEventsIterator(
         ["wss://healthy", "wss://invalid-sig"],
@@ -342,6 +357,12 @@ describe.concurrent("NostrFetcher", () => {
   });
 
   describe.concurrent("fetchAllEvents", () => {
+    test("throws error if time range is invalid", async () => {
+      await expect(
+        fetcher.fetchAllEvents(["wss://healthy"], {}, { since: 1, until: 0 })
+      ).rejects.toThrow("Invalid time range (since > until)");
+    });
+
     test("sorts result if sort: true", async () => {
       const evs = await fetcher.fetchAllEvents(
         ["wss://relay1", "wss://relay2", "wss://relay3"],
@@ -353,10 +374,15 @@ describe.concurrent("NostrFetcher", () => {
       expect(evs).toStrictEqual(sorted);
     });
 
-    test("throws error if time range is invalid", async () => {
-      await expect(
-        fetcher.fetchAllEvents(["wss://healthy"], {}, { since: 1, until: 0 })
-      ).rejects.toThrow("Invalid time range (since > until)");
+    test("withSeenOn: true works correctly", async () => {
+      const evs = await fetcher.fetchAllEvents(
+        ["wss://dup1", "wss://dup2"],
+        {},
+        {},
+        { withSeenOn: true }
+      );
+      expect(evs.length).toBe(1);
+      expect(evs[0]?.seenOn).toEqual(expect.arrayContaining(["wss://dup1/", "wss://dup2/"]));
     });
   });
 
@@ -388,6 +414,14 @@ describe.concurrent("NostrFetcher", () => {
       expect(evs.length).toBe(20);
       assert(evs.every(({ content }) => content.includes("latest")));
       assert(evs.some(({ content }) => content.includes("near-latest")));
+    });
+
+    test("withSeenOn: true works correctly", async () => {
+      const evs = await fetcher.fetchLatestEvents(["wss://dup1", "wss://dup2"], {}, 1, {
+        withSeenOn: true,
+      });
+      expect(evs.length).toBe(1);
+      expect(evs[0]?.seenOn).toEqual(expect.arrayContaining(["wss://dup1/", "wss://dup2/"]));
     });
   });
 
@@ -480,6 +514,22 @@ describe.concurrent("NostrFetcher", () => {
           .every(({ content }) => content.includes("test3") || content.includes("test1"))
       );
       /* eslint-enable @typescript-eslint/no-non-null-assertion */
+    });
+
+    test("withSeenOn: true works correctly", async () => {
+      const iter = await fetcher.fetchLatestEventsPerAuthor(
+        { authors: [pubkeyFromAuthorName("test")], relayUrls: ["wss://dup1", "wss://dup2"] },
+        {},
+        1,
+        {
+          withSeenOn: true,
+        }
+      );
+      const res = await collectAsyncIter(iter);
+      expect(res.length).toBe(1);
+      expect(res[0]?.events[0]?.seenOn).toEqual(
+        expect.arrayContaining(["wss://dup1/", "wss://dup2/"])
+      );
     });
   });
 
