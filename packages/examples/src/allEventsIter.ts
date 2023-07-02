@@ -8,7 +8,7 @@ const main = async () => {
   const fetcher = NostrFetcher.init();
 
   // fetch all text events (kind: 1) posted in the last hour from the relays
-  const eventsIter = await fetcher.allEventsIterator(
+  const eventsIter = fetcher.allEventsIterator(
     defaultRelays,
     {
       kinds: [eventKind.text],

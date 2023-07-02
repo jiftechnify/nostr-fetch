@@ -29,7 +29,7 @@ const main = async () => {
     .map((t) => t[1] as string);
 
   // get profile (metadata) events for each followee
-  const profilePerAuthor = await fetcher.fetchLastEventPerAuthor(
+  const profilePerAuthor = fetcher.fetchLastEventPerAuthor(
     { authors: followees, relayUrls: defaultRelays },
     {
       kinds: [eventKind.metadata],

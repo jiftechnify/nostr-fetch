@@ -171,13 +171,13 @@ describe.concurrent("NostrFetcher", () => {
 
   describe.concurrent("allEventsIterator", () => {
     test("fetches all events (single relay)", async () => {
-      const evIter = await fetcher.allEventsIterator(["wss://relay1"], {}, {}, { limitPerReq: 5 });
+      const evIter = fetcher.allEventsIterator(["wss://relay1"], {}, {}, { limitPerReq: 5 });
       const evs = await collectAsyncIter(evIter);
       expect(evs.length).toBe(30);
     });
 
     test("fetches all events (multiple relays)", async () => {
-      const evIter = await fetcher.allEventsIterator(
+      const evIter = fetcher.allEventsIterator(
         ["wss://relay1", "wss://relay2", "wss://relay3"],
         {},
         {},
@@ -188,18 +188,14 @@ describe.concurrent("NostrFetcher", () => {
     });
 
     test("fetches all events within time range (single relay)", async () => {
-      const evIter = await fetcher.allEventsIterator(
-        ["wss://relay1"],
-        {},
-        { since: 1000, until: 2000 }
-      );
+      const evIter = fetcher.allEventsIterator(["wss://relay1"], {}, { since: 1000, until: 2000 });
       const evs = await collectAsyncIter(evIter);
       expect(evs.length).toBe(10);
       assert(evs.every(({ content }) => content.includes("within range")));
     });
 
     test("fetches all events within time range (multiple relays)", async () => {
-      const evIter = await fetcher.allEventsIterator(
+      const evIter = fetcher.allEventsIterator(
         ["wss://relay1", "wss://relay2", "wss://relay3"],
         {},
         { since: 1000, until: 2000 }
@@ -209,20 +205,20 @@ describe.concurrent("NostrFetcher", () => {
       assert(evs.every(({ content }) => content.includes("within range")));
     });
 
-    test("throws error if time range is invalid", async () => {
-      await expect(
-        fetcher.allEventsIterator(["wss://healthy"], {}, { since: 1, until: 0 })
-      ).rejects.toThrow("Invalid time range (since > until)");
+    test("throws error if time range is invalid", () => {
+      expect(() => {
+        fetcher.allEventsIterator(["wss://healthy"], {}, { since: 1, until: 0 });
+      }).toThrow("Invalid time range (since > until)");
     });
 
     test("dedups events based on event id", async () => {
-      const evIter = await fetcher.allEventsIterator(["wss://dup1", "wss://dup2"], {}, {});
+      const evIter = fetcher.allEventsIterator(["wss://dup1", "wss://dup2"], {}, {});
       const evs = await collectAsyncIter(evIter);
       expect(evs.length).toBe(1);
     });
 
     test("sends the same event multiple times with updated seenOn", async () => {
-      const evIter = await fetcher.allEventsIterator(
+      const evIter = fetcher.allEventsIterator(
         ["wss://dup1", "wss://dup2"],
         {},
         {},
@@ -237,18 +233,14 @@ describe.concurrent("NostrFetcher", () => {
     });
 
     test("verifies signature by default", async () => {
-      const evIter = await fetcher.allEventsIterator(
-        ["wss://healthy", "wss://invalid-sig"],
-        {},
-        {}
-      );
+      const evIter = fetcher.allEventsIterator(["wss://healthy", "wss://invalid-sig"], {}, {});
       const evs = await collectAsyncIter(evIter);
       expect(evs.length).toBe(10);
       assert(evs.every(({ content }) => content.includes("healthy")));
     });
 
     test("skips signature verification if skipVerification is true", async () => {
-      const evIter = await fetcher.allEventsIterator(
+      const evIter = fetcher.allEventsIterator(
         ["wss://healthy", "wss://invalid-sig"],
         {},
         {},
@@ -262,18 +254,14 @@ describe.concurrent("NostrFetcher", () => {
     });
 
     test("ignores unreachable relays", async () => {
-      const evIter = await fetcher.allEventsIterator(
-        ["wss://healthy", "wss://unreachable"],
-        {},
-        {}
-      );
+      const evIter = fetcher.allEventsIterator(["wss://healthy", "wss://unreachable"], {}, {});
       const evs = await collectAsyncIter(evIter);
       expect(evs.length).toBe(10);
       assert(evs.every(({ content }) => content.includes("healthy")));
     });
 
     test("skips slow-to-connect relays if timeout exceeds", async () => {
-      const evIter = await fetcher.allEventsIterator(
+      const evIter = fetcher.allEventsIterator(
         ["wss://healthy", "wss://slow-to-connect"],
         {},
         {},
@@ -285,7 +273,7 @@ describe.concurrent("NostrFetcher", () => {
     });
 
     test("waits slow-to-connect relays until timeout", async () => {
-      const evIter = await fetcher.allEventsIterator(
+      const evIter = fetcher.allEventsIterator(
         ["wss://healthy", "wss://slow-to-connect"],
         {},
         {},
@@ -301,7 +289,7 @@ describe.concurrent("NostrFetcher", () => {
     });
 
     test("cut off slow-to-return-events relays if timeout exceeds", async () => {
-      const evIter = await fetcher.allEventsIterator(
+      const evIter = fetcher.allEventsIterator(
         ["wss://healthy", "wss://slow-to-return-events"],
         {},
         {},
@@ -313,7 +301,7 @@ describe.concurrent("NostrFetcher", () => {
     });
 
     test("waits slow-to-return-events relays until timeout", async () => {
-      const evIter = await fetcher.allEventsIterator(
+      const evIter = fetcher.allEventsIterator(
         ["wss://healthy", "wss://slow-to-return-events"],
         {},
         {},
@@ -334,7 +322,7 @@ describe.concurrent("NostrFetcher", () => {
         ac.abort();
       }, 500);
 
-      const evIter = await fetcher.allEventsIterator(
+      const evIter = fetcher.allEventsIterator(
         ["wss://delayed"],
         {},
         {},
@@ -345,7 +333,7 @@ describe.concurrent("NostrFetcher", () => {
     });
 
     test("uses only searchable relays (supports NIP-50) if the filter contains search field", async () => {
-      const evIter = await fetcher.allEventsIterator(
+      const evIter = fetcher.allEventsIterator(
         ["wss://healthy", "wss://search"],
         { search: "search" },
         {}
@@ -358,7 +346,7 @@ describe.concurrent("NostrFetcher", () => {
 
   describe.concurrent("fetchAllEvents", () => {
     test("throws error if time range is invalid", async () => {
-      await expect(
+      await expect(() =>
         fetcher.fetchAllEvents(["wss://healthy"], {}, { since: 1, until: 0 })
       ).rejects.toThrow("Invalid time range (since > until)");
     });
@@ -388,7 +376,7 @@ describe.concurrent("NostrFetcher", () => {
 
   describe.concurrent("fetchLatestEvents", () => {
     test("throws error if limit <= 0", async () => {
-      await expect(fetcher.fetchLatestEvents(["wss://healthy"], {}, 0)).rejects.toThrow(
+      await expect(() => fetcher.fetchLatestEvents(["wss://healthy"], {}, 0)).rejects.toThrow(
         '"limit" should be positive number'
       );
     });
@@ -452,7 +440,7 @@ describe.concurrent("NostrFetcher", () => {
     const pkC = pubkeyFromAuthorName("cat");
 
     test("relay set for all authors", async () => {
-      const iter = await fetcher.fetchLatestEventsPerAuthor(
+      const iter = fetcher.fetchLatestEventsPerAuthor(
         {
           authors: [pkA, pkB, pkC],
           relayUrls: ["wss://per-author1", "wss://per-author2", "wss://per-author3"],
@@ -485,7 +473,7 @@ describe.concurrent("NostrFetcher", () => {
 
       const eventsPerAuthor = new Map<string, NostrEvent[]>();
 
-      const iter = await fetcher.fetchLatestEventsPerAuthor(relaySetPerAuthor, {}, 5);
+      const iter = fetcher.fetchLatestEventsPerAuthor(relaySetPerAuthor, {}, 5);
       for await (const { author, events } of iter) {
         eventsPerAuthor.set(author, events);
 
@@ -517,7 +505,7 @@ describe.concurrent("NostrFetcher", () => {
     });
 
     test("withSeenOn: true works correctly", async () => {
-      const iter = await fetcher.fetchLatestEventsPerAuthor(
+      const iter = fetcher.fetchLatestEventsPerAuthor(
         { authors: [pubkeyFromAuthorName("test")], relayUrls: ["wss://dup1", "wss://dup2"] },
         {},
         1,
@@ -539,7 +527,7 @@ describe.concurrent("NostrFetcher", () => {
     const pkC = pubkeyFromAuthorName("cat");
 
     test("single relay set for all authors", async () => {
-      const iter = await fetcher.fetchLastEventPerAuthor(
+      const iter = fetcher.fetchLastEventPerAuthor(
         {
           authors: [pkA, pkB, pkC],
           relayUrls: ["wss://per-author1", "wss://per-author2", "wss://per-author3"],
@@ -565,7 +553,7 @@ describe.concurrent("NostrFetcher", () => {
         [pkB, ["wss://per-author2", "wss://per-author3"]],
         [pkC, ["wss://per-author3", "wss://per-author1"]],
       ]);
-      const iter = await fetcher.fetchLastEventPerAuthor(relaySetPerAuthor, {});
+      const iter = fetcher.fetchLastEventPerAuthor(relaySetPerAuthor, {});
 
       const authors: string[] = [];
 
