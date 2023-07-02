@@ -15,7 +15,7 @@ const main = async () => {
   const fetcher = NostrFetcher.init();
 
   // fetch all the text events (kind: 1) which match the search query and have posted in the last 24 hours
-  const eventsIter = await fetcher.allEventsIterator(
+  const eventsIter = fetcher.allEventsIterator(
     searchRelays,
     {
       kinds: [eventKind.text],

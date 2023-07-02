@@ -27,7 +27,7 @@ const fetcher = NostrFetcher.init();
 const relayUrls = [/* relay URLs */];
 
 // fetches all text events since 24 hr ago in streaming manner
-const postIter = await fetcher.allEventsIterator(
+const postIter = fetcher.allEventsIterator(
     relayUrls, 
     /* filter (kinds, authors, ids, tags) */
     { kinds: [ eventKind.text ] },
@@ -84,7 +84,7 @@ const lastMetadata: NostrEvent | undefined = await fetcher.fetchLastEvent(
 );
 
 // fetches latest 10 text posts from each author in `authors`
-const postsPerAuthor = await fetcher.fetchLatestEventsPerAuthor(
+const postsPerAuthor = fetcher.fetchLatestEventsPerAuthor(
     /* authors and relay set */
     // you can also pass a `Map` which has mappings from authors (pubkey) to reley sets,
     // to specify a relay set for each author
@@ -105,7 +105,7 @@ for await (const { author, events } of postsPerAuthor) {
 }
 
 // fetches the last metadata event from each author in `authors`
-const metadataPerAuthor = await fetcher.fetchLastEventPerAuthor(
+const metadataPerAuthor = fetcher.fetchLastEventPerAuthor(
     /* authors and relay set */
     // you can also pass a `Map` which has mappings from authors (pubkey) to reley sets,
     // to specify a relay set for each author
@@ -152,7 +152,7 @@ const fetcher = NostrFetcher.withCustomPool(simplePoolAdapter(pool));
 | [`nostr-relaypool`](https://github.com/adamritter/nostr-relaypool-ts) | `RelayPool`      | `@nostr-fetch/adapter-nostr-relaypool` | `relayPoolAdapter`  |
 | [`@nostr-dev-kit/ndk`](https://github.com/nostr-dev-kit/ndk) | `NDK` | `@nostr-fetch/adapter-ndk` | `ndkAdapter` |
 
-### Aborting
+### Cancelling by AbortController
 
 ```ts
 import { eventKind, NostrFecher } from 'nostr-fetch'
@@ -162,7 +162,7 @@ const relayUrls = [/* relay URLs */];
 
 const abortCtrl = new AbortController();
 
-const evIter = await fetcher.allEventsIterator(
+const evIter = fetcher.allEventsIterator(
     relayUrls,
     {/* filter */},
     {/* time range */},
@@ -236,7 +236,9 @@ This opens up interoperability with other relay pool implementations such as [no
 
 #### `NostrFetcher#shutdown`
 
-Closes all the connections to relays and clean up the internal relay pool.
+Cleans up the internal relay pool.
+
+If you use a fetcher instance initialized via `NostrFetcher.init`, calling this method closes conenctions to all the connected relays.
 
 ---
 
@@ -247,12 +249,12 @@ All methods are instance methods of `NostrFetcher`.
 #### `allEventsIterator`
 
 ```ts
-public async allEventsIterator(
+public allEventsIterator(
     relayUrls: string[],
     filter: FetchFilter,
     timeRangeFilter: FetchTimeRangeFilter,
     options: AllEventsIterOptions = {}
-): Promise<AsyncIterable<NostrEvent>>
+): AsyncIterable<NostrEvent>
 ```
 
 Returns an async iterable of all events matching the filter from Nostr relays specified by the array of URLs.
@@ -261,7 +263,7 @@ You can iterate over events using for-await-of loop.
 
 ```ts
 const fetcher = NostrFetcher.init();
-const events = await fetcher.allEventsIterator([/* relays */], {/* filter */}, {/* time range */});
+const events = fetcher.allEventsIterator([/* relays */], {/* filter */}, {/* time range */});
 for await (const ev of events) {
     // process events
 }
@@ -332,12 +334,12 @@ Returns `undefined` if no event matching the filter exists in any relay.
 #### `fetchLatestEventsPerAuthor`
 
 ```ts
-public async fetchLatestEventsPerAuthor(
+public fetchLatestEventsPerAuthor(
     authorsAndRelays: AuthorsAndRelays,
     otherFilter: Omit<FetchFilter, "authors">,
     limit: number,
     options: FetchLatestOptions = {}
-): Promise<AsyncIterable<{ author: string; events: NostrEvent[] }>>
+): AsyncIterable<{ author: string; events: NostrEvent[] }>
 ```
 Fetches latest up to `limit` events **for each author specified by `authorsAndRelays`**.
 
@@ -355,11 +357,11 @@ Each array of events in the result are sorted in "newest to oldest" order.
 #### `fetchLastEventPerAuthor`
 
 ```ts
-public async fetchLastEventPerAuthor(
+public fetchLastEventPerAuthor(
     authorsAndRelays: AuthorsAndRelays,
     otherFilter: Omit<FetchFilter, "authors">,
     options: FetchLatestOptions = {}
-): Promise<AsyncIterable<{ author: string; event: NostrEvent | undefined }>>
+): AsyncIterable<{ author: string; event: NostrEvent | undefined }>
 ```
 
 Fetches the last event **for each author specified by `authorsAndRelays`**.

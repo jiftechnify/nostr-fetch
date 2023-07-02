@@ -214,12 +214,12 @@ export class NostrFetcher {
    * @param options
    * @returns
    */
-  public async allEventsIterator<SeenOn extends boolean = false>(
+  public allEventsIterator<SeenOn extends boolean = false>(
     relayUrls: string[],
     filter: FetchFilter,
     timeRangeFilter: FetchTimeRangeFilter,
     options: AllEventsIterOptions<SeenOn> = {}
-  ): Promise<AsyncIterable<NostrEventExt<SeenOn>>> {
+  ): AsyncIterable<NostrEventExt<SeenOn>> {
     assertReq(
       { relayUrls, timeRangeFilter },
       [
@@ -247,15 +247,24 @@ export class NostrFetcher {
     };
     this.#debugLogger?.log("verbose", "finalOpts=%O", finalOpts);
 
-    const reqNips = this.#calcRequiredNips(filter);
-    const eligibleRelayUrls = await this.#ensureRelaysWithCapCheck(relayUrls, filledOpts, reqNips);
+    return this.#allEventsIterBody(relayUrls, filter, timeRangeFilter, finalOpts);
+  }
 
-    const highWaterMark = finalOpts.enableBackpressure
-      ? Math.max(finalOpts.limitPerReq * eligibleRelayUrls.length, MIN_HIGH_WATER_MARK)
+  async *#allEventsIterBody<SeenOn extends boolean>(
+    relayUrls: string[],
+    filter: FetchFilter,
+    timeRangeFilter: FetchTimeRangeFilter,
+    options: Required<AllEventsIterOptions<SeenOn>>
+  ): AsyncIterable<NostrEventExt<SeenOn>> {
+    const reqNips = this.#calcRequiredNips(filter);
+    const eligibleRelayUrls = await this.#ensureRelaysWithCapCheck(relayUrls, options, reqNips);
+
+    const highWaterMark = options.enableBackpressure
+      ? Math.max(options.limitPerReq * eligibleRelayUrls.length, MIN_HIGH_WATER_MARK)
       : undefined;
     const [tx, chIter] = Channel.make<NostrEventExt<SeenOn>>({ highWaterMark });
 
-    const globalSeenEvents = initSeenEvents(filledOpts.withSeenOn);
+    const globalSeenEvents = initSeenEvents(options.withSeenOn);
     const initialUntil = timeRangeFilter.until ?? currUnixtimeSec();
 
     // fetch events from each relay
@@ -278,7 +287,7 @@ export class NostrFetcher {
             until: nextUntil,
             // relays are supposed to return *latest* events by specifying `limit` explicitly (cf. [NIP-01](https://github.com/nostr-protocol/nips/blob/master/01.md)).
             // nostream doesn't accept a filter which has `limit` grater than 5000, so limit `limit` to this threshold or less.
-            limit: Math.min(finalOpts.limitPerReq, MAX_LIMIT_PER_REQ),
+            limit: Math.min(options.limitPerReq, MAX_LIMIT_PER_REQ),
           };
           logger?.log("verbose", "refinedFilter=%O", refinedFilter);
 
@@ -286,7 +295,7 @@ export class NostrFetcher {
           let oldestCreatedAt = Number.MAX_SAFE_INTEGER;
 
           try {
-            for await (const e of this.#backend.fetchTillEose(rurl, refinedFilter, finalOpts)) {
+            for await (const e of this.#backend.fetchTillEose(rurl, refinedFilter, options)) {
               // eliminate duplicated events
               if (!localSeenEventIds.has(e.id)) {
                 gotNewEvent = true;
@@ -298,7 +307,7 @@ export class NostrFetcher {
                 const { hasSeen, seenOn } = globalSeenEvents.report(e, rurl);
                 // `withSeenOn`: true  -> send the event even if it has already seen in order to update seenOn
                 // `withSeenOn`: false -> send the event only if it hasn't seen yet
-                if (finalOpts.withSeenOn || !hasSeen) {
+                if (options.withSeenOn || !hasSeen) {
                   tx.send({ ...e, seenOn });
                 }
               }
@@ -314,7 +323,7 @@ export class NostrFetcher {
             logger?.log("info", `got ${localSeenEventIds.size} events`);
             break;
           }
-          if (finalOpts.abortSignal?.aborted) {
+          if (options.abortSignal?.aborted) {
             // termination contidion 2
             logger?.log("info", "aborted");
             break;
@@ -332,7 +341,8 @@ export class NostrFetcher {
       // all subscription loops have been terminated
       tx.close();
     });
-    return chIter;
+
+    yield* chIter;
   }
 
   /**
@@ -373,7 +383,7 @@ export class NostrFetcher {
       ...options,
     } as Required<FetchAllOptions<SeenOn>>;
 
-    const allEvents = await this.allEventsIterator(relayUrls, filter, timeRangeFilter, {
+    const allEvents = this.allEventsIterator(relayUrls, filter, timeRangeFilter, {
       ...finalOpts,
       enableBackpressure: false,
     });
@@ -672,42 +682,54 @@ export class NostrFetcher {
    * @param options
    * @returns
    */
-  public async fetchLatestEventsPerAuthor<SeenOn extends boolean = false>(
+  public fetchLatestEventsPerAuthor<SeenOn extends boolean = false>(
     authorsAndRelays: AuthorsAndRelays,
     otherFilter: Omit<FetchFilter, "authors">,
     limit: number,
     options: FetchLatestOptions<SeenOn> = {}
-  ): Promise<AsyncIterable<{ author: string; events: NostrEventExt<SeenOn>[] }>> {
+  ): AsyncIterable<{ author: string; events: NostrEventExt<SeenOn>[] }> {
     assertReq(
       { limit },
       [checkIfTrue((r) => r.limit > 0, "error", '"limit" should be positive number')],
       this.#debugLogger
     );
 
-    const finalOpts = {
+    const filledOpts = {
       ...defaultFetchLatestOptions,
       ...options,
     } as Required<FetchLatestOptions<SeenOn>>;
-    this.#debugLogger?.log("verbose", "finalOpts=%O", finalOpts);
+    this.#debugLogger?.log("verbose", "finalOpts=%O", filledOpts);
 
     // options for subscription
-    const subOpts: FetchTillEoseOptions = {
-      ...finalOpts,
+    const finalOpts = {
+      ...filledOpts,
       // skip "full" verification if `reduceVerification` is enabled
-      skipVerification: finalOpts.skipVerification || finalOpts.reduceVerification,
+      skipVerification: filledOpts.skipVerification || filledOpts.reduceVerification,
     };
 
+    return this.#fetchLatestEventPerAuthorBody(authorsAndRelays, otherFilter, limit, finalOpts);
+  }
+
+  async *#fetchLatestEventPerAuthorBody<SeenOn extends boolean>(
+    authorsAndRelays: AuthorsAndRelays,
+    otherFilter: Omit<FetchFilter, "authors">,
+    limit: number,
+    options: Required<FetchLatestOptions<SeenOn>>
+  ): AsyncIterable<{
+    author: string;
+    events: NostrEventExt<SeenOn>[];
+  }> {
     // get mapping of available relay to authors and list of all authors
     const reqNips = this.#calcRequiredNips(otherFilter);
     const [relayToAuthors, allAuthors] = await this.#mapAvailableRelayToAuthors(
       authorsAndRelays,
-      finalOpts,
+      options,
       reqNips
     );
     this.#debugLogger?.log("verbose", "relayToAuthors=%O", relayToAuthors);
 
     const [tx, chIter] = Channel.make<{ author: string; events: NostrEventExt<SeenOn>[] }>();
-    const globalSeenEvents = initSeenEvents(finalOpts.withSeenOn);
+    const globalSeenEvents = initSeenEvents(options.withSeenOn);
     const initialUntil = currUnixtimeSec();
 
     // for each pair of author and relay URL, create a promise that act as "latch", so that the "merger" can wait for a subscription to complete
@@ -759,7 +781,7 @@ export class NostrFetcher {
           let oldestCreatedAt = Number.MAX_SAFE_INTEGER;
 
           try {
-            for await (const e of this.#backend.fetchTillEose(rurl, refinedFilter, subOpts)) {
+            for await (const e of this.#backend.fetchTillEose(rurl, refinedFilter, options)) {
               if (!localSeenEventIds.has(e.id)) {
                 gotNewEvent = true;
                 localSeenEventIds.add(e.id);
@@ -792,7 +814,7 @@ export class NostrFetcher {
             resolveAllOnEarlyBreak();
             break;
           }
-          if (finalOpts.abortSignal?.aborted) {
+          if (options.abortSignal?.aborted) {
             // termination condition 3
             logger?.log("info", `aborted`);
             resolveAllOnEarlyBreak();
@@ -836,7 +858,7 @@ export class NostrFetcher {
         // take latest events
         const res = (() => {
           // return latest `limit` events if not "reduced verification mode"
-          if (finalOpts.skipVerification || !finalOpts.reduceVerification) {
+          if (options.skipVerification || !options.reduceVerification) {
             return evsDeduped.slice(0, limit);
           }
 
@@ -854,7 +876,7 @@ export class NostrFetcher {
         })();
 
         // send result
-        if (finalOpts.withSeenOn) {
+        if (options.withSeenOn) {
           // append "seen on" data to events if `withSeenOn` is true.
           tx.send({
             author: pubkey,
@@ -871,7 +893,7 @@ export class NostrFetcher {
       tx.close();
     });
 
-    return chIter;
+    yield* chIter;
   }
 
   /**
@@ -891,11 +913,11 @@ export class NostrFetcher {
    * @param options
    * @returns
    */
-  public async fetchLastEventPerAuthor<SeenOn extends boolean = false>(
+  public async *fetchLastEventPerAuthor<SeenOn extends boolean = false>(
     authorsAndRelays: AuthorsAndRelays,
     otherFilter: Omit<FetchFilter, "authors">,
     options: FetchLatestOptions<SeenOn> = {}
-  ): Promise<AsyncIterable<{ author: string; event: NostrEventExt<SeenOn> | undefined }>> {
+  ): AsyncIterable<{ author: string; event: NostrEventExt<SeenOn> | undefined }> {
     const finalOpts = {
       ...defaultFetchLatestOptions,
       ...{
@@ -905,18 +927,15 @@ export class NostrFetcher {
       },
     } as Required<FetchLatestOptions<SeenOn>>;
 
-    const latest1Iter = await this.fetchLatestEventsPerAuthor(
+    const latest1Iter = this.fetchLatestEventsPerAuthor(
       authorsAndRelays,
       otherFilter,
       1,
       finalOpts
     );
-    const mapped = async function* () {
-      for await (const { author, events } of latest1Iter) {
-        yield { author, event: events[0] };
-      }
-    };
-    return mapped();
+    for await (const { author, events } of latest1Iter) {
+      yield { author, event: events[0] };
+    }
   }
 
   /**

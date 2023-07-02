@@ -26,7 +26,7 @@ const fetchFollowees = async (pubkey: string): Promise<string[]> => {
 
 // get write relays for each pubkeys
 const fetchWriteRelaysPerAuthors = async (authors: string[]): Promise<Map<string, string[]>> => {
-  const iter = await fetcher.fetchLastEventPerAuthor(
+  const iter = fetcher.fetchLastEventPerAuthor(
     { authors, relayUrls: defaultRelays },
     {
       kinds: [eventKind.contacts, eventKind.relayList],
@@ -58,7 +58,7 @@ const main = async () => {
   }
 
   // get the last post for each followee
-  const lastPostsPerFollowee = await fetcher.fetchLastEventPerAuthor(writeRelaysPerFollowees, {
+  const lastPostsPerFollowee = fetcher.fetchLastEventPerAuthor(writeRelaysPerFollowees, {
     kinds: [eventKind.text],
   });
   for await (const { author, event: ev } of lastPostsPerFollowee) {
