@@ -43,9 +43,66 @@ export type NostrEventExt<SeenOn extends boolean = false> = NostrEvent & {
   seenOn: SeenOn extends true ? string[] : undefined;
 };
 
+export type FetchStats = {
+  count: {
+    eventsFetched: number;
+    totalReqs: number;
+    runningReqs: number;
+  };
+};
+
+export type FetchStatsListener = (stats: FetchStats) => void;
+
+class FetchStatsManager {
+  #stats: FetchStats = {
+    count: {
+      eventsFetched: 0,
+      totalReqs: 0,
+      runningReqs: 0,
+    },
+  };
+  #cb: FetchStatsListener;
+  #timer: NodeJS.Timer | undefined;
+
+  private constructor(cb: FetchStatsListener, notifInterval: number) {
+    this.#cb = cb;
+    this.#timer = setInterval(() => {
+      this.#cb(this.#stats);
+    }, notifInterval);
+  }
+
+  static init(
+    cb: FetchStatsListener | undefined,
+    notifIntervalMs: number
+  ): FetchStatsManager | undefined {
+    return cb !== undefined ? new FetchStatsManager(cb, notifIntervalMs) : undefined;
+  }
+
+  eventFetched(): void {
+    this.#stats.count.eventsFetched++;
+  }
+
+  reqOpened(): void {
+    this.#stats.count.totalReqs++;
+    this.#stats.count.runningReqs++;
+  }
+
+  reqClosed(): void {
+    this.#stats.count.runningReqs--;
+  }
+
+  stop(): void {
+    if (this.#timer !== undefined) {
+      clearInterval(this.#timer);
+    }
+  }
+}
+
 export type FetchOptions<SeenOn extends boolean = false> = {
   skipVerification?: boolean;
   withSeenOn?: SeenOn;
+  statsListener?: FetchStatsListener | undefined;
+  statsNotifIntervalMs?: number;
   connectTimeoutMs?: number;
   abortSignal?: AbortSignal | undefined;
   abortSubBeforeEoseTimeoutMs?: number;
@@ -55,6 +112,8 @@ export type FetchOptions<SeenOn extends boolean = false> = {
 const defaultFetchOptions: Required<FetchOptions> = {
   skipVerification: false,
   withSeenOn: false,
+  statsListener: undefined,
+  statsNotifIntervalMs: 1000,
   connectTimeoutMs: 5000,
   abortSignal: undefined,
   abortSubBeforeEoseTimeoutMs: 10000,
@@ -256,6 +315,8 @@ export class NostrFetcher {
     timeRangeFilter: FetchTimeRangeFilter,
     options: Required<AllEventsIterOptions<SeenOn>>
   ): AsyncIterable<NostrEventExt<SeenOn>> {
+    const statsMngr = FetchStatsManager.init(options.statsListener, options.statsNotifIntervalMs);
+
     const reqNips = this.#calcRequiredNips(filter);
     const eligibleRelayUrls = await this.#ensureRelaysWithCapCheck(relayUrls, options, reqNips);
 
@@ -295,9 +356,11 @@ export class NostrFetcher {
           let oldestCreatedAt = Number.MAX_SAFE_INTEGER;
 
           try {
+            statsMngr?.reqOpened();
             for await (const e of this.#backend.fetchTillEose(rurl, refinedFilter, options)) {
               // eliminate duplicated events
               if (!localSeenEventIds.has(e.id)) {
+                // hasn't seen the event on this relay
                 gotNewEvent = true;
                 localSeenEventIds.add(e.id);
                 if (e.created_at < oldestCreatedAt) {
@@ -305,16 +368,20 @@ export class NostrFetcher {
                 }
 
                 const { hasSeen, seenOn } = globalSeenEvents.report(e, rurl);
-                // `withSeenOn`: true  -> send the event even if it has already seen in order to update seenOn
-                // `withSeenOn`: false -> send the event only if it hasn't seen yet
+                // `withSeenOn`: true  -> send the event even if it has already been seen in order to update seenOn
+                // `withSeenOn`: false -> send the event only if it hasn't been seen yet
                 if (options.withSeenOn || !hasSeen) {
                   tx.send({ ...e, seenOn });
                 }
+
+                statsMngr?.eventFetched();
               }
             }
+            statsMngr?.reqClosed();
           } catch (err) {
             // an error occurred while fetching events
             logger?.log("error", err);
+            statsMngr?.reqClosed();
             break;
           }
 
@@ -340,6 +407,7 @@ export class NostrFetcher {
     ).then(() => {
       // all subscription loops have been terminated
       tx.close();
+      statsMngr?.stop();
     });
 
     yield* chIter;
@@ -453,6 +521,11 @@ export class NostrFetcher {
       skipVerification: finalOpts.skipVerification || finalOpts.reduceVerification,
     };
 
+    const statsMngr = FetchStatsManager.init(
+      finalOpts.statsListener,
+      finalOpts.statsNotifIntervalMs
+    );
+
     const reqNips = this.#calcRequiredNips(filter);
     const eligibleRelayUrls = await this.#ensureRelaysWithCapCheck(relayUrls, finalOpts, reqNips);
 
@@ -489,9 +562,11 @@ export class NostrFetcher {
           let oldestCreatedAt = Number.MAX_SAFE_INTEGER;
 
           try {
+            statsMngr?.reqOpened();
             for await (const e of this.#backend.fetchTillEose(rurl, refinedFilter, subOpts)) {
               // eliminate duplicated events
               if (!localSeenEventIds.has(e.id)) {
+                // hasn't seen the event on this relay
                 numNewEvents++;
                 localSeenEventIds.add(e.id);
                 if (e.created_at < oldestCreatedAt) {
@@ -502,11 +577,15 @@ export class NostrFetcher {
                 if (!hasSeen) {
                   tx.send(e);
                 }
+
+                statsMngr?.eventFetched();
               }
             }
+            statsMngr?.reqClosed();
           } catch (err) {
             // an error occurred while fetching events
             logger?.log("error", err);
+            statsMngr?.reqClosed();
             break;
           }
 
@@ -530,6 +609,7 @@ export class NostrFetcher {
     ).then(() => {
       // all subnscription loops have been terminated
       tx.close();
+      statsMngr?.stop();
     });
 
     // collect events from relays. events are already deduped
@@ -719,6 +799,8 @@ export class NostrFetcher {
     author: string;
     events: NostrEventExt<SeenOn>[];
   }> {
+    const statsMngr = FetchStatsManager.init(options.statsListener, options.statsNotifIntervalMs);
+
     // get mapping of available relay to authors and list of all authors
     const reqNips = this.#calcRequiredNips(otherFilter);
     const [relayToAuthors, allAuthors] = await this.#mapAvailableRelayToAuthors(
@@ -781,14 +863,16 @@ export class NostrFetcher {
           let oldestCreatedAt = Number.MAX_SAFE_INTEGER;
 
           try {
+            statsMngr?.reqOpened();
             for await (const e of this.#backend.fetchTillEose(rurl, refinedFilter, options)) {
               if (!localSeenEventIds.has(e.id)) {
+                // hasn't seen the event on this relay
                 gotNewEvent = true;
                 localSeenEventIds.add(e.id);
-
                 if (e.created_at < oldestCreatedAt) {
                   oldestCreatedAt = e.created_at;
                 }
+
                 globalSeenEvents.report(e, rurl);
 
                 // add the event to the bucket for the author(pubkey)
@@ -799,11 +883,15 @@ export class NostrFetcher {
                   latches.get(e.pubkey, rurl)?.resolve(addRes.events);
                   logger?.log("verbose", `fulfilled a bucket for author=${e.pubkey}`);
                 }
+
+                statsMngr?.eventFetched();
               }
             }
+            statsMngr?.reqClosed();
           } catch (err) {
             // an error occurred while fetching events
             logger?.log("error", err);
+            statsMngr?.reqClosed();
             resolveAllOnEarlyBreak();
             break;
           }
@@ -891,6 +979,7 @@ export class NostrFetcher {
     ).then(() => {
       // finished to fetch events for all authors
       tx.close();
+      statsMngr?.stop();
     });
 
     yield* chIter;
