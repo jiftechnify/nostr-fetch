@@ -3,6 +3,20 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.10.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.9.0...v0.10.0) (2023-07-04)
+
+### Bug Fixes
+
+* bugs in querying supported NIPs ([4950841](https://github.com/jiftechnify/nostr-fetch/commit/4950841785d4a254d7912993145c370e79f9847c))
+* make tag query field optional ([71a56a6](https://github.com/jiftechnify/nostr-fetch/commit/71a56a6fb2c767f71f2660b733374af6c2c3bfe8))
+
+### Features
+
+* add buffered events count to stats ([8093106](https://github.com/jiftechnify/nostr-fetch/commit/80931067b3d13b33ec4265647766fc3547660336))
+* add newly standardized event kinds ([68252a4](https://github.com/jiftechnify/nostr-fetch/commit/68252a47f6aca6f7d7f3ec79a33ba4cf79fe5a75))
+* add support for search filter ([d145de6](https://github.com/jiftechnify/nostr-fetch/commit/d145de60f332234f7798bb40fee637ac3cc0a301))
+* rename NostrFetcherBase to NostrFetcherBackend ([0a36def](https://github.com/jiftechnify/nostr-fetch/commit/0a36def032667b1f92124559271cdc4843aaf6ff))
+
 # [0.9.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.8.0...v0.9.0) (2023-06-16)
 
 ### Features

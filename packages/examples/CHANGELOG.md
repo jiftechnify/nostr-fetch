@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.10.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.9.0...v0.10.0) (2023-07-04)
+
+### Bug Fixes
+
+* write tests for adapter-ndk ([6327ee5](https://github.com/jiftechnify/nostr-fetch/commit/6327ee551df37392ca3d7854deeb18da79b962d6))
+
+### Features
+
+* add search example ([07b6a7f](https://github.com/jiftechnify/nostr-fetch/commit/07b6a7ffb94110388ab08ac5acd38a2cf6a8bf91))
+* change semantics of fetchers which return an async iterable ([1f08e59](https://github.com/jiftechnify/nostr-fetch/commit/1f08e5965b806ae4a79b588428e777aeb3285949))
+
 # [0.9.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.8.0...v0.9.0) (2023-06-16)
 
 ### Features

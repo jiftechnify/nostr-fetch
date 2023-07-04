@@ -3,6 +3,20 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.10.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.9.0...v0.10.0) (2023-07-04)
+
+### Bug Fixes
+
+* bug in subscription auto abortion of SimplePool/NDK adapter ([4fd8879](https://github.com/jiftechnify/nostr-fetch/commit/4fd8879c609bdd9cc7e5abe38b95b7b5d7a672fb))
+* close subscription on notice received in SimplePool adapter ([2a26b4f](https://github.com/jiftechnify/nostr-fetch/commit/2a26b4fbaa0ff28bcf108af7c124f72e01695742))
+* move "immediate abortion check" after the line that sends REQ etc ([a05e6d4](https://github.com/jiftechnify/nostr-fetch/commit/a05e6d4882642ee2331afe40a96c5e00b8aab460))
+* pass subId option correctly in SimplePool adapter ([1a157b0](https://github.com/jiftechnify/nostr-fetch/commit/1a157b080b3f995d5e33c789d7b7ec3532842c23))
+* write tests for adapter-nostr-tools ([1a851e9](https://github.com/jiftechnify/nostr-fetch/commit/1a851e9abb50d48698e1ce979ae95b83a8b2ed93))
+
+### Features
+
+* rename NostrFetcherBase to NostrFetcherBackend ([0a36def](https://github.com/jiftechnify/nostr-fetch/commit/0a36def032667b1f92124559271cdc4843aaf6ff))
+
 # [0.9.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.8.0...v0.9.0) (2023-06-16)
 
 **Note:** Version bump only for package @nostr-fetch/adapter-nostr-tools

@@ -3,6 +3,16 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.10.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.9.0...v0.10.0) (2023-07-04)
+
+### Bug Fixes
+
+* write tests for nostr-relaypool adapter ([b0aae57](https://github.com/jiftechnify/nostr-fetch/commit/b0aae57346f65aa9f4df0b84a7185099f616b497))
+
+### Features
+
+* rename NostrFetcherBase to NostrFetcherBackend ([0a36def](https://github.com/jiftechnify/nostr-fetch/commit/0a36def032667b1f92124559271cdc4843aaf6ff))
+
 # [0.9.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.8.0...v0.9.0) (2023-06-16)
 
 **Note:** Version bump only for package @nostr-fetch/adapter-nostr-relaypool

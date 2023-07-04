@@ -3,6 +3,34 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.10.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.9.0...v0.10.0) (2023-07-04)
+
+### Bug Fixes
+
+* add tests for default RelayPool ([d5ab10b](https://github.com/jiftechnify/nostr-fetch/commit/d5ab10b9d76038c3e2297dd4bb2feb1969cb5e82))
+* add unit tests for default Relay/Subscription ([239964f](https://github.com/jiftechnify/nostr-fetch/commit/239964f3877354aba723c4cdae537f580e8b6958))
+* bugs in querying supported NIPs ([4950841](https://github.com/jiftechnify/nostr-fetch/commit/4950841785d4a254d7912993145c370e79f9847c))
+* handle error from sub.req/close ([e84a060](https://github.com/jiftechnify/nostr-fetch/commit/e84a0602841e686619cecef946bfa3360d4c6b39))
+* mitigate test flakiness ([cedbca2](https://github.com/jiftechnify/nostr-fetch/commit/cedbca284248ef9e2ce984627927364357c9db96))
+* move "immediate abortion check" after the line that sends REQ etc ([a05e6d4](https://github.com/jiftechnify/nostr-fetch/commit/a05e6d4882642ee2331afe40a96c5e00b8aab460))
+* remove unnecessary codes from RelayPool impl ([b74da61](https://github.com/jiftechnify/nostr-fetch/commit/b74da61411c7d64f0e28b86dbd88ad4d69eaf3dc))
+* separate interface of relay capability checking for testing ([2b1ca1f](https://github.com/jiftechnify/nostr-fetch/commit/2b1ca1fb4241c649d75505d3f0ee521182dcf365))
+* throw error if time range is invalid ([528268c](https://github.com/jiftechnify/nostr-fetch/commit/528268c483f3509aad576098d9ad4286028991b8))
+* write tests for DefaultFetcherBase ([e2f7f19](https://github.com/jiftechnify/nostr-fetch/commit/e2f7f192b9bc76d7cabee91cd6fc8691f30dd3eb))
+* write tests for fetcher helpers ([bc67fbf](https://github.com/jiftechnify/nostr-fetch/commit/bc67fbf7d39b4d8c896f31b5475495e35da34433))
+* write tests for NostrFetcher based on fakes ([ed06ef6](https://github.com/jiftechnify/nostr-fetch/commit/ed06ef6d602c868f4574ef74fbe879fb4e45be4e))
+
+### Features
+
+* add buffered events count to stats ([8093106](https://github.com/jiftechnify/nostr-fetch/commit/80931067b3d13b33ec4265647766fc3547660336))
+* add fetch progress tracking ([9a51bc1](https://github.com/jiftechnify/nostr-fetch/commit/9a51bc13450ed0525a86069baf00a8d14011657e))
+* add means to know on which relay an event was seen ([f70042b](https://github.com/jiftechnify/nostr-fetch/commit/f70042b96475a04ebeda336704e4be154f1da1ec))
+* add support for search filter ([d145de6](https://github.com/jiftechnify/nostr-fetch/commit/d145de60f332234f7798bb40fee637ac3cc0a301))
+* basic fetch statistics ([ccf60b9](https://github.com/jiftechnify/nostr-fetch/commit/ccf60b927c0a55d340415b8fc69a50e83614913d))
+* change semantics of fetchers which return an async iterable ([1f08e59](https://github.com/jiftechnify/nostr-fetch/commit/1f08e5965b806ae4a79b588428e777aeb3285949))
+* export type `NostrFecthError` from nostr-fetch ([6da4515](https://github.com/jiftechnify/nostr-fetch/commit/6da4515f3400f0ad080be9c6456bcdf3a2bf72a3))
+* rename NostrFetcherBase to NostrFetcherBackend ([0a36def](https://github.com/jiftechnify/nostr-fetch/commit/0a36def032667b1f92124559271cdc4843aaf6ff))
+
 # [0.9.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.8.0...v0.9.0) (2023-06-16)
 
 ### Features
