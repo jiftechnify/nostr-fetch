@@ -1,6 +1,7 @@
 import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
 import { NostrFetcherCommonOptions } from "@nostr-fetch/kernel/fetcherBackend";
 import { NostrEvent, querySupportedNips } from "@nostr-fetch/kernel/nostr";
+import { FetchStats, FetchStatsListener } from "./types";
 
 /**
  * Type of errors that can be thrown from methods of `NostrFetcher`.
@@ -284,5 +285,92 @@ class SeenEventsSet implements SeenEvents<false> {
 
   getSeenOn(_: string): string[] {
     return [];
+  }
+}
+
+export class FetchStatsManager {
+  #stats: FetchStats = {
+    progress: {
+      max: 1, // prevent division by 0
+      current: 0,
+    },
+    count: {
+      fetchedEvents: 0,
+      openedSubs: 0,
+      runningSubs: 0,
+    },
+  };
+  #cb: FetchStatsListener;
+  #timer: NodeJS.Timer | undefined;
+
+  private constructor(cb: FetchStatsListener, notifInterval: number) {
+    this.#cb = cb;
+    this.#timer = setInterval(() => {
+      this.#cb(this.#stats);
+    }, notifInterval);
+  }
+
+  static init(
+    cb: FetchStatsListener | undefined,
+    notifIntervalMs: number
+  ): FetchStatsManager | undefined {
+    return cb !== undefined ? new FetchStatsManager(cb, notifIntervalMs) : undefined;
+  }
+
+  /* progress */
+  setProgressMax(max: number): void {
+    this.#stats.progress.max = Math.max(max, 1);
+  }
+
+  addProgress(delta: number): void {
+    this.#stats.progress.current += delta;
+  }
+
+  setCurrentProgress(p: number): void {
+    this.#stats.progress.current = p;
+  }
+
+  /* counts */
+  eventFetched(): void {
+    this.#stats.count.fetchedEvents++;
+  }
+
+  subOpened(): void {
+    this.#stats.count.openedSubs++;
+    this.#stats.count.runningSubs++;
+  }
+
+  subClosed(): void {
+    this.#stats.count.runningSubs--;
+  }
+
+  stop(): void {
+    if (this.#timer !== undefined) {
+      clearInterval(this.#timer);
+    }
+    // notify last stats before stopped
+    this.#cb(this.#stats);
+  }
+}
+
+// tracks per-relay fetch progress
+export class ProgressTracker {
+  #progressPerRelay: Map<string, number>;
+
+  constructor(relayUrls: string[]) {
+    this.#progressPerRelay = new Map(relayUrls.map((rurl) => [rurl, 0]));
+  }
+
+  addProgress(relayUrl: string, delta: number) {
+    const prev = this.#progressPerRelay.get(relayUrl) ?? 0;
+    this.#progressPerRelay.set(relayUrl, prev + delta);
+  }
+
+  setProgress(relayUrl: string, prog: number) {
+    this.#progressPerRelay.set(relayUrl, prog);
+  }
+
+  calcTotalProgress(): number {
+    return [...this.#progressPerRelay.values()].reduce((total, prog) => total + prog);
   }
 }

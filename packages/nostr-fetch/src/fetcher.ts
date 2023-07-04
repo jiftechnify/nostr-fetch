@@ -15,8 +15,10 @@ import { abbreviate, currUnixtimeSec, normalizeRelayUrls } from "@nostr-fetch/ke
 import { DefaultFetcherBackend } from "./fetcherBackend";
 import {
   EventBuckets,
+  FetchStatsManager,
   KeyRelayMatrix,
   NostrFetchError,
+  ProgressTracker,
   RelayCapCheckerInitializer,
   RelayCapabilityChecker,
   assertReq,
@@ -27,6 +29,7 @@ import {
   initDefaultRelayCapChecker,
   initSeenEvents,
 } from "./fetcherHelper";
+import { FetchStatsListener } from "./types";
 
 const MAX_LIMIT_PER_REQ = 5000;
 const MAX_LIMIT_PER_REQ_IN_BACKPRESSURE = 500;
@@ -42,61 +45,6 @@ export type FetchTimeRangeFilter = Pick<Filter, "since" | "until">;
 export type NostrEventExt<SeenOn extends boolean = false> = NostrEvent & {
   seenOn: SeenOn extends true ? string[] : undefined;
 };
-
-export type FetchStats = {
-  count: {
-    eventsFetched: number;
-    totalReqs: number;
-    runningReqs: number;
-  };
-};
-
-export type FetchStatsListener = (stats: FetchStats) => void;
-
-class FetchStatsManager {
-  #stats: FetchStats = {
-    count: {
-      eventsFetched: 0,
-      totalReqs: 0,
-      runningReqs: 0,
-    },
-  };
-  #cb: FetchStatsListener;
-  #timer: NodeJS.Timer | undefined;
-
-  private constructor(cb: FetchStatsListener, notifInterval: number) {
-    this.#cb = cb;
-    this.#timer = setInterval(() => {
-      this.#cb(this.#stats);
-    }, notifInterval);
-  }
-
-  static init(
-    cb: FetchStatsListener | undefined,
-    notifIntervalMs: number
-  ): FetchStatsManager | undefined {
-    return cb !== undefined ? new FetchStatsManager(cb, notifIntervalMs) : undefined;
-  }
-
-  eventFetched(): void {
-    this.#stats.count.eventsFetched++;
-  }
-
-  reqOpened(): void {
-    this.#stats.count.totalReqs++;
-    this.#stats.count.runningReqs++;
-  }
-
-  reqClosed(): void {
-    this.#stats.count.runningReqs--;
-  }
-
-  stop(): void {
-    if (this.#timer !== undefined) {
-      clearInterval(this.#timer);
-    }
-  }
-}
 
 export type FetchOptions<SeenOn extends boolean = false> = {
   skipVerification?: boolean;
@@ -323,10 +271,19 @@ export class NostrFetcher {
     const highWaterMark = options.enableBackpressure
       ? Math.max(options.limitPerReq * eligibleRelayUrls.length, MIN_HIGH_WATER_MARK)
       : undefined;
-    const [tx, chIter] = Channel.make<NostrEventExt<SeenOn>>({ highWaterMark });
 
+    const [tx, chIter] = Channel.make<NostrEventExt<SeenOn>>({ highWaterMark });
     const globalSeenEvents = initSeenEvents(options.withSeenOn);
     const initialUntil = timeRangeFilter.until ?? currUnixtimeSec();
+
+    // codes for tracking progress
+    // if `since` is undefined, duration is infinite (represented by undefined)
+    const timeRangeDur =
+      timeRangeFilter.since !== undefined
+        ? Math.max(initialUntil - timeRangeFilter.since + 1, 1)
+        : undefined;
+    const progTracker = new ProgressTracker(eligibleRelayUrls);
+    statsMngr?.setProgressMax(eligibleRelayUrls.length);
 
     // fetch events from each relay
     Promise.all(
@@ -356,7 +313,7 @@ export class NostrFetcher {
           let oldestCreatedAt = Number.MAX_SAFE_INTEGER;
 
           try {
-            statsMngr?.reqOpened();
+            statsMngr?.subOpened();
             for await (const e of this.#backend.fetchTillEose(rurl, refinedFilter, options)) {
               // eliminate duplicated events
               if (!localSeenEventIds.has(e.id)) {
@@ -377,11 +334,11 @@ export class NostrFetcher {
                 statsMngr?.eventFetched();
               }
             }
-            statsMngr?.reqClosed();
+            statsMngr?.subClosed();
           } catch (err) {
             // an error occurred while fetching events
             logger?.log("error", err);
-            statsMngr?.reqClosed();
+            statsMngr?.subClosed();
             break;
           }
 
@@ -390,19 +347,29 @@ export class NostrFetcher {
             logger?.log("info", `got ${localSeenEventIds.size} events`);
             break;
           }
+
+          // set next `until` to `created_at` of the oldest event returned in this time.
+          // `+ 1` is needed to make it work collectly even if we used relays which has "exclusive" behaviour with respect to `until`.
+          nextUntil = oldestCreatedAt + 1;
+
+          // update progress
+          if (timeRangeDur !== undefined) {
+            progTracker.setProgress(rurl, (initialUntil - oldestCreatedAt) / timeRangeDur);
+            statsMngr?.setCurrentProgress(progTracker.calcTotalProgress());
+          }
+
           if (options.abortSignal?.aborted) {
             // termination contidion 2
             logger?.log("info", "aborted");
             break;
           }
 
-          // set next `until` to `created_at` of the oldest event returned in this time.
-          // `+ 1` is needed to make it work collectly even if we used relays which has "exclusive" behaviour with respect to `until`.
-          nextUntil = oldestCreatedAt + 1;
-
           // receive backpressure: wait until the channel is drained enough
           await tx.waitUntilDrained();
         }
+        // subscripton loop for the relay terminated
+        progTracker.setProgress(rurl, 1);
+        statsMngr?.setCurrentProgress(progTracker.calcTotalProgress());
       })
     ).then(() => {
       // all subscription loops have been terminated
@@ -533,6 +500,9 @@ export class NostrFetcher {
     const globalSeenEvents = initSeenEvents(finalOpts.withSeenOn);
     const initialUntil = currUnixtimeSec();
 
+    const progTracker = new ProgressTracker(eligibleRelayUrls);
+    statsMngr?.setProgressMax(eligibleRelayUrls.length * limit);
+
     // fetch at most `limit` events from each relay
     Promise.all(
       eligibleRelayUrls.map(async (rurl) => {
@@ -562,7 +532,7 @@ export class NostrFetcher {
           let oldestCreatedAt = Number.MAX_SAFE_INTEGER;
 
           try {
-            statsMngr?.reqOpened();
+            statsMngr?.subOpened();
             for await (const e of this.#backend.fetchTillEose(rurl, refinedFilter, subOpts)) {
               // eliminate duplicated events
               if (!localSeenEventIds.has(e.id)) {
@@ -581,13 +551,16 @@ export class NostrFetcher {
                 statsMngr?.eventFetched();
               }
             }
-            statsMngr?.reqClosed();
+            statsMngr?.subClosed();
           } catch (err) {
             // an error occurred while fetching events
             logger?.log("error", err);
-            statsMngr?.reqClosed();
+            statsMngr?.subClosed();
             break;
           }
+
+          progTracker.addProgress(rurl, Math.min(numNewEvents, remainingLimit));
+          statsMngr?.setCurrentProgress(progTracker.calcTotalProgress());
 
           remainingLimit -= numNewEvents;
           if (numNewEvents === 0 || remainingLimit <= 0) {
@@ -605,6 +578,9 @@ export class NostrFetcher {
           // `+ 1` is needed to make it work collectly even if we used relays which has "exclusive" behaviour with respect to `until`.
           nextUntil = oldestCreatedAt + 1;
         }
+        // subscripton loop for the relay terminated
+        progTracker.setProgress(rurl, limit);
+        statsMngr?.setCurrentProgress(progTracker.calcTotalProgress());
       })
     ).then(() => {
       // all subnscription loops have been terminated
@@ -808,6 +784,7 @@ export class NostrFetcher {
       options,
       reqNips
     );
+    statsMngr?.setProgressMax(allAuthors.length);
     this.#debugLogger?.log("verbose", "relayToAuthors=%O", relayToAuthors);
 
     const [tx, chIter] = Channel.make<{ author: string; events: NostrEventExt<SeenOn>[] }>();
@@ -863,7 +840,7 @@ export class NostrFetcher {
           let oldestCreatedAt = Number.MAX_SAFE_INTEGER;
 
           try {
-            statsMngr?.reqOpened();
+            statsMngr?.subOpened();
             for await (const e of this.#backend.fetchTillEose(rurl, refinedFilter, options)) {
               if (!localSeenEventIds.has(e.id)) {
                 // hasn't seen the event on this relay
@@ -887,11 +864,11 @@ export class NostrFetcher {
                 statsMngr?.eventFetched();
               }
             }
-            statsMngr?.reqClosed();
+            statsMngr?.subClosed();
           } catch (err) {
             // an error occurred while fetching events
             logger?.log("error", err);
-            statsMngr?.reqClosed();
+            statsMngr?.subClosed();
             resolveAllOnEarlyBreak();
             break;
           }
@@ -975,6 +952,7 @@ export class NostrFetcher {
         } else {
           tx.send({ author: pubkey, events: res as NostrEventExt<SeenOn>[] });
         }
+        statsMngr?.addProgress(1);
       })
     ).then(() => {
       // finished to fetch events for all authors
