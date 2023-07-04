@@ -332,6 +332,7 @@ export class NostrFetcher {
                 }
 
                 statsMngr?.eventFetched();
+                statsMngr?.setNumBufferedEvents(tx.numBufferedItems());
               }
             }
             statsMngr?.subClosed();
@@ -549,6 +550,7 @@ export class NostrFetcher {
                 }
 
                 statsMngr?.eventFetched();
+                statsMngr?.setNumBufferedEvents(tx.numBufferedItems());
               }
             }
             statsMngr?.subClosed();
@@ -862,6 +864,7 @@ export class NostrFetcher {
                 }
 
                 statsMngr?.eventFetched();
+                statsMngr?.setNumBufferedEvents(tx.numBufferedItems());
               }
             }
             statsMngr?.subClosed();

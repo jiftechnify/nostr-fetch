@@ -5,6 +5,7 @@ export type FetchStats = {
   };
   count: {
     fetchedEvents: number;
+    bufferedEvents: number;
     openedSubs: number;
     runningSubs: number;
   };

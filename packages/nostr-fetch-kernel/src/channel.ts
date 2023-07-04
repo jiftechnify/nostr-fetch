@@ -23,6 +23,7 @@ interface ChannelSender<T> {
   close(): void;
 
   waitUntilDrained(): Promise<void>;
+  numBufferedItems(): number;
 }
 
 interface ChannelIter<T> {
@@ -114,6 +115,10 @@ export class Channel<T> {
     // sendQ have overflowed -> wait until drained
     this.#drainWaiter = new Deferred();
     return this.#drainWaiter.promise;
+  }
+
+  numBufferedItems(): number {
+    return this.#sendQ.length;
   }
 
   private get isCompleted(): boolean {

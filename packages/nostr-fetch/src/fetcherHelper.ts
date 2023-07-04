@@ -296,6 +296,7 @@ export class FetchStatsManager {
     },
     count: {
       fetchedEvents: 0,
+      bufferedEvents: 0,
       openedSubs: 0,
       runningSubs: 0,
     },
@@ -333,6 +334,10 @@ export class FetchStatsManager {
   /* counts */
   eventFetched(): void {
     this.#stats.count.fetchedEvents++;
+  }
+
+  setNumBufferedEvents(n: number): void {
+    this.#stats.count.bufferedEvents = n;
   }
 
   subOpened(): void {
