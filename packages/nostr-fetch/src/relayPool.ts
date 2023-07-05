@@ -9,9 +9,13 @@ import {
   normalizeRelayUrls,
 } from "@nostr-fetch/kernel/utils";
 
+// [NIP-01](https://github.com/nostr-protocol/nips/blob/master/01.md#other-notes) says:
+// > When a websocket is closed by the relay with a status code 4000 that means the client shouldn't try to connect again.
+const CLOSE_CODE_RELAY_NOT_RECONNECTABLE = 4000;
+
 export interface RelayPool {
   ensureRelays(relayUrls: string[], relayOpts: RelayOptions): Promise<string[]>;
-  getRelayIfConnected(relayUrl: string): Relay | undefined;
+  ensureSingleRelay(relayUrl: string, relayOpts: RelayOptions): Promise<Relay | undefined>;
   shutdown(): void;
 }
 
@@ -41,10 +45,11 @@ type ConnectFailedRelay = {
 type DisconnectedRelay = {
   state: "disconnected";
   relayUrl: string;
+  reconnectable: boolean;
 };
 type ManagedRelay = AliveRelay | ConnectingRelay | ConnectFailedRelay | DisconnectedRelay;
 
-const WATCHDOG_INTERVAL = 15 * 1000;
+const WATCHDOG_INTERVAL = 30 * 1000;
 const WATCHDOG_CONN_TIMEOUT = 10 * 1000;
 
 class RelayPoolImpl implements RelayPool {
@@ -72,9 +77,8 @@ class RelayPoolImpl implements RelayPool {
 
   #relayShouldBeReconnected(relay: ManagedRelay): boolean {
     return (
-      // TODO: make the threshold configuarable
-      (relay.state === "connectFailed" && currUnixtimeMilli() - relay.failedAt > 60 * 1000) ||
-      relay.state === "disconnected" ||
+      (relay.state === "connectFailed" && currUnixtimeMilli() - relay.failedAt > 30 * 1000) ||
+      (relay.state === "disconnected" && relay.reconnectable) ||
       (relay.state === "alive" && relay.relay.wsReadyState === WebSocket.CLOSED) // is it possible?
     );
   }
@@ -105,11 +109,19 @@ class RelayPoolImpl implements RelayPool {
           r.on("connect", () => logger?.log("info", `connected`));
           r.on("disconnect", (ev) => {
             logger?.log("info", `disconnected: ${JSON.stringify(ev)}`);
-            this.#relays.set(r.url, { state: "disconnected", relayUrl: r.url });
+            this.#relays.set(r.url, {
+              state: "disconnected",
+              relayUrl: r.url,
+              reconnectable: ev.code !== CLOSE_CODE_RELAY_NOT_RECONNECTABLE,
+            });
           });
           r.on("error", () => {
             logger?.log("error", `WebSocket error`);
-            this.#relays.set(r.url, { state: "disconnected", relayUrl: r.url });
+            this.#relays.set(r.url, {
+              state: "disconnected",
+              relayUrl: r.url,
+              reconnectable: true,
+            });
           });
           r.on("notice", (notice) => logger?.log("warn", `NOTICE: ${notice}`));
 
@@ -144,15 +156,18 @@ class RelayPoolImpl implements RelayPool {
     return connectedRelays;
   }
 
-  public getRelayIfConnected(relayUrl: string): Relay | undefined {
-    const r = this.#relays.get(normalizeRelayUrl(relayUrl));
-    if (r === undefined) {
-      return undefined;
+  public async ensureSingleRelay(
+    relayUrl: string,
+    relayOpts: RelayOptions
+  ): Promise<Relay | undefined> {
+    const normalizedUrl = normalizeRelayUrl(relayUrl);
+    await this.addRelays([normalizedUrl], relayOpts);
+
+    const r = this.#relays.get(normalizedUrl);
+    if (r !== undefined && r.state === "alive") {
+      return r.relay;
     }
-    if (r.state !== "alive") {
-      return undefined;
-    }
-    return r.relay;
+    return undefined;
   }
 
   /**

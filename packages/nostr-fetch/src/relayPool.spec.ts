@@ -1,7 +1,10 @@
+import { RelayOptions } from "./relay";
 import { RelayPool, initRelayPool } from "./relayPool";
 
 import { afterEach, assert, beforeEach, describe, expect, test } from "vitest";
 import { WS } from "vitest-websocket-mock";
+
+import { setTimeout as delay } from "node:timers/promises";
 
 class MockRelayServer {
   #ws: WS;
@@ -12,6 +15,9 @@ class MockRelayServer {
     const ws = new WS(rurl);
     ws.on("connection", () => {
       this.connected = true;
+    });
+    ws.on("close", () => {
+      this.connected = false;
     });
     return ws;
   }
@@ -31,6 +37,7 @@ class MockRelayServer {
 }
 
 describe("RelayPool", () => {
+  const opts: RelayOptions = { connectTimeoutMs: 1000 };
   let pool: RelayPool;
 
   beforeEach(() => {
@@ -49,28 +56,33 @@ describe("RelayPool", () => {
     const srv2 = new MockRelayServer(url2);
 
     // ensure connections to the relays
-    const ensuredRelays1 = await pool.ensureRelays([url1, url2], { connectTimeoutMs: 1000 });
+    const ensuredRelays1 = await pool.ensureRelays([url1, url2], opts);
     expect(ensuredRelays1).toEqual(expect.arrayContaining([url1, url2]));
     assert(srv1.connected && srv2.connected);
 
-    expect(pool.getRelayIfConnected(url1)).toBeDefined();
-    expect(pool.getRelayIfConnected(url2)).toBeDefined();
+    await expect(pool.ensureSingleRelay(url1, opts)).resolves.toBeDefined();
+    await expect(pool.ensureSingleRelay(url2, opts)).resolves.toBeDefined();
 
-    // close connection from server -> connection status should be tracked
+    // close connections from relays
     await srv1.closeFromServer();
-    expect(pool.getRelayIfConnected(url1)).toBeUndefined();
-    expect(pool.getRelayIfConnected(url2)).toBeDefined();
+    await srv2.closeFromServer();
 
-    // ensuring again -> should reconnect to the disconnectied relays
-    const ensuredRelays2 = await pool.ensureRelays([url1, url2], { connectTimeoutMs: 1000 });
+    // ensuring a connection to single relay
+    await expect(pool.ensureSingleRelay(url1, opts)).resolves.toBeDefined();
+    assert(srv1.connected && !srv2.connected);
+
+    // close the connection again
+    await srv1.closeFromServer();
+
+    // ensuring connections again
+    const ensuredRelays2 = await pool.ensureRelays([url1, url2], opts);
     expect(ensuredRelays2).toEqual(expect.arrayContaining([url1, url2]));
-    expect(pool.getRelayIfConnected(url1)).toBeDefined();
-    expect(pool.getRelayIfConnected(url2)).toBeDefined();
+    assert(srv1.connected && srv2.connected);
 
     // shutdown closes connections to the all relays
     pool.shutdown();
-    expect(pool.getRelayIfConnected(url1)).toBeUndefined();
-    expect(pool.getRelayIfConnected(url2)).toBeUndefined();
+    await delay(1000);
+    assert(!srv1.connected && !srv2.connected);
   });
 
   test("connection error", async () => {

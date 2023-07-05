@@ -52,15 +52,16 @@ export class DefaultFetcherBackend implements NostrFetcherBackend {
    *
    * If no connection to the specified relay has been established at the time this function is called, it will return an empty channel.
    */
-  public fetchTillEose(
+  public async *fetchTillEose(
     relayUrl: string,
     filter: Filter,
     options: FetchTillEoseOptions
   ): AsyncIterable<NostrEvent> {
     const logger = this.#debugLogger?.subLogger(relayUrl);
 
-    const relay = this.#relayPool.getRelayIfConnected(relayUrl);
+    const relay = await this.#relayPool.ensureSingleRelay(relayUrl, options);
     if (relay === undefined) {
+      logger?.log("warn", "failed to ensure connection to the relay");
       return emptyAsyncGen();
     }
 
@@ -134,6 +135,6 @@ export class DefaultFetcherBackend implements NostrFetcherBackend {
       closeSub();
     });
 
-    return chIter;
+    yield* chIter;
   }
 }
