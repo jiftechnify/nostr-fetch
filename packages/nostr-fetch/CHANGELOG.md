@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.10.1](https://github.com/jiftechnify/nostr-fetch/compare/v0.10.0...v0.10.1) (2023-07-05)
+
+### Bug Fixes
+
+* ensure connection to relays every time fetchers open new subscription ([75c230b](https://github.com/jiftechnify/nostr-fetch/commit/75c230beae463fbb3c65c51bd40c44c5b4606b6f))
+* respect NIP-01's note on reconnections to relays ([d004560](https://github.com/jiftechnify/nostr-fetch/commit/d0045600837a432d31a5143654086d401ca56591))
+
 # [0.10.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.9.0...v0.10.0) (2023-07-04)
 
 ### Bug Fixes
