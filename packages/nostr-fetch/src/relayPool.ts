@@ -15,7 +15,7 @@ const CLOSE_CODE_RELAY_NOT_RECONNECTABLE = 4000;
 
 export interface RelayPool {
   ensureRelays(relayUrls: string[], relayOpts: RelayOptions): Promise<string[]>;
-  getRelayIfConnected(relayUrl: string): Relay | undefined;
+  ensureSingleRelay(relayUrl: string, relayOpts: RelayOptions): Promise<Relay | undefined>;
   shutdown(): void;
 }
 
@@ -49,7 +49,7 @@ type DisconnectedRelay = {
 };
 type ManagedRelay = AliveRelay | ConnectingRelay | ConnectFailedRelay | DisconnectedRelay;
 
-const WATCHDOG_INTERVAL = 15 * 1000;
+const WATCHDOG_INTERVAL = 30 * 1000;
 const WATCHDOG_CONN_TIMEOUT = 10 * 1000;
 
 class RelayPoolImpl implements RelayPool {
@@ -77,8 +77,7 @@ class RelayPoolImpl implements RelayPool {
 
   #relayShouldBeReconnected(relay: ManagedRelay): boolean {
     return (
-      // TODO: make the threshold configuarable
-      (relay.state === "connectFailed" && currUnixtimeMilli() - relay.failedAt > 60 * 1000) ||
+      (relay.state === "connectFailed" && currUnixtimeMilli() - relay.failedAt > 30 * 1000) ||
       (relay.state === "disconnected" && relay.reconnectable) ||
       (relay.state === "alive" && relay.relay.wsReadyState === WebSocket.CLOSED) // is it possible?
     );
@@ -157,15 +156,18 @@ class RelayPoolImpl implements RelayPool {
     return connectedRelays;
   }
 
-  public getRelayIfConnected(relayUrl: string): Relay | undefined {
-    const r = this.#relays.get(normalizeRelayUrl(relayUrl));
-    if (r === undefined) {
-      return undefined;
+  public async ensureSingleRelay(
+    relayUrl: string,
+    relayOpts: RelayOptions
+  ): Promise<Relay | undefined> {
+    const normalizedUrl = normalizeRelayUrl(relayUrl);
+    await this.addRelays([normalizedUrl], relayOpts);
+
+    const r = this.#relays.get(normalizedUrl);
+    if (r !== undefined && r.state === "alive") {
+      return r.relay;
     }
-    if (r.state !== "alive") {
-      return undefined;
-    }
-    return r.relay;
+    return undefined;
   }
 
   /**
