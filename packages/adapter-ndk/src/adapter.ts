@@ -1,18 +1,15 @@
 import { Channel } from "@nostr-fetch/kernel/channel";
 import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
-import type {
-  EnsureRelaysOptions,
-  FetchTillEoseOptions,
-  NostrFetcherBackend,
-  NostrFetcherCommonOptions,
+import {
+  FetchTillEoseAbortedSignal,
+  FetchTillEoseFailedSignal,
+  type EnsureRelaysOptions,
+  type FetchTillEoseOptions,
+  type NostrFetcherBackend,
+  type NostrFetcherCommonOptions,
 } from "@nostr-fetch/kernel/fetcherBackend";
 import type { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
-import {
-  emptyAsyncGen,
-  normalizeRelayUrl,
-  normalizeRelayUrls,
-  withTimeout,
-} from "@nostr-fetch/kernel/utils";
+import { normalizeRelayUrl, normalizeRelayUrls, withTimeout } from "@nostr-fetch/kernel/utils";
 
 import type NDK from "@nostr-dev-kit/ndk";
 import { NDKEvent, NDKRelay, NDKRelaySet, NDKRelayStatus } from "@nostr-dev-kit/ndk";
@@ -113,19 +110,23 @@ export class NDKAdapter implements NostrFetcherBackend {
    * You can think that it's an asynchronous channel which conveys events.
    * The channel will be closed once EOSE is reached.
    *
-   * If no connection to the specified relay has been established at the time this function is called, it will return an empty channel.
+   * If one of the following situations occurs, it is regarded as "failure".
+   * In such a case, it should throw `FetchTillEoseFailedSignal`.
+   *
+   * - It couldn't establish connection to the relay
+   * - Received a NOTICE message during the fetch
+   * - A WebSocket error occurred during the fetch
+   *
+   * If the fetch was aborted (due to AbortController or auto abortion timer), it should throw `FetchTillEoseAbortedSignal`.
    */
   public fetchTillEose(
     relayUrl: string,
     filter: Filter,
     options: FetchTillEoseOptions
   ): AsyncIterable<NostrEvent> {
-    const logger = this.#debugLogger?.subLogger(relayUrl);
-
     const relay = this.getRelayIfConnected(relayUrl);
     if (relay === undefined) {
-      logger?.log("warn", "not connected");
-      return emptyAsyncGen();
+      throw new FetchTillEoseFailedSignal("failed to ensure connection to the relay");
     }
 
     const [tx, chIter] = Channel.make<NostrEvent>();
@@ -137,12 +138,17 @@ export class NDKAdapter implements NostrFetcherBackend {
       new NDKRelaySet(new Set([relay]), this.#ndk)
     );
 
+    // common process to close subscription
+    const closeSub = () => {
+      sub.stop();
+      removeRelayListeners();
+    };
+
     // error handlings
     // TODO: how to handle WebSocket error?
     const onNotice = (_: unknown, notice: string) => {
-      sub.stop();
-      tx.error(Error(`NOTICE: ${notice}`));
-      removeRelayListeners();
+      closeSub();
+      tx.error(new FetchTillEoseFailedSignal(`NOTICE: ${notice}`));
     };
     const removeRelayListeners = () => {
       relay.off("notice", onNotice);
@@ -156,14 +162,8 @@ export class NDKAdapter implements NostrFetcherBackend {
     });
     sub.on("eose", () => {
       closeSub();
-    });
-
-    // common process to close subscription
-    const closeSub = () => {
-      sub.stop();
       tx.close();
-      removeRelayListeners();
-    };
+    });
 
     // auto abortion
     let subAutoAbortTimer: NodeJS.Timer | undefined;
@@ -173,20 +173,20 @@ export class NDKAdapter implements NostrFetcherBackend {
         subAutoAbortTimer = undefined;
       }
       subAutoAbortTimer = setTimeout(() => {
-        logger?.log("info", "subscription aborted before EOSE due to timeout");
         closeSub();
+        tx.error(new FetchTillEoseAbortedSignal("subscription aborted before EOSE due to timeout"));
       }, options.abortSubBeforeEoseTimeoutMs);
     };
     resetAutoAbortTimer(); // initiate subscription auto abortion timer
 
     // handle abortion by AbortController
     if (options.abortSignal?.aborted) {
-      logger?.log("info", `subscription aborted by AbortController`);
       closeSub();
+      tx.error(new FetchTillEoseAbortedSignal("subscription aborted by AbortController"));
     }
     options.abortSignal?.addEventListener("abort", () => {
-      logger?.log("info", `subscription aborted by AbortController`);
       closeSub();
+      tx.error(new FetchTillEoseAbortedSignal("subscription aborted by AbortController"));
     });
     return chIter;
   }
