@@ -1,3 +1,14 @@
+/**
+ * Type of errors that can be thrown from methods of `NostrFetcher`.
+ */
+export class NostrFetchError extends Error {
+  static {
+    this.prototype.name = "NostrFetchError";
+  }
+}
+
+/* stats */
+
 export type RelayStatus = "fetching" | "completed" | "aborted" | "failed";
 
 export type RelayFetchStats = {

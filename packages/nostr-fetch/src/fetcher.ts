@@ -19,7 +19,6 @@ import {
   EventBuckets,
   FetchStatsManager,
   KeyRelayMatrix,
-  NostrFetchError,
   ProgressTracker,
   RelayCapCheckerInitializer,
   RelayCapabilityChecker,
@@ -31,7 +30,7 @@ import {
   initDefaultRelayCapChecker,
   initSeenEvents,
 } from "./fetcherHelper";
-import { FetchStatsListener } from "./types";
+import { FetchStatsListener, NostrFetchError } from "./types";
 
 const MAX_LIMIT_PER_REQ = 5000;
 const MAX_LIMIT_PER_REQ_IN_BACKPRESSURE = 500;

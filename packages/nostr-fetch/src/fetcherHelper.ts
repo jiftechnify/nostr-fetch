@@ -1,16 +1,13 @@
 import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
 import { NostrFetcherCommonOptions } from "@nostr-fetch/kernel/fetcherBackend";
 import { NostrEvent, querySupportedNips } from "@nostr-fetch/kernel/nostr";
-import { FetchStats, FetchStatsListener, RelayFetchStats, RelayStatus } from "./types";
-
-/**
- * Type of errors that can be thrown from methods of `NostrFetcher`.
- */
-export class NostrFetchError extends Error {
-  static {
-    this.prototype.name = "NostrFetchError";
-  }
-}
+import {
+  FetchStats,
+  FetchStatsListener,
+  NostrFetchError,
+  RelayFetchStats,
+  RelayStatus,
+} from "./types";
 
 type AssertionResult =
   | {
