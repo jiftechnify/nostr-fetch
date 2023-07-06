@@ -39,7 +39,15 @@ export interface NostrFetcherBackend {
    * You can think that it's an asynchronous channel which conveys events.
    * The channel will be closed once EOSE is reached.
    *
-   * If no connection to the specified relay has been established at the time this function is called, it will return an empty channel.
+   * If one of the following situations occurs, it is regarded as "failure".
+   * In such a case, it should throw `FetchTillEoseFailedSignal`.
+   *
+   * - It couldn't establish connection to the relay
+   * - Received a NOTICE message during the fetch
+   * - A WebSocket error occurred during the fetch
+   *
+   *
+   * If the fetch was aborted (due to AbortController or auto abortion timer), it should throw `FetchTillEoseAbortedSignal`.
    *
    * Hint:
    * You can make use of a `Channel` to convert "push" style code (bunch of event listers) to `AsyncIterable`.
@@ -54,6 +62,25 @@ export interface NostrFetcherBackend {
    * Cleans up all the internal states of the fetcher.
    */
   shutdown(): void;
+}
+
+/**
+ * Error type signaling that `NostrFetcherBackend#fetchTillEose()` failed
+ * (connection was not established / NOTICE received / WebSocket error occurred)
+ */
+export class FetchTillEoseFailedSignal extends Error {
+  static {
+    this.prototype.name = "FetchTillEoseFailedSignal";
+  }
+}
+
+/**
+ * Error type signaling that `NostrFetcherBackend#fetchTillEose()` is aborted (due to AbortController or auto abortion)
+ */
+export class FetchTillEoseAbortedSignal extends Error {
+  static {
+    this.prototype.name = "FetchTillEoseAbortedSignal";
+  }
 }
 
 /**

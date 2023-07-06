@@ -3,6 +3,8 @@ import { verifyEventSig } from "@nostr-fetch/kernel/crypto";
 import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
 import {
   EnsureRelaysOptions,
+  FetchTillEoseAbortedSignal,
+  FetchTillEoseFailedSignal,
   FetchTillEoseOptions,
   NostrFetcherBackend,
   NostrFetcherBackendInitializer,
@@ -284,6 +286,7 @@ export class NostrFetcher {
         : undefined;
     const progTracker = new ProgressTracker(eligibleRelayUrls);
     statsMngr?.setProgressMax(eligibleRelayUrls.length);
+    statsMngr?.initRelayStats(eligibleRelayUrls, initialUntil);
 
     // fetch events from each relay
     Promise.all(
@@ -312,6 +315,8 @@ export class NostrFetcher {
           let gotNewEvent = false;
           let oldestCreatedAt = Number.MAX_SAFE_INTEGER;
 
+          let isAboutToAbort = false;
+
           try {
             statsMngr?.subOpened();
             for await (const e of this.#backend.fetchTillEose(rurl, refinedFilter, options)) {
@@ -331,27 +336,42 @@ export class NostrFetcher {
                   tx.send({ ...e, seenOn });
                 }
 
-                statsMngr?.eventFetched();
+                statsMngr?.eventFetched(rurl);
                 statsMngr?.setNumBufferedEvents(tx.numBufferedItems());
               }
             }
             statsMngr?.subClosed();
           } catch (err) {
-            // an error occurred while fetching events
-            logger?.log("error", err);
-            statsMngr?.subClosed();
-            break;
+            if (err instanceof FetchTillEoseFailedSignal) {
+              // an error occurred while fetching events
+              logger?.log("error", err);
+              statsMngr?.subClosed();
+              statsMngr?.setRelayStatus(rurl, "failed");
+              break;
+            }
+            if (err instanceof FetchTillEoseAbortedSignal) {
+              // fetch aborted
+              logger?.log("info", err.message);
+              isAboutToAbort = true;
+            } else {
+              logger?.log("error", "unexpected error:", err);
+              statsMngr?.subClosed();
+              statsMngr?.setRelayStatus(rurl, "failed");
+              break;
+            }
           }
 
           if (!gotNewEvent) {
             // termination contidion 1
             logger?.log("info", `got ${localSeenEventIds.size} events`);
+            statsMngr?.setRelayStatus(rurl, isAboutToAbort ? "aborted" : "completed");
             break;
           }
 
           // set next `until` to `created_at` of the oldest event returned in this time.
           // `+ 1` is needed to make it work collectly even if we used relays which has "exclusive" behaviour with respect to `until`.
           nextUntil = oldestCreatedAt + 1;
+          statsMngr?.setRelayFrontier(rurl, oldestCreatedAt);
 
           // update progress
           if (timeRangeDur !== undefined) {
@@ -362,6 +382,7 @@ export class NostrFetcher {
           if (options.abortSignal?.aborted) {
             // termination contidion 2
             logger?.log("info", "aborted");
+            statsMngr?.setRelayStatus(rurl, "aborted");
             break;
           }
 
@@ -503,6 +524,7 @@ export class NostrFetcher {
 
     const progTracker = new ProgressTracker(eligibleRelayUrls);
     statsMngr?.setProgressMax(eligibleRelayUrls.length * limit);
+    statsMngr?.initRelayStats(eligibleRelayUrls, initialUntil);
 
     // fetch at most `limit` events from each relay
     Promise.all(
@@ -532,6 +554,8 @@ export class NostrFetcher {
           let numNewEvents = 0;
           let oldestCreatedAt = Number.MAX_SAFE_INTEGER;
 
+          let isAboutToAbort = false;
+
           try {
             statsMngr?.subOpened();
             for await (const e of this.#backend.fetchTillEose(rurl, refinedFilter, subOpts)) {
@@ -549,16 +573,29 @@ export class NostrFetcher {
                   tx.send(e);
                 }
 
-                statsMngr?.eventFetched();
+                statsMngr?.eventFetched(rurl);
                 statsMngr?.setNumBufferedEvents(tx.numBufferedItems());
               }
             }
             statsMngr?.subClosed();
           } catch (err) {
-            // an error occurred while fetching events
-            logger?.log("error", err);
-            statsMngr?.subClosed();
-            break;
+            if (err instanceof FetchTillEoseFailedSignal) {
+              // an error occurred while fetching events
+              logger?.log("error", err);
+              statsMngr?.subClosed();
+              statsMngr?.setRelayStatus(rurl, "failed");
+              break;
+            }
+            if (err instanceof FetchTillEoseAbortedSignal) {
+              // fetch aborted
+              logger?.log("info", err.message);
+              isAboutToAbort = true;
+            } else {
+              logger?.log("error", "unexpected error:", err);
+              statsMngr?.subClosed();
+              statsMngr?.setRelayStatus(rurl, "failed");
+              break;
+            }
           }
 
           progTracker.addProgress(rurl, Math.min(numNewEvents, remainingLimit));
@@ -568,17 +605,20 @@ export class NostrFetcher {
           if (numNewEvents === 0 || remainingLimit <= 0) {
             // termination condition 1, 2
             logger?.log("info", `got ${localSeenEventIds.size} events`);
+            statsMngr?.setRelayStatus(rurl, isAboutToAbort ? "aborted" : "completed");
             break;
           }
           if (finalOpts.abortSignal?.aborted) {
             // termination condition 3
             logger?.log("info", `aborted`);
+            statsMngr?.setRelayStatus(rurl, "aborted");
             break;
           }
 
           // set next `until` to `created_at` of the oldest event returned in this time.
           // `+ 1` is needed to make it work collectly even if we used relays which has "exclusive" behaviour with respect to `until`.
           nextUntil = oldestCreatedAt + 1;
+          statsMngr?.setRelayFrontier(rurl, oldestCreatedAt);
         }
         // subscripton loop for the relay terminated
         progTracker.setProgress(rurl, limit);
@@ -786,12 +826,14 @@ export class NostrFetcher {
       options,
       reqNips
     );
-    statsMngr?.setProgressMax(allAuthors.length);
     this.#debugLogger?.log("verbose", "relayToAuthors=%O", relayToAuthors);
 
     const [tx, chIter] = Channel.make<{ author: string; events: NostrEventExt<SeenOn>[] }>();
     const globalSeenEvents = initSeenEvents(options.withSeenOn);
     const initialUntil = currUnixtimeSec();
+
+    statsMngr?.setProgressMax(allAuthors.length);
+    statsMngr?.initRelayStats([...relayToAuthors.keys()], initialUntil);
 
     // for each pair of author and relay URL, create a promise that act as "latch", so that the "merger" can wait for a subscription to complete
     const latches = new KeyRelayMatrix(relayToAuthors, () => new Deferred<NostrEvent[]>());
@@ -827,6 +869,7 @@ export class NostrFetcher {
           if (nextAuthors.length === 0) {
             // termination condition 1
             logger?.log("verbose", `fulfilled buckets for all authors`);
+            statsMngr?.setRelayStatus(rurl, "completed");
             break;
           }
 
@@ -840,6 +883,8 @@ export class NostrFetcher {
 
           let gotNewEvent = false;
           let oldestCreatedAt = Number.MAX_SAFE_INTEGER;
+
+          let isAboutToAbort = false;
 
           try {
             statsMngr?.subOpened();
@@ -863,33 +908,50 @@ export class NostrFetcher {
                   logger?.log("verbose", `fulfilled a bucket for author=${e.pubkey}`);
                 }
 
-                statsMngr?.eventFetched();
+                statsMngr?.eventFetched(rurl);
                 statsMngr?.setNumBufferedEvents(tx.numBufferedItems());
               }
             }
             statsMngr?.subClosed();
           } catch (err) {
-            // an error occurred while fetching events
-            logger?.log("error", err);
-            statsMngr?.subClosed();
-            resolveAllOnEarlyBreak();
-            break;
+            if (err instanceof FetchTillEoseFailedSignal) {
+              // an error occurred while fetching events
+              logger?.log("error", err);
+              statsMngr?.subClosed();
+              statsMngr?.setRelayStatus(rurl, "failed");
+              resolveAllOnEarlyBreak();
+              break;
+            }
+            if (err instanceof FetchTillEoseAbortedSignal) {
+              // fetch aborted
+              logger?.log("info", err.message);
+              isAboutToAbort = true;
+            } else {
+              logger?.log("error", "unexpected error:", err);
+              statsMngr?.subClosed();
+              statsMngr?.setRelayStatus(rurl, "failed");
+              resolveAllOnEarlyBreak();
+              break;
+            }
           }
 
           if (!gotNewEvent) {
             // termination condition 2
             logger?.log("info", `got ${localSeenEventIds.size} events`);
+            statsMngr?.setRelayStatus(rurl, isAboutToAbort ? "aborted" : "completed");
             resolveAllOnEarlyBreak();
             break;
           }
           if (options.abortSignal?.aborted) {
             // termination condition 3
             logger?.log("info", `aborted`);
+            statsMngr?.setRelayStatus(rurl, isAboutToAbort ? "aborted" : "completed");
             resolveAllOnEarlyBreak();
             break;
           }
 
           nextUntil = oldestCreatedAt + 1;
+          statsMngr?.setRelayFrontier(rurl, oldestCreatedAt);
         }
       })
     );
