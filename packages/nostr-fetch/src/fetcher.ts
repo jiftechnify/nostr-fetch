@@ -339,12 +339,10 @@ export class NostrFetcher {
                 statsMngr?.setNumBufferedEvents(tx.numBufferedItems());
               }
             }
-            statsMngr?.subClosed();
           } catch (err) {
             if (err instanceof FetchTillEoseFailedSignal) {
               // an error occurred while fetching events
               logger?.log("error", err);
-              statsMngr?.subClosed();
               statsMngr?.setRelayStatus(rurl, "failed");
               break;
             }
@@ -354,10 +352,11 @@ export class NostrFetcher {
               isAboutToAbort = true;
             } else {
               logger?.log("error", "unexpected error:", err);
-              statsMngr?.subClosed();
               statsMngr?.setRelayStatus(rurl, "failed");
               break;
             }
+          } finally {
+            statsMngr?.subClosed();
           }
 
           if (!gotNewEvent) {
@@ -576,12 +575,10 @@ export class NostrFetcher {
                 statsMngr?.setNumBufferedEvents(tx.numBufferedItems());
               }
             }
-            statsMngr?.subClosed();
           } catch (err) {
             if (err instanceof FetchTillEoseFailedSignal) {
               // an error occurred while fetching events
               logger?.log("error", err);
-              statsMngr?.subClosed();
               statsMngr?.setRelayStatus(rurl, "failed");
               break;
             }
@@ -591,10 +588,11 @@ export class NostrFetcher {
               isAboutToAbort = true;
             } else {
               logger?.log("error", "unexpected error:", err);
-              statsMngr?.subClosed();
               statsMngr?.setRelayStatus(rurl, "failed");
               break;
             }
+          } finally {
+            statsMngr?.subClosed();
           }
 
           progTracker.addProgress(rurl, Math.min(numNewEvents, remainingLimit));
@@ -911,12 +909,10 @@ export class NostrFetcher {
                 statsMngr?.setNumBufferedEvents(tx.numBufferedItems());
               }
             }
-            statsMngr?.subClosed();
           } catch (err) {
             if (err instanceof FetchTillEoseFailedSignal) {
               // an error occurred while fetching events
               logger?.log("error", err);
-              statsMngr?.subClosed();
               statsMngr?.setRelayStatus(rurl, "failed");
               resolveAllOnEarlyBreak();
               break;
@@ -927,11 +923,12 @@ export class NostrFetcher {
               isAboutToAbort = true;
             } else {
               logger?.log("error", "unexpected error:", err);
-              statsMngr?.subClosed();
               statsMngr?.setRelayStatus(rurl, "failed");
               resolveAllOnEarlyBreak();
               break;
             }
+          } finally {
+            statsMngr?.subClosed();
           }
 
           if (!gotNewEvent) {
