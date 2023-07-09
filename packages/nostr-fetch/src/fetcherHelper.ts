@@ -1,16 +1,13 @@
 import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
 import { NostrFetcherCommonOptions } from "@nostr-fetch/kernel/fetcherBackend";
 import { NostrEvent, querySupportedNips } from "@nostr-fetch/kernel/nostr";
-import { FetchStats, FetchStatsListener } from "./types";
-
-/**
- * Type of errors that can be thrown from methods of `NostrFetcher`.
- */
-export class NostrFetchError extends Error {
-  static {
-    this.prototype.name = "NostrFetchError";
-  }
-}
+import {
+  FetchStats,
+  FetchStatsListener,
+  NostrFetchError,
+  RelayFetchStats,
+  RelayStatus,
+} from "./types";
 
 type AssertionResult =
   | {
@@ -289,26 +286,31 @@ class SeenEventsSet implements SeenEvents<false> {
 }
 
 export class FetchStatsManager {
-  #stats: FetchStats = {
+  #stats: Omit<FetchStats, "relays"> = {
     progress: {
       max: 1, // prevent division by 0
       current: 0,
     },
-    count: {
+    counts: {
       fetchedEvents: 0,
       bufferedEvents: 0,
       openedSubs: 0,
       runningSubs: 0,
     },
   };
+  #relayStatsMap: Map<string, RelayFetchStats> = new Map();
   #cb: FetchStatsListener;
   #timer: NodeJS.Timer | undefined;
 
   private constructor(cb: FetchStatsListener, notifInterval: number) {
     this.#cb = cb;
     this.#timer = setInterval(() => {
-      this.#cb(this.#stats);
+      this.#cb(this.#renderStats());
     }, notifInterval);
+  }
+
+  #renderStats(): FetchStats {
+    return { ...this.#stats, relays: Object.fromEntries(this.#relayStatsMap) };
   }
 
   static init(
@@ -332,21 +334,55 @@ export class FetchStatsManager {
   }
 
   /* counts */
-  eventFetched(): void {
-    this.#stats.count.fetchedEvents++;
+  eventFetched(rurl: string): void {
+    this.#stats.counts.fetchedEvents++;
+
+    // update event count of relay
+    const rs = this.#relayStatsMap.get(rurl);
+    if (rs !== undefined) {
+      rs.numFetchedEvents++;
+    }
   }
 
   setNumBufferedEvents(n: number): void {
-    this.#stats.count.bufferedEvents = n;
+    this.#stats.counts.bufferedEvents = n;
   }
 
   subOpened(): void {
-    this.#stats.count.openedSubs++;
-    this.#stats.count.runningSubs++;
+    this.#stats.counts.openedSubs++;
+    this.#stats.counts.runningSubs++;
   }
 
   subClosed(): void {
-    this.#stats.count.runningSubs--;
+    this.#stats.counts.runningSubs--;
+  }
+
+  /* relay stats */
+  initRelayStats(rurls: string[], initUntil: number): void {
+    this.#relayStatsMap = new Map(
+      rurls.map((rurl) => [
+        rurl,
+        {
+          status: "fetching",
+          numFetchedEvents: 0,
+          frontier: initUntil,
+        },
+      ])
+    );
+  }
+
+  setRelayStatus(rurl: string, status: RelayStatus): void {
+    const rs = this.#relayStatsMap.get(rurl);
+    if (rs !== undefined) {
+      rs.status = status;
+    }
+  }
+
+  setRelayFrontier(rurl: string, frontier: number): void {
+    const rs = this.#relayStatsMap.get(rurl);
+    if (rs !== undefined) {
+      rs.frontier = frontier;
+    }
   }
 
   stop(): void {
@@ -354,7 +390,7 @@ export class FetchStatsManager {
       clearInterval(this.#timer);
     }
     // notify last stats before stopped
-    this.#cb(this.#stats);
+    this.#cb(this.#renderStats());
   }
 }
 

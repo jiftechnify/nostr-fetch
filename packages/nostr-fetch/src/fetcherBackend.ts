@@ -1,12 +1,13 @@
 import { Channel } from "@nostr-fetch/kernel/channel";
-import type {
-  EnsureRelaysOptions,
-  FetchTillEoseOptions,
-  NostrFetcherBackend,
-  NostrFetcherCommonOptions,
+import {
+  FetchTillEoseAbortedSignal,
+  FetchTillEoseFailedSignal,
+  type EnsureRelaysOptions,
+  type FetchTillEoseOptions,
+  type NostrFetcherBackend,
+  type NostrFetcherCommonOptions,
 } from "@nostr-fetch/kernel/fetcherBackend";
 import type { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
-import { emptyAsyncGen } from "@nostr-fetch/kernel/utils";
 
 import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
 import { RelayPool, initRelayPool } from "./relayPool";
@@ -50,7 +51,14 @@ export class DefaultFetcherBackend implements NostrFetcherBackend {
    * You can think that it's an asynchronous channel which conveys events.
    * The channel will be closed once EOSE is reached.
    *
-   * If no connection to the specified relay has been established at the time this function is called, it will return an empty channel.
+   * If one of the following situations occurs, it is regarded as "failure".
+   * In such a case, it should throw `FetchTillEoseFailedSignal`.
+   *
+   * - It couldn't establish connection to the relay
+   * - Received a NOTICE message during the fetch
+   * - A WebSocket error occurred during the fetch
+   *
+   * If the fetch was aborted (due to AbortController or auto abortion timer), it should throw `FetchTillEoseAbortedSignal`.
    */
   public async *fetchTillEose(
     relayUrl: string,
@@ -61,26 +69,25 @@ export class DefaultFetcherBackend implements NostrFetcherBackend {
 
     const relay = await this.#relayPool.ensureSingleRelay(relayUrl, options);
     if (relay === undefined) {
-      logger?.log("warn", "failed to ensure connection to the relay");
-      return emptyAsyncGen();
+      throw new FetchTillEoseFailedSignal("failed to ensure connection to the relay");
     }
 
     const [tx, chIter] = Channel.make<NostrEvent>();
 
     // relay error handlings
     const onNotice = (n: unknown) => {
-      tx.error(Error(`NOTICE: ${JSON.stringify(n)}`));
       try {
         sub.close();
       } catch (err) {
         logger?.log("error", `failed to close subscription (id: ${sub.subId}): ${err}`);
       }
       removeRelayListeners();
+      tx.error(new FetchTillEoseFailedSignal(`NOTICE: ${JSON.stringify(n)}`));
     };
     const onError = () => {
       // WebSocket error closes the connection, so calling close() is meaningless
-      tx.error(Error("ERROR"));
       removeRelayListeners();
+      tx.error(new FetchTillEoseFailedSignal("WebSocket error"));
     };
     const removeRelayListeners = () => {
       relay.off("notice", onNotice);
@@ -98,10 +105,16 @@ export class DefaultFetcherBackend implements NostrFetcherBackend {
       tx.send(ev);
     });
     sub.on("eose", ({ aborted }) => {
-      if (aborted) {
-        logger?.log("info", `subscription (id: ${sub.subId}) aborted before EOSE due to timeout`);
-      }
       closeSub();
+      if (aborted) {
+        tx.error(
+          new FetchTillEoseAbortedSignal(
+            `subscription (id: ${sub.subId}) aborted before EOSE due to timeout`
+          )
+        );
+      } else {
+        tx.close();
+      }
     });
 
     // common process to close subscription
@@ -111,7 +124,6 @@ export class DefaultFetcherBackend implements NostrFetcherBackend {
       } catch (err) {
         logger?.log("error", `failed to close subscription (id: ${sub.subId}): ${err}`);
       }
-      tx.close();
       removeRelayListeners();
       logger?.log("verbose", `CLOSE: subId=${options.subId ?? "<auto>"}`);
     };
@@ -121,18 +133,22 @@ export class DefaultFetcherBackend implements NostrFetcherBackend {
     try {
       sub.req();
     } catch (err) {
-      tx.error(err);
+      tx.error(new FetchTillEoseFailedSignal("failed to send REQ", { cause: err }));
       removeRelayListeners();
     }
 
     // handle abortion
     if (options.abortSignal?.aborted) {
-      logger?.log("info", `subscription (id: ${sub.subId}) aborted by AbortController`);
       closeSub();
+      tx.error(
+        new FetchTillEoseAbortedSignal(`subscription (id: ${sub.subId}) aborted by AbortController`)
+      );
     }
     options.abortSignal?.addEventListener("abort", () => {
-      logger?.log("info", `subscription (id: ${sub.subId}) aborted by AbortController`);
       closeSub();
+      tx.error(
+        new FetchTillEoseAbortedSignal(`subscription (id: ${sub.subId}) aborted by AbortController`)
+      );
     });
 
     yield* chIter;

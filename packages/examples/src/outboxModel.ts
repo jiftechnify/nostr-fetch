@@ -24,7 +24,7 @@ const fetchFollowees = async (pubkey: string): Promise<string[]> => {
   return ev.tags.filter((t) => t.length >= 2 && t[0] === "p").map((t) => t[1] as string);
 };
 
-// get write relays for each pubkeys
+// get write relays for each pubkeys. appends default relays as fallback.
 const fetchWriteRelaysPerAuthors = async (authors: string[]): Promise<Map<string, string[]>> => {
   const iter = fetcher.fetchLastEventPerAuthor(
     { authors, relayUrls: defaultRelays },
@@ -34,45 +34,44 @@ const fetchWriteRelaysPerAuthors = async (authors: string[]): Promise<Map<string
   );
   const res = new Map<string, string[]>();
   for await (const { author, event: ev } of iter) {
-    if (ev !== undefined) {
-      const wrs = getWriteRelaysFromEvent(ev);
-      if (wrs.length > 0) {
-        res.set(author, wrs);
-      }
-    }
+    const wrs = ev ? getWriteRelaysFromEvent(ev) : [];
+    res.set(author, [...wrs, ...defaultRelays]);
   }
   return res;
 };
 
 const main = async () => {
+  console.log("fetching follow list...");
   const followees = await fetchFollowees(pubkey);
   if (followees.length === 0) {
     console.error("contacts event (kind: 3) not found or you haven't followed any users");
     return;
   }
 
+  console.log("fetching a list of write relay for each followee...");
   const writeRelaysPerFollowees = await fetchWriteRelaysPerAuthors(followees);
-  if (writeRelaysPerFollowees.size === 0) {
-    console.error("failed to fetch write relays for each followees");
-    return;
-  }
 
   // get the last post for each followee
-  const lastPostsPerFollowee = fetcher.fetchLastEventPerAuthor(writeRelaysPerFollowees, {
-    kinds: [eventKind.text],
-  });
+  console.log("fetching the last post from followees...");
+  const lastPostsPerFollowee = fetcher.fetchLastEventPerAuthor(
+    writeRelaysPerFollowees,
+    {
+      kinds: [eventKind.text],
+    },
+    { statsListener: (stats) => console.error(stats) }
+  );
   for await (const { author, event: ev } of lastPostsPerFollowee) {
     if (ev !== undefined) {
       printPost(ev);
     } else {
-      console.log(`post from author: ${author} not found`);
+      console.log(`post from author: [${author}] not found`);
     }
   }
 };
 
 const printPost = (ev: NostrEvent) => {
   console.log(
-    `last post from author: ${ev.pubkey} (${new Date(ev.created_at * 1000).toLocaleString()})`
+    `last post from author: [${ev.pubkey}] (${new Date(ev.created_at * 1000).toLocaleString()})`
   );
   console.log(ev.content);
   console.log();

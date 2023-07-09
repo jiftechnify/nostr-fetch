@@ -1,10 +1,12 @@
 import { Channel } from "@nostr-fetch/kernel/channel";
 import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
-import type {
-  EnsureRelaysOptions,
-  FetchTillEoseOptions,
-  NostrFetcherBackend,
-  NostrFetcherCommonOptions,
+import {
+  FetchTillEoseAbortedSignal,
+  FetchTillEoseFailedSignal,
+  type EnsureRelaysOptions,
+  type FetchTillEoseOptions,
+  type NostrFetcherBackend,
+  type NostrFetcherCommonOptions,
 } from "@nostr-fetch/kernel/fetcherBackend";
 import type { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
 import { normalizeRelayUrls, withTimeout } from "@nostr-fetch/kernel/utils";
@@ -151,15 +153,20 @@ export class NRTPoolAdapter implements NostrFetcherBackend {
    * You can think that it's an asynchronous channel which conveys events.
    * The channel will be closed once EOSE is reached.
    *
-   * If no connection to the specified relay has been established at the time this function is called, it will return an empty channel.
+   * If one of the following situations occurs, it is regarded as "failure".
+   * In such a case, it should throw `FetchTillEoseFailedSignal`.
+   *
+   * - It couldn't establish connection to the relay
+   * - Received a NOTICE message during the fetch
+   * - A WebSocket error occurred during the fetch
+   *
+   * If the fetch was aborted (due to AbortController or auto abortion timer), it should throw `FetchTillEoseAbortedSignal`.
    */
   public fetchTillEose(
     relayUrl: string,
     filter: Filter,
     options: FetchTillEoseOptions
   ): AsyncIterable<NostrEvent> {
-    const logger = this.#debugLogger?.subLogger(relayUrl);
-
     const [tx, chIter] = Channel.make<NostrEvent>();
 
     // if "relay" is set, that filter will be requested only from that relay
@@ -191,12 +198,12 @@ export class NRTPoolAdapter implements NostrFetcherBackend {
     // error handlings
     const onNotice = (msg: string) => {
       unsub();
-      tx.error(Error(`NOTICE: ${JSON.stringify(msg)}`));
       removeRelayListeners();
+      tx.error(new FetchTillEoseFailedSignal(`NOTICE: ${JSON.stringify(msg)}`));
     };
     const onError = (msg: string) => {
-      tx.error(Error(`ERROR: ${msg}`));
       removeRelayListeners();
+      tx.error(new FetchTillEoseFailedSignal(`ERROR: ${msg}`));
     };
     const removeRelayListeners = () => {
       this.removeListener(relayUrl, "notice");
@@ -207,12 +214,10 @@ export class NRTPoolAdapter implements NostrFetcherBackend {
     this.addListener(relayUrl, "error", onError);
 
     // common process for subscription abortion
-    const abortSub = (debugMsg: string) => {
-      logger?.log("info", debugMsg);
-
+    const abortSub = (msg: string) => {
       unsub();
-      tx.close();
       removeRelayListeners();
+      tx.error(new FetchTillEoseAbortedSignal(msg));
     };
 
     // auto abortion
