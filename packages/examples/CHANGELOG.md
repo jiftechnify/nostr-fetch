@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.11.2](https://github.com/jiftechnify/nostr-fetch/compare/v0.11.1...v0.11.2) (2023-07-09)
+
+### Bug Fixes
+
+* tsconfig for examples ([e5e5c92](https://github.com/jiftechnify/nostr-fetch/commit/e5e5c92223328ff6d21e8fe98bc6585a03a6070b))
+
 ## [0.11.1](https://github.com/jiftechnify/nostr-fetch/compare/v0.11.0...v0.11.1) (2023-07-09)
 
 **Note:** Version bump only for package @nostr-fetch/examples
