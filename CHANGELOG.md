@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.11.1](https://github.com/jiftechnify/nostr-fetch/compare/v0.11.0...v0.11.1) (2023-07-09)
+
+### Bug Fixes
+
+* tsconfig for adapter-nostr-relaypool ([be8edbc](https://github.com/jiftechnify/nostr-fetch/commit/be8edbcad549fe67293cd3cb13d2f04cab2fd7ab))
+
 # [0.11.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.10.1...v0.11.0) (2023-07-09)
 
 ### Bug Fixes
