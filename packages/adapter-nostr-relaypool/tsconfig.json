@@ -2,9 +2,9 @@
   // https://github.com/tsconfig/bases/blob/main/bases/strictest.json
   "extends": "@tsconfig/strictest/tsconfig.json",
   "compilerOptions": {
-    "target": "ES2022",
-    "lib": ["ES2022", "DOM"],
-    "module": "ES2022",
+    "target": "ESNext",
+    "lib": ["ESNext", "DOM"],
+    "module": "ESNext",
     "moduleResolution": "Node",
     "noEmit": true,
   },

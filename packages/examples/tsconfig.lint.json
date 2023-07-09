@@ -5,7 +5,7 @@
     "lib": ["dom", "dom.iterable", "esnext", "webworker", "scripthost"],
     "noEmit": true,
     "strict": true,
-    "moduleResolution": "node",
+    "moduleResolution": "Bundler",
     "esModuleInterop": true,
     "skipLibCheck": true,
   },
