@@ -1,6 +1,6 @@
 {
   "name": "@nostr-fetch/examples",
-  "version": "0.10.1",
+  "version": "0.11.0",
   "description": "nostr-fetch examples",
   "type": "module",
   "private": true,
@@ -16,10 +16,10 @@
   },
   "dependencies": {
     "@nostr-dev-kit/ndk": "^0.5.0",
-    "@nostr-fetch/adapter-ndk": "^0.10.1",
-    "@nostr-fetch/adapter-nostr-relaypool": "^0.10.1",
-    "@nostr-fetch/adapter-nostr-tools": "^0.10.1",
-    "nostr-fetch": "^0.10.1",
+    "@nostr-fetch/adapter-ndk": "^0.11.0",
+    "@nostr-fetch/adapter-nostr-relaypool": "^0.11.0",
+    "@nostr-fetch/adapter-nostr-tools": "^0.11.0",
+    "nostr-fetch": "^0.11.0",
     "nostr-relaypool": "^0.6.28",
     "nostr-tools": "^1.10.1",
     "websocket-polyfill": "^0.0.3",

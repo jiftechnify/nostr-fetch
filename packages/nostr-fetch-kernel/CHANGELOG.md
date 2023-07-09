@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.11.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.10.1...v0.11.0) (2023-07-09)
+
+### Features
+
+* per-relay fetch stats ([fc37872](https://github.com/jiftechnify/nostr-fetch/commit/fc378721868c0c28cc7f45db6ef8dce2b141bd7b))
+
 # [0.10.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.9.0...v0.10.0) (2023-07-04)
 
 ### Bug Fixes
