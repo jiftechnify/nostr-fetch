@@ -50,7 +50,7 @@ export const normalizeRelayUrls = (relayUrls: string[]): string[] => {
           return false;
         }
       })
-      .map((u) => normalizeRelayUrl(u))
+      .map((u) => normalizeRelayUrl(u)),
   );
 };
 
@@ -84,7 +84,7 @@ export const abbreviate = (s: string, affixLen: number): string => {
 export const withTimeout = async <T>(
   promise: Promise<T>,
   timeoutMs: number,
-  msgOnTimeout: string
+  msgOnTimeout: string,
 ): Promise<T> => {
   let timer: NodeJS.Timeout;
   const timeout = new Promise<never>((_, reject) => {

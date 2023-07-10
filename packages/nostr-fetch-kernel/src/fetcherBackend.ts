@@ -55,7 +55,7 @@ export interface NostrFetcherBackend {
   fetchTillEose(
     relayUrl: string,
     filter: Filter,
-    options: FetchTillEoseOptions
+    options: FetchTillEoseOptions,
   ): AsyncIterable<NostrEvent>;
 
   /**
@@ -103,5 +103,5 @@ export const defaultFetcherCommonOptions: Required<NostrFetcherCommonOptions> = 
  * A "relay pool adapter" should return initializer function of this type.
  */
 export type NostrFetcherBackendInitializer = (
-  commonOpts: Required<NostrFetcherCommonOptions>
+  commonOpts: Required<NostrFetcherCommonOptions>,
 ) => NostrFetcherBackend;

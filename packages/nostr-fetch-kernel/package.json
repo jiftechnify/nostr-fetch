@@ -39,10 +39,10 @@
     "testw": "vitest",
     "tsc": "tsc",
     "lint": "run-p tsc lint:*",
-    "lint:format": "prettier --check --loglevel warn src/**/*.ts",
+    "lint:format": "prettier --check --log-level warn src/**/*.ts",
     "lint:js": "eslint --max-warnings 0 src/",
     "fix": "run-s fix:*",
-    "fix:format": "prettier --write --loglevel warn src/**/*.ts",
+    "fix:format": "prettier --write --log-level warn src/**/*.ts",
     "fix:js": "eslint --fix src/",
     "build": "tsc -p tsconfig.build.json"
   },

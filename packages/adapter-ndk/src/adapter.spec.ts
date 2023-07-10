@@ -91,7 +91,7 @@ describe("NDKAdapter", () => {
       const iter = backend.fetchTillEose(
         url,
         {},
-        optsWithDefault({ abortSubBeforeEoseTimeoutMs: 1000 })
+        optsWithDefault({ abortSubBeforeEoseTimeoutMs: 1000 }),
       );
       const evs = await collectAsyncIter(iter);
       expect(evs.length).toBe(9);
