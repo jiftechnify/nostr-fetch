@@ -24,7 +24,7 @@
     "@lerna-lite/publish": "^2.3.0",
     "@tsconfig/strictest": "^2.0.1",
     "@types/fs-extra": "^11.0.1",
-    "@types/node": "^18.14.2",
+    "@types/node": "^20.4.1",
     "@typescript-eslint/eslint-plugin": "^5.60.0",
     "@typescript-eslint/parser": "^5.60.0",
     "conventional-changelog-cli": "^3.0.0",
