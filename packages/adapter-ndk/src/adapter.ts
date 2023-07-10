@@ -36,7 +36,7 @@ export class NDKAdapter implements NostrFetcherBackend {
    */
   public async ensureRelays(
     relayUrls: string[],
-    { connectTimeoutMs }: EnsureRelaysOptions
+    { connectTimeoutMs }: EnsureRelaysOptions,
   ): Promise<string[]> {
     const normalizedUrls = normalizeRelayUrls(relayUrls);
 
@@ -50,7 +50,7 @@ export class NDKAdapter implements NostrFetcherBackend {
         }
         return { managedRurls: managedRurls, unconnRurls: [...unconnRurls, rurl] };
       },
-      { managedRurls: [] as string[], unconnRurls: [] as string[] }
+      { managedRurls: [] as string[], unconnRurls: [] as string[] },
     );
     this.#debugLogger?.log("verbose", "managed=%O, unconnected=%O", managedRurls, unconnRurls);
 
@@ -76,7 +76,7 @@ export class NDKAdapter implements NostrFetcherBackend {
           const r = await withTimeout(
             ensure(rurl),
             connectTimeoutMs,
-            `attempt to connect to the relay ${rurl} timed out`
+            `attempt to connect to the relay ${rurl} timed out`,
           );
 
           connectedRurls.push(rurl);
@@ -84,7 +84,7 @@ export class NDKAdapter implements NostrFetcherBackend {
         } catch (err) {
           this.#debugLogger?.log("error", err);
         }
-      })
+      }),
     );
     return [...managedRurls, ...connectedRurls];
   }
@@ -122,7 +122,7 @@ export class NDKAdapter implements NostrFetcherBackend {
   public fetchTillEose(
     relayUrl: string,
     filter: Filter,
-    options: FetchTillEoseOptions
+    options: FetchTillEoseOptions,
   ): AsyncIterable<NostrEvent> {
     const relay = this.getRelayIfConnected(relayUrl);
     if (relay === undefined) {
@@ -135,7 +135,7 @@ export class NDKAdapter implements NostrFetcherBackend {
     const sub = this.#ndk.subscribe(
       filter,
       { closeOnEose: true },
-      new NDKRelaySet(new Set([relay]), this.#ndk)
+      new NDKRelaySet(new Set([relay]), this.#ndk),
     );
 
     // common process to close subscription

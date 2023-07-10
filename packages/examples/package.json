@@ -7,15 +7,15 @@
   "scripts": {
     "check-type": "tsc -p tsconfig.lint.json || exit 0",
     "lint": "run-p check-type lint:*",
-    "lint:format": "prettier --check --loglevel warn src/**/*.ts",
+    "lint:format": "prettier --check --log-level warn src/**/*.ts",
     "lint:js": "eslint --max-warnings 0 src/",
     "fix": "run-s fix:*",
-    "fix:format": "prettier --write --loglevel warn src/**/*.ts",
+    "fix:format": "prettier --write --log-level warn src/**/*.ts",
     "fix:js": "eslint --fix src/",
     "exec-ts": "node --loader esbuild-register/loader -r esbuild-register"
   },
   "dependencies": {
-    "@nostr-dev-kit/ndk": "^0.5.0",
+    "@nostr-dev-kit/ndk": "^0.7.5",
     "@nostr-fetch/adapter-ndk": "^0.11.0",
     "@nostr-fetch/adapter-nostr-relaypool": "^0.11.1",
     "@nostr-fetch/adapter-nostr-tools": "^0.11.0",

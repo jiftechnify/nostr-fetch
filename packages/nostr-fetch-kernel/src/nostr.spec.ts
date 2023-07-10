@@ -106,7 +106,7 @@ describe("parseR2CMessage", () => {
 const validEvent = JSON.parse(validEventJSON) as Record<keyof NostrEvent, unknown>;
 
 const modifiedEvent = (
-  mod: Partial<Record<keyof NostrEvent, unknown>>
+  mod: Partial<Record<keyof NostrEvent, unknown>>,
 ): Record<string, unknown> => {
   return { ...validEvent, ...mod };
 };

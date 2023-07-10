@@ -34,7 +34,7 @@ describe("normalizeRelayUrls", () => {
         "wss://relay.example.com",
         "wss://relay.example.com:443",
         "wss://relay.example.com#hash",
-      ])
+      ]),
     ).toStrictEqual(["wss://relay.example.com/"]);
   });
 });
@@ -66,7 +66,7 @@ describe("withTimeout", () => {
     const promise = new Promise((resolve) =>
       setTimeout(() => {
         resolve("ok");
-      }, 5000)
+      }, 5000),
     );
     return expect(withTimeout(promise, 3000, "timed out!")).rejects.toThrow("timed out!");
   });
@@ -77,17 +77,17 @@ describe("withTimeout", () => {
       const promise = new Promise((resolve) =>
         setTimeout(() => {
           resolve("ok");
-        }, 1000)
+        }, 1000),
       );
       return expect(withTimeout(promise, 3000, "timed out!")).resolves.toBe("ok");
-    }
+    },
   );
 
   test.concurrent("rejects with original error if original promise rejects before timeout", () => {
     const promise = new Promise((_, reject) =>
       setTimeout(() => {
         reject("err");
-      }, 1000)
+      }, 1000),
     );
     return expect(withTimeout(promise, 3000, "timed out!")).rejects.toThrow("err");
   });

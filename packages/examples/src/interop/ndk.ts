@@ -28,7 +28,7 @@ const main = async () => {
     },
     {
       skipVerification: true,
-    }
+    },
   );
 
   for await (const ev of eventsIter) {
