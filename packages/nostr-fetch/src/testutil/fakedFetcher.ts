@@ -98,7 +98,7 @@ class FakeRelay {
     filter: Filter,
     subId: string,
     onEvent: (ev: NostrEvent) => void,
-    onEose: () => void
+    onEose: () => void,
   ): () => void {
     this.#subs.add(subId);
 
@@ -150,7 +150,7 @@ class FakeFetcherBackend implements NostrFetcherBackend {
 
   constructor(relaySpecs: Map<string, FakeRelaySpec>) {
     this.#mapFakeRelay = new Map(
-      [...relaySpecs.entries()].map(([rurl, spec]) => [rurl, new FakeRelay(spec)])
+      [...relaySpecs.entries()].map(([rurl, spec]) => [rurl, new FakeRelay(spec)]),
     );
   }
 
@@ -171,7 +171,7 @@ class FakeFetcherBackend implements NostrFetcherBackend {
         } catch (err) {
           console.error(err);
         }
-      })
+      }),
     );
     return connected;
   }
@@ -179,7 +179,7 @@ class FakeFetcherBackend implements NostrFetcherBackend {
   fetchTillEose(
     relayUrl: string,
     filter: Filter,
-    options: FetchTillEoseOptions
+    options: FetchTillEoseOptions,
   ): AsyncIterable<NostrEvent> {
     const relay = this.#mapFakeRelay.get(normalizeRelayUrl(relayUrl));
     if (relay === undefined) {

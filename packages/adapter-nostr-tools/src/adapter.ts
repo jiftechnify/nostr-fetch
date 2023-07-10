@@ -38,7 +38,7 @@ export class SimplePoolExt implements NostrFetcherBackend {
    */
   public async ensureRelays(
     relayUrls: string[],
-    { connectTimeoutMs }: EnsureRelaysOptions
+    { connectTimeoutMs }: EnsureRelaysOptions,
   ): Promise<string[]> {
     const normalizedUrls = normalizeRelayUrls(relayUrls);
 
@@ -63,7 +63,7 @@ export class SimplePoolExt implements NostrFetcherBackend {
           const r = await withTimeout(
             ensure(rurl),
             connectTimeoutMs,
-            `attempt to connect to the relay ${rurl} timed out`
+            `attempt to connect to the relay ${rurl} timed out`,
           );
 
           connectedRelays.push(rurl);
@@ -72,7 +72,7 @@ export class SimplePoolExt implements NostrFetcherBackend {
           this.#debugLogger?.log("error", err);
           this.#relays.delete(rurl);
         }
-      })
+      }),
     );
     return connectedRelays;
   }
@@ -100,7 +100,7 @@ export class SimplePoolExt implements NostrFetcherBackend {
   public fetchTillEose(
     relayUrl: string,
     filter: Filter,
-    options: FetchTillEoseOptions
+    options: FetchTillEoseOptions,
   ): AsyncIterable<NostrEvent> {
     const relay = this.getRelayIfConnected(relayUrl);
     if (relay === undefined) {
