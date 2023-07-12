@@ -9,7 +9,7 @@ import {
   type NostrFetcherCommonOptions,
 } from "@nostr-fetch/kernel/fetcherBackend";
 import type { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
-import { normalizeRelayUrl, normalizeRelayUrls, withTimeout } from "@nostr-fetch/kernel/utils";
+import { normalizeRelayUrl, normalizeRelayUrlSet, withTimeout } from "@nostr-fetch/kernel/utils";
 
 import type NDK from "@nostr-dev-kit/ndk";
 import { NDKEvent, NDKRelay, NDKRelaySet, NDKRelayStatus } from "@nostr-dev-kit/ndk";
@@ -38,7 +38,7 @@ export class NDKAdapter implements NostrFetcherBackend {
     relayUrls: string[],
     { connectTimeoutMs }: EnsureRelaysOptions,
   ): Promise<string[]> {
-    const normalizedUrls = normalizeRelayUrls(relayUrls);
+    const normalizedUrls = normalizeRelayUrlSet(relayUrls);
 
     // partition relays to 2 groups:
     // 1. managed by the NDK pool or the adapter

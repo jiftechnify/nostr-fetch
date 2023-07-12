@@ -10,6 +10,11 @@ export const currUnixtimeSec = (now = new Date()): number =>
   Math.floor(currUnixtimeMilli(now) / 1000);
 
 // borrowed from nostr-tools (https://github.com/nbd-wtf/nostr-tools).
+/**
+ * Normalizes single URL of relay (WebSocket endpoint).
+ * @param urlStr
+ * @returns
+ */
 export const normalizeRelayUrl = (urlStr: string): string => {
   const url = new URL(urlStr);
 
@@ -35,11 +40,11 @@ const dedup = <T>(items: T[]): T[] => {
 };
 
 /**
- *  Normalizes each relay URL in `relayUrls`, then removes duplications.
+ * Normalizes all relay URLs, then removes duplications.
  *
- *  This function also filters out malformed URLs.
+ * It also filters out malformed URLs.
  */
-export const normalizeRelayUrls = (relayUrls: string[]): string[] => {
+export const normalizeRelayUrlSet = (relayUrls: string[]): string[] => {
   return dedup(
     relayUrls
       .filter((u) => {

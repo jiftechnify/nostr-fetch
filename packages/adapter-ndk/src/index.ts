@@ -15,11 +15,11 @@ import type {
  * @example
  * ```
  * import NDK from '@nostr-dev-kit/ndk';
- * import { NostrFetcher, normalizeRelayUrls } from 'nostr-fetch';
+ * import { NostrFetcher, normalizeRelayUrlSet } from 'nostr-fetch';
  * import { ndkAdapter } from '@nostr-fetch/adapter-ndk';
  *
- * // You should normalize relay URLs by `normalizeRelayUrls` before passing them to NDK's constructor if working with nostr-fetch!
- * const explicitRelays = normalizeRelayUrls([
+ * // You should normalize a set of relay URLs by `normalizeRelayUrlSet` before passing them to NDK's constructor if working with nostr-fetch!
+ * const explicitRelays = normalizeRelayUrlSet([
  *   "wss://relay-jp.nostr.wirednet.jp",
  *   "wss://relay.damus.io",
  * ]);

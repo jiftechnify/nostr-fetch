@@ -9,7 +9,7 @@ import {
   type NostrFetcherCommonOptions,
 } from "@nostr-fetch/kernel/fetcherBackend";
 import type { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
-import { normalizeRelayUrls, withTimeout } from "@nostr-fetch/kernel/utils";
+import { normalizeRelayUrlSet, withTimeout } from "@nostr-fetch/kernel/utils";
 
 import type { RelayPool } from "nostr-relaypool";
 
@@ -91,7 +91,7 @@ export class NRTPoolAdapter implements NostrFetcherBackend {
     relayUrls: string[],
     { connectTimeoutMs }: EnsureRelaysOptions,
   ): Promise<string[]> {
-    const normalizedUrls = normalizeRelayUrls(relayUrls);
+    const normalizedUrls = normalizeRelayUrlSet(relayUrls);
 
     const ensure = (rurl: string) =>
       new Promise<string>((resolve, reject) => {

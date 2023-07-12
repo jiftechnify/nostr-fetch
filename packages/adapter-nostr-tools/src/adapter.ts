@@ -9,7 +9,7 @@ import {
   type NostrFetcherCommonOptions,
 } from "@nostr-fetch/kernel/fetcherBackend";
 import { NostrEvent, type Filter } from "@nostr-fetch/kernel/nostr";
-import { normalizeRelayUrl, normalizeRelayUrls, withTimeout } from "@nostr-fetch/kernel/utils";
+import { normalizeRelayUrl, normalizeRelayUrlSet, withTimeout } from "@nostr-fetch/kernel/utils";
 
 import type { SimplePool, Relay as ToolsRelay } from "nostr-tools";
 
@@ -40,7 +40,7 @@ export class SimplePoolExt implements NostrFetcherBackend {
     relayUrls: string[],
     { connectTimeoutMs }: EnsureRelaysOptions,
   ): Promise<string[]> {
-    const normalizedUrls = normalizeRelayUrls(relayUrls);
+    const normalizedUrls = normalizeRelayUrlSet(relayUrls);
 
     const ensure = async (rurl: string) => {
       const logger = this.#debugLogger?.subLogger(rurl);

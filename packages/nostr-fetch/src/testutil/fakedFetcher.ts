@@ -10,7 +10,7 @@ import { Filter, NostrEvent, generateSubId } from "@nostr-fetch/kernel/nostr";
 import {
   emptyAsyncGen,
   normalizeRelayUrl,
-  normalizeRelayUrls,
+  normalizeRelayUrlSet,
   withTimeout,
 } from "@nostr-fetch/kernel/utils";
 import { FakeEventsSpec, generateFakeEvents } from "@nostr-fetch/testutil/fakeEvent";
@@ -156,7 +156,7 @@ class FakeFetcherBackend implements NostrFetcherBackend {
 
   async ensureRelays(relayUrls: string[], options: EnsureRelaysOptions): Promise<string[]> {
     const connected: string[] = [];
-    const normalizedUrls = normalizeRelayUrls(relayUrls);
+    const normalizedUrls = normalizeRelayUrlSet(relayUrls);
     await Promise.all(
       normalizedUrls.map(async (rurl) => {
         const relay = this.#mapFakeRelay.get(rurl);

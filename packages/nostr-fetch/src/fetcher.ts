@@ -12,7 +12,7 @@ import {
   defaultFetcherCommonOptions,
 } from "@nostr-fetch/kernel/fetcherBackend";
 import { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
-import { abbreviate, currUnixtimeSec, normalizeRelayUrls } from "@nostr-fetch/kernel/utils";
+import { abbreviate, currUnixtimeSec, normalizeRelayUrlSet } from "@nostr-fetch/kernel/utils";
 
 import { DefaultFetcherBackend } from "./fetcherBackend";
 import {
@@ -129,7 +129,7 @@ export class NostrFetcher {
   private constructor(
     backend: NostrFetcherBackend,
     relayCapChecker: RelayCapabilityChecker,
-    initOpts: Required<NostrFetcherCommonOptions>
+    initOpts: Required<NostrFetcherCommonOptions>,
   ) {
     this.#backend = backend;
     this.#relayCapChecker = relayCapChecker;
@@ -144,7 +144,7 @@ export class NostrFetcher {
    */
   public static init(
     options: NostrFetcherCommonOptions = {},
-    initRelayCapChecker: RelayCapCheckerInitializer = initDefaultRelayCapChecker
+    initRelayCapChecker: RelayCapCheckerInitializer = initDefaultRelayCapChecker,
   ): NostrFetcher {
     const finalOpts = { ...defaultFetcherCommonOptions, ...options };
     const backend = new DefaultFetcherBackend(finalOpts);
@@ -165,7 +165,7 @@ export class NostrFetcher {
   public static withCustomPool(
     poolAdapter: NostrFetcherBackendInitializer,
     options: NostrFetcherCommonOptions = {},
-    initRelayCapChecker: RelayCapCheckerInitializer = initDefaultRelayCapChecker
+    initRelayCapChecker: RelayCapCheckerInitializer = initDefaultRelayCapChecker,
   ): NostrFetcher {
     const finalOpts = { ...defaultFetcherCommonOptions, ...options };
     const relayCapChecker = initRelayCapChecker(finalOpts);
@@ -175,7 +175,7 @@ export class NostrFetcher {
   async #ensureRelaysWithCapCheck(
     relayUrls: string[],
     opts: EnsureRelaysOptions,
-    requiredNips: number[]
+    requiredNips: number[],
   ): Promise<string[]> {
     const connectedRelays = await this.#backend.ensureRelays(relayUrls, opts);
 
@@ -192,7 +192,7 @@ export class NostrFetcher {
         if (await this.#relayCapChecker.relaySupportsNips(rurl, requiredNips)) {
           res.push(rurl);
         }
-      })
+      }),
     );
 
     this.#debugLogger?.log("info", `eligible relays: ${res}`);
@@ -226,7 +226,7 @@ export class NostrFetcher {
     relayUrls: string[],
     filter: FetchFilter,
     timeRangeFilter: FetchTimeRangeFilter,
-    options: AllEventsIterOptions<SeenOn> = {}
+    options: AllEventsIterOptions<SeenOn> = {},
   ): AsyncIterable<NostrEventExt<SeenOn>> {
     assertReq(
       { relayUrls, timeRangeFilter },
@@ -235,10 +235,10 @@ export class NostrFetcher {
         checkIfTimeRangeIsValid(
           (r) => r.timeRangeFilter,
           "error",
-          "Invalid time range (since > until)"
+          "Invalid time range (since > until)",
         ),
       ],
-      this.#debugLogger
+      this.#debugLogger,
     );
 
     const filledOpts = {
@@ -262,7 +262,7 @@ export class NostrFetcher {
     relayUrls: string[],
     filter: FetchFilter,
     timeRangeFilter: FetchTimeRangeFilter,
-    options: Required<AllEventsIterOptions<SeenOn>>
+    options: Required<AllEventsIterOptions<SeenOn>>,
   ): AsyncIterable<NostrEventExt<SeenOn>> {
     const statsMngr = FetchStatsManager.init(options.statsListener, options.statsNotifIntervalMs);
 
@@ -390,7 +390,7 @@ export class NostrFetcher {
         // subscripton loop for the relay terminated
         progTracker.setProgress(rurl, 1);
         statsMngr?.setCurrentProgress(progTracker.calcTotalProgress());
-      })
+      }),
     ).then(() => {
       // all subscription loops have been terminated
       tx.close();
@@ -418,7 +418,7 @@ export class NostrFetcher {
     relayUrls: string[],
     filter: FetchFilter,
     timeRangeFilter: FetchTimeRangeFilter,
-    options: FetchAllOptions<SeenOn> = {}
+    options: FetchAllOptions<SeenOn> = {},
   ): Promise<NostrEventExt<SeenOn>[]> {
     assertReq(
       { relayUrls, timeRangeFilter },
@@ -427,10 +427,10 @@ export class NostrFetcher {
         checkIfTimeRangeIsValid(
           (r) => r.timeRangeFilter,
           "error",
-          "Invalid time range (since > until)"
+          "Invalid time range (since > until)",
         ),
       ],
-      this.#debugLogger
+      this.#debugLogger,
     );
 
     const finalOpts = {
@@ -484,7 +484,7 @@ export class NostrFetcher {
     relayUrls: string[],
     filter: FetchFilter,
     limit: number,
-    options: FetchLatestOptions<SeenOn> = {}
+    options: FetchLatestOptions<SeenOn> = {},
   ): Promise<NostrEventExt<SeenOn>[]> {
     assertReq(
       { relayUrls, limit },
@@ -492,7 +492,7 @@ export class NostrFetcher {
         checkIfNonEmpty((r) => r.relayUrls, "warn", "Specify at least 1 relay URL"),
         checkIfTrue((r) => r.limit > 0, "error", '"limit" should be positive number'),
       ],
-      this.#debugLogger
+      this.#debugLogger,
     );
 
     const finalOpts = {
@@ -510,7 +510,7 @@ export class NostrFetcher {
 
     const statsMngr = FetchStatsManager.init(
       finalOpts.statsListener,
-      finalOpts.statsNotifIntervalMs
+      finalOpts.statsNotifIntervalMs,
     );
 
     const reqNips = this.#calcRequiredNips(filter);
@@ -620,7 +620,7 @@ export class NostrFetcher {
         // subscripton loop for the relay terminated
         progTracker.setProgress(rurl, limit);
         statsMngr?.setCurrentProgress(progTracker.calcTotalProgress());
-      })
+      }),
     ).then(() => {
       // all subnscription loops have been terminated
       tx.close();
@@ -675,7 +675,7 @@ export class NostrFetcher {
   public async fetchLastEvent<SeenOn extends boolean = false>(
     relayUrls: string[],
     filter: FetchFilter,
-    options: FetchLatestOptions<SeenOn> = {}
+    options: FetchLatestOptions<SeenOn> = {},
   ): Promise<NostrEventExt<SeenOn> | undefined> {
     const finalOpts = {
       ...defaultFetchLatestOptions,
@@ -694,7 +694,7 @@ export class NostrFetcher {
   async #mapAvailableRelayToAuthors(
     a2rs: AuthorsAndRelays,
     ensureOpts: EnsureRelaysOptions,
-    reqNips: number[]
+    reqNips: number[],
   ): Promise<[map: Map<string, string[]>, allAuthors: string[]]> {
     if (isRelaySetForAllAuthors(a2rs)) {
       assertReq(
@@ -703,13 +703,13 @@ export class NostrFetcher {
           checkIfNonEmpty((r) => r.relayUrls, "warn", "Specify at least 1 relay URL"),
           checkIfNonEmpty((r) => r.authors, "warn", "Specify at least 1 author (pubkey)"),
         ],
-        this.#debugLogger
+        this.#debugLogger,
       );
 
       const eligibleRelays = await this.#ensureRelaysWithCapCheck(
         a2rs.relayUrls,
         ensureOpts,
-        reqNips
+        reqNips,
       );
       return [new Map(eligibleRelays.map((rurl) => [rurl, a2rs.authors])), a2rs.authors];
     }
@@ -723,16 +723,16 @@ export class NostrFetcher {
           checkIfTrue(
             (a2rs) => a2rs.every(([, relays]) => relays.length > 0),
             "warn",
-            "Specify at least 1 relay URL for all authors"
+            "Specify at least 1 relay URL for all authors",
           ),
         ],
-        this.#debugLogger
+        this.#debugLogger,
       );
 
       // transpose: author to rurls -> rurl to authors
       const rurl2authors = new Map<string, string[]>();
       for (const [author, rurls] of a2rsArr) {
-        const normalized = normalizeRelayUrls(rurls);
+        const normalized = normalizeRelayUrlSet(rurls);
         for (const rurl of normalized) {
           const authors = rurl2authors.get(rurl);
           rurl2authors.set(rurl, [...(authors ?? []), author]);
@@ -741,7 +741,7 @@ export class NostrFetcher {
       const eligibleRelays = await this.#ensureRelaysWithCapCheck(
         [...rurl2authors.keys()],
         ensureOpts,
-        reqNips
+        reqNips,
       );
 
       // retain eligible relays only
@@ -753,7 +753,7 @@ export class NostrFetcher {
     }
 
     throw new NostrFetchError(
-      "malformed first argument for fetchLatestEventsPerAuthor/fetchLastEventPerAuthor"
+      "malformed first argument for fetchLatestEventsPerAuthor/fetchLastEventPerAuthor",
     );
   }
 
@@ -781,12 +781,12 @@ export class NostrFetcher {
     authorsAndRelays: AuthorsAndRelays,
     otherFilter: Omit<FetchFilter, "authors">,
     limit: number,
-    options: FetchLatestOptions<SeenOn> = {}
+    options: FetchLatestOptions<SeenOn> = {},
   ): AsyncIterable<{ author: string; events: NostrEventExt<SeenOn>[] }> {
     assertReq(
       { limit },
       [checkIfTrue((r) => r.limit > 0, "error", '"limit" should be positive number')],
-      this.#debugLogger
+      this.#debugLogger,
     );
 
     const filledOpts = {
@@ -809,7 +809,7 @@ export class NostrFetcher {
     authorsAndRelays: AuthorsAndRelays,
     otherFilter: Omit<FetchFilter, "authors">,
     limit: number,
-    options: Required<FetchLatestOptions<SeenOn>>
+    options: Required<FetchLatestOptions<SeenOn>>,
   ): AsyncIterable<{
     author: string;
     events: NostrEventExt<SeenOn>[];
@@ -821,7 +821,7 @@ export class NostrFetcher {
     const [relayToAuthors, allAuthors] = await this.#mapAvailableRelayToAuthors(
       authorsAndRelays,
       options,
-      reqNips
+      reqNips,
     );
     this.#debugLogger?.log("verbose", "relayToAuthors=%O", relayToAuthors);
 
@@ -949,7 +949,7 @@ export class NostrFetcher {
           nextUntil = oldestCreatedAt + 1;
           statsMngr?.setRelayFrontier(rurl, oldestCreatedAt);
         }
-      })
+      }),
     );
 
     // the "merger".
@@ -960,7 +960,7 @@ export class NostrFetcher {
 
         // wait for all the buckets for the author to fulfilled
         const evsPerRelay = await Promise.all(
-          latches.itemsByKey(pubkey)?.map((d) => d.promise) ?? []
+          latches.itemsByKey(pubkey)?.map((d) => d.promise) ?? [],
         );
         logger?.log("verbose", `fulfilled all buckets for this author`);
 
@@ -1014,7 +1014,7 @@ export class NostrFetcher {
           tx.send({ author: pubkey, events: res as NostrEventExt<SeenOn>[] });
         }
         statsMngr?.addProgress(1);
-      })
+      }),
     ).then(() => {
       // finished to fetch events for all authors
       tx.close();
@@ -1044,7 +1044,7 @@ export class NostrFetcher {
   public async *fetchLastEventPerAuthor<SeenOn extends boolean = false>(
     authorsAndRelays: AuthorsAndRelays,
     otherFilter: Omit<FetchFilter, "authors">,
-    options: FetchLatestOptions<SeenOn> = {}
+    options: FetchLatestOptions<SeenOn> = {},
   ): AsyncIterable<{ author: string; event: NostrEventExt<SeenOn> | undefined }> {
     const finalOpts = {
       ...defaultFetchLatestOptions,
@@ -1059,7 +1059,7 @@ export class NostrFetcher {
       authorsAndRelays,
       otherFilter,
       1,
-      finalOpts
+      finalOpts,
     );
     for await (const { author, events } of latest1Iter) {
       yield { author, event: events[0] };

@@ -1,5 +1,5 @@
 /**
- * Nostr event data structure
+ * The data structure of Nostr event.
  */
 export type NostrEvent = {
   id: string;
@@ -12,7 +12,7 @@ export type NostrEvent = {
 };
 
 /**
- * Known Nostr event kinds
+ * Known Nostr event kinds.
  */
 export const eventKind = {
   metadata: 0,
@@ -31,6 +31,7 @@ export const eventKind = {
   channelHideMessage: 43,
   channelMuteUser: 44,
   fileMetadata: 1063,
+  liveChatMessage: 1311,
   report: 1984,
   label: 1985,
   zapRequest: 9734,
@@ -52,6 +53,7 @@ export const eventKind = {
   marketplaceProduct: 30018,
   article: 30023,
   appSpecificData: 30078,
+  liveEvent: 30311,
   handlerRecommendation: 31989,
   handlerInformation: 31990,
 } as const;
