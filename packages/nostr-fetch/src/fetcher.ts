@@ -55,6 +55,26 @@ export type NostrEventExt<SeenOn extends boolean = false> = NostrEvent & {
 };
 
 /**
+ * Pair of the pubkey of event author and list of events from that author.
+ *
+ * It is the type of elements of `AsyncIterable` returned from {@linkcode NostrFetcher.fetchLatestEventsPerAuthor}.
+ */
+export type NostrEventListWithAuthor<SeenOn extends boolean> = {
+  author: string;
+  events: NostrEventExt<SeenOn>[];
+};
+
+/**
+ * Pair of the pubkye of event author and an event from that author. If no event found from the author, it will be `undefined`.
+ *
+ * It is the type of elements of `AsyncIterable` returned from {@linkcode NostrFetcher.fetchLastEventPerAuthor}.
+ */
+export type NostrEventWithAuthor<SeenOn extends boolean> = {
+  author: string;
+  event: NostrEventExt<SeenOn> | undefined;
+};
+
+/**
  * Common options for all the fetch methods.
  */
 export type FetchOptions<SeenOn extends boolean = false> = {
@@ -132,7 +152,7 @@ const defaultFetchOptions: Required<FetchOptions> = {
 };
 
 /**
- * Options for `allEventsIterator`.
+ * Options for {@linkcode NostrFetcher.allEventsIterator}.
  */
 export type AllEventsIterOptions<SeenOn extends boolean = false> = FetchOptions<SeenOn> & {
   /**
@@ -153,7 +173,7 @@ const defaultAllEventsIterOptions: Required<AllEventsIterOptions> = {
 };
 
 /**
- * Options for `fetchAllEvents`.
+ * Options for {@linkcode NostrFetcher.fetchAllEvents}.
  */
 export type FetchAllOptions<SeenOn extends boolean = false> = FetchOptions<SeenOn> & {
   /**
@@ -170,7 +190,7 @@ const defaultFetchAllOptions: Required<FetchAllOptions> = {
 };
 
 /**
- * Options for "fetch latest N events" kind of fetchers.
+ * Options for "fetch latest N events" kind of fetchers, such as {@linkcode NostrFetcher.fetchLatestEvents}.
  */
 export type FetchLatestOptions<SeenOn extends boolean = false> = FetchOptions<SeenOn> & {
   /**
@@ -189,7 +209,7 @@ const defaultFetchLatestOptions: Required<FetchLatestOptions> = {
 };
 
 /**
- * Type of the first argument of `fetchLatestEventsPerAuthor`/`fetchLastEventPerAuthor`.
+ * Type of the first argument of {@linkcode NostrFetcher.fetchLatestEventsPerAuthor}/{@linkcode NostrFetcher.fetchLastEventPerAuthor}.
  */
 export type AuthorsAndRelays = RelaySetForAllAuthors | RelaySetsPerAuthor;
 
@@ -218,7 +238,7 @@ const isRelaySetsPerAuthor = (a2rs: AuthorsAndRelays): a2rs is RelaySetsPerAutho
  *
  * It sits on top of a Nostr relay pool implementation which manages connections to Nostr relays. It is recommended to reuse single `NostrFetcher` instance in entire app.
  *
- * You must instantiate `NostrFetcher` with static methods `init()` or `withCustomPool()` instead of the constructor.
+ * You must instantiate `NostrFetcher` with static methods like {@linkcode NostrFetcher.init} or {@linkcode NostrFetcher.withCustomPool} instead of the constructor.
  */
 export class NostrFetcher {
   #backend: NostrFetcherBackend;
@@ -239,7 +259,7 @@ export class NostrFetcher {
   }
 
   /**
-   * Initializes `NostrFetcher` with the default relay pool implementation.
+   * Initializes {@linkcode NostrFetcher} with the default relay pool implementation.
    */
   public static init(
     options: NostrFetcherCommonOptions = {},
@@ -252,7 +272,7 @@ export class NostrFetcher {
   }
 
   /**
-   * Initializes `NostrFetcher` with the given adapted custom relay pool implementation.
+   * Initializes {@linkcode NostrFetcher} with the given adapted custom relay pool implementation.
    *
    * @example
    * ```ts
@@ -308,17 +328,11 @@ export class NostrFetcher {
   /**
    * Returns an async iterable of all events matching the filter from Nostr relays specified by the array of URLs.
    *
-   * You can iterate over events using for-await-of loop.
+   * You can iterate over events using `for-await-of` loop.
    *
    * Note: there are no guarantees about the order of returned events.
    *
    * Throws {@linkcode NostrFetchError} if `timeRangeFilter` is invalid (`since` > `until`).
-   *
-   * @param relayUrls
-   * @param filter
-   * @param timeRangeFilter
-   * @param options
-   * @returns
    */
   public allEventsIterator<SeenOn extends boolean = false>(
     relayUrls: string[],
@@ -505,12 +519,6 @@ export class NostrFetcher {
    * Note: there are no guarantees about the order of returned events if `sort` options is not specified.
    *
    * Throws {@linkcode NostrFetchError} if `timeRangeFilter` is invalid (`since` > `until`).
-   *
-   * @param relayUrls
-   * @param filter
-   * @param timeRangeFilter
-   * @param options
-   * @returns
    */
   public async fetchAllEvents<SeenOn extends boolean = false>(
     relayUrls: string[],
@@ -571,12 +579,6 @@ export class NostrFetcher {
    * Events are sorted in "newest to oldest" order.
    *
    * Throws {@linkcode NostrFetchError} if `limit` is a non-positive number.
-   *
-   * @param relayUrls
-   * @param filter
-   * @param limit
-   * @param options
-   * @returns
    */
   public async fetchLatestEvents<SeenOn extends boolean = false>(
     relayUrls: string[],
@@ -764,11 +766,6 @@ export class NostrFetcher {
    * Fetches the last event matching the filter from Nostr relays specified by the array of URLs.
    *
    * Returns `undefined` if no event matching the filter exists in any relay.
-   *
-   * @param relayUrls
-   * @param filter
-   * @param options
-   * @returns
    */
   public async fetchLastEvent<SeenOn extends boolean = false>(
     relayUrls: string[],
@@ -863,24 +860,18 @@ export class NostrFetcher {
    * - `{ authors: string[], relayUrls: string[] }`: The fetcher will use the same relay set (`relayUrls`) for all `authors` to fetch events.
    * - `Map<string, string[]>`: Key must be author's pubkey and value must be relay set for that author. The fetcher will use separate relay set for each author to fetch events.
    *
-   * Result is an async iterable of `{ author (pubkey), events (from the author) }` pairs.
+   * Result is an async iterable of `{ author: <author's pubkey>, events: <events from the author> }` pairs.
    *
    * Each array of events in the result are sorted in "newest to oldest" order.
    *
    * Throws {@linkcode NostrFetchError} if `limit` is a non-positive number.
-   *
-   * @param authorsAndRelays
-   * @param otherFilter
-   * @param limit
-   * @param options
-   * @returns
    */
   public fetchLatestEventsPerAuthor<SeenOn extends boolean = false>(
     authorsAndRelays: AuthorsAndRelays,
     otherFilter: Omit<FetchFilter, "authors">,
     limit: number,
     options: FetchLatestOptions<SeenOn> = {},
-  ): AsyncIterable<{ author: string; events: NostrEventExt<SeenOn>[] }> {
+  ): AsyncIterable<NostrEventListWithAuthor<SeenOn>> {
     assertReq(
       { limit },
       [checkIfTrue((r) => r.limit > 0, "error", '"limit" should be positive number')],
@@ -908,10 +899,7 @@ export class NostrFetcher {
     otherFilter: Omit<FetchFilter, "authors">,
     limit: number,
     options: Required<FetchLatestOptions<SeenOn>>,
-  ): AsyncIterable<{
-    author: string;
-    events: NostrEventExt<SeenOn>[];
-  }> {
+  ): AsyncIterable<NostrEventListWithAuthor<SeenOn>> {
     const statsMngr = FetchStatsManager.init(options.statsListener, options.statsNotifIntervalMs);
 
     // get mapping of available relay to authors and list of all authors
@@ -1130,20 +1118,15 @@ export class NostrFetcher {
    * - `{ authors: string[], relayUrls: string[] }`: The fetcher will use the same relay set (`relayUrls`) for all `authors` to fetch events.
    * - `Map<string, string[]>`: Key must be author's pubkey and value must be relay set for that author. The fetcher will use separate relay set for each author to fetch events.
    *
-   * Result is an async iterable of `{ author (pubkey), event }` pairs.
+   * Result is an async iterable of `{ author: <author's pubkey>, event: <the latest event from the author> }` pairs.
    *
    * `event` in result will be `undefined` if no event matching the filter for the author exists in any relay.
-   *
-   * @param authorsAndRelays
-   * @param otherFilter
-   * @param options
-   * @returns
    */
   public async *fetchLastEventPerAuthor<SeenOn extends boolean = false>(
     authorsAndRelays: AuthorsAndRelays,
     otherFilter: Omit<FetchFilter, "authors">,
     options: FetchLatestOptions<SeenOn> = {},
-  ): AsyncIterable<{ author: string; event: NostrEventExt<SeenOn> | undefined }> {
+  ): AsyncIterable<NostrEventWithAuthor<SeenOn>> {
     const finalOpts = {
       ...defaultFetchLatestOptions,
       ...{

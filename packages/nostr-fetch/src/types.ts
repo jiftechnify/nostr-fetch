@@ -25,15 +25,15 @@ export type RelayStatus = "fetching" | "completed" | "aborted" | "failed";
  * Per-relay fetch statistics.
  */
 export type RelayFetchStats = {
-  /** Status of relays during a fetch */
+  /** Status of relays during a fetch. */
   status: RelayStatus;
 
-  /** Number of events fetched from the relay */
+  /** Number of events fetched from the relay. */
   numFetchedEvents: number;
 
   /**
    * "Frontier" of the event fetching.
-   * In other words, `created_at` of the oldest events fetched from the relay
+   * In other words, `created_at` of the oldest events fetched from the relay.
    */
   frontier: number;
 };
@@ -42,23 +42,23 @@ export type RelayFetchStats = {
  * Various statistics of the event fetching.
  */
 export type FetchStats = {
-  /** Overall progress of the event fetching */
+  /** Overall progress of the event fetching. */
   progress: {
     max: number;
     current: number;
   };
-  /** Events and subscriptions counts */
+  /** Events and subscriptions counts. */
   counts: {
-    /** Number of events fetched from relays so far */
+    /** Number of events fetched from relays so far. */
     fetchedEvents: number;
-    /** Number of events buffered in the internal buffer */
+    /** Number of events buffered in the internal buffer. */
     bufferedEvents: number;
-    /** Number of subscriptions opened so far */
+    /** Number of subscriptions opened so far. */
     openedSubs: number;
-    /** Number of subscriptions that is running */
+    /** Number of subscriptions that is running. */
     runningSubs: number;
   };
-  /** Per-relay fetch statistics */
+  /** Per-relay fetch statistics. */
   relays: {
     [relayUrl: string]: RelayFetchStats;
   };
