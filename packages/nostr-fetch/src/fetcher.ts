@@ -47,14 +47,69 @@ export type NostrEventExt<SeenOn extends boolean = false> = NostrEvent & {
   seenOn: SeenOn extends true ? string[] : undefined;
 };
 
+/**
+ * Common options for all the fetch methods.
+ */
 export type FetchOptions<SeenOn extends boolean = false> = {
+  /**
+   * If true, the fetcher skips event signature verification.
+   *
+   * Note: This option has no effect under some relay pool adapters.
+   * Check the document of the relay pool adapter you want to use.
+   *
+   * @default false
+   */
   skipVerification?: boolean;
+
+  /**
+   * If true, `seenOn` property is appeded to every returned events.
+   * The value of `seenOn` is array of relay URLs on which the event have been seen.
+   *
+   * @default false
+   */
   withSeenOn?: SeenOn;
+
+  /**
+   * The function for listening fetch statistics.
+   *
+   * @default undefined
+   */
   statsListener?: FetchStatsListener | undefined;
+
+  /**
+   * How often fetch statistics is notified to the listener (specified via `statsListener`), in milliseconds.
+   *
+   * @default 1000
+   */
   statsNotifIntervalMs?: number;
+
+  /**
+   * The maximum amount of time allowed to attempt to connect to relays, in milliseconds.
+   *
+   * @default 5000
+   */
   connectTimeoutMs?: number;
+
+  /**
+   * The `AbortSignal` used to abort an event fetching.
+   *
+   * @default undefined
+   */
   abortSignal?: AbortSignal | undefined;
+
+  /**
+   * The maximum amount of time to wait for events from relay before a subscription is automatically aborted before EOSE, in milliseconds.
+   *
+   * @default 10000
+   */
   abortSubBeforeEoseTimeoutMs?: number;
+
+  /**
+   * `limit` value to be used in internal subscriptions.
+   * You may want to lower this value if relays you use have limit on value of `limit`.
+   *
+   * @default 5000
+   */
   limitPerReq?: number;
 };
 
@@ -69,7 +124,19 @@ const defaultFetchOptions: Required<FetchOptions> = {
   limitPerReq: MAX_LIMIT_PER_REQ,
 };
 
+/**
+ * Options for `allEventsIterator`.
+ */
 export type AllEventsIterOptions<SeenOn extends boolean = false> = FetchOptions<SeenOn> & {
+  /**
+   * If true, the backpressure mode is enabled.
+   *
+   * In the backpressure mode, a fetcher is automatically slowed down when the consumer of events is slower than the fetcher (producer of events).
+   *
+   * This feature may be useful for jobs like transferring events from relays to other relays.
+   *
+   * @default false
+   */
   enableBackpressure?: boolean;
 };
 
@@ -78,7 +145,15 @@ const defaultAllEventsIterOptions: Required<AllEventsIterOptions> = {
   enableBackpressure: false,
 };
 
+/**
+ * Options for `fetchAllEvents`.
+ */
 export type FetchAllOptions<SeenOn extends boolean = false> = FetchOptions<SeenOn> & {
+  /**
+   * If true, resulting events are sorted in "newest to oldest" order.
+   *
+   * @default false
+   */
   sort?: boolean;
 };
 
@@ -87,7 +162,17 @@ const defaultFetchAllOptions: Required<FetchAllOptions> = {
   sort: false,
 };
 
+/**
+ * Options for "fetch latest N events" kind of fetchers.
+ */
 export type FetchLatestOptions<SeenOn extends boolean = false> = FetchOptions<SeenOn> & {
+  /**
+   * If true, the "reduced verification" mode is enabled.
+   *
+   * In the reduced verification mode, event signature verification is performed only to minimum amount of events enough to ensure validity.
+   *
+   * @default false
+   */
   reduceVerification?: boolean;
 };
 
@@ -97,7 +182,7 @@ const defaultFetchLatestOptions: Required<FetchLatestOptions> = {
 };
 
 /**
- * Type of the fiest argument of `fetchLatestEventsPerAuthor`/`fetchLastEventPerAuthor`
+ * Type of the first argument of `fetchLatestEventsPerAuthor`/`fetchLastEventPerAuthor`.
  */
 export type AuthorsAndRelays = RelaySetForAllAuthors | RelaySetsPerAuthor;
 
@@ -121,6 +206,13 @@ const isRelaySetsPerAuthor = (a2rs: AuthorsAndRelays): a2rs is RelaySetsPerAutho
   return Symbol.iterator in Object(a2rs);
 };
 
+/**
+ * The entry point of the Nostr event fetching.
+ *
+ * It sits on top of a Nostr relay pool implementation which manages connections to Nostr relays. It is recommended to reuse single `NostrFetcher` instance in entire app.
+ *
+ * You must instantiate `NostrFetcher` with static methods `init()` or `withCustomPool()` instead of the constructor.
+ */
 export class NostrFetcher {
   #backend: NostrFetcherBackend;
   #relayCapChecker: RelayCapabilityChecker;
@@ -153,8 +245,7 @@ export class NostrFetcher {
   }
 
   /**
-   * Initializes `NostrFetcher` with the given custom relay pool implementation.
-   *
+   * Initializes `NostrFetcher` with the given adapted custom relay pool implementation.
    *
    * @example
    * ```ts
