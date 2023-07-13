@@ -20,7 +20,7 @@ const main = async () => {
     {
       skipVerification: true,
       enableBackpressure: true, // enabling backpressure mode!
-    }
+    },
   );
 
   for await (const ev of eventsIter) {

@@ -21,7 +21,7 @@ export const getWriteRelaysFromEvent = (ev: NostrEvent): string[] => {
         return [];
       }
       const es = Object.entries(
-        parsedContent as Record<string, { read?: boolean; write?: boolean }>
+        parsedContent as Record<string, { read?: boolean; write?: boolean }>,
       );
       return es.filter(([, usage]) => usage.write ?? false).map(([relay]) => relay);
     }

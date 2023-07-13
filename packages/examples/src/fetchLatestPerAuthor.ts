@@ -29,7 +29,7 @@ const main = async () => {
   const latestPostsPerFollowee = fetcher.fetchLatestEventsPerAuthor(
     { authors: followees, relayUrls: defaultRelays },
     { kinds: [eventKind.text] },
-    10
+    10,
   );
 
   for await (const { author, events } of latestPostsPerFollowee) {

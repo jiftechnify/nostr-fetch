@@ -12,7 +12,7 @@ const main = async () => {
     {
       kinds: [eventKind.text],
     },
-    100
+    100,
     // { skipVerification: true }
   );
 

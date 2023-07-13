@@ -19,7 +19,7 @@ const main = async () => {
     {
       statsListener: (stats) => console.error(stats),
       statsNotifIntervalMs: 500,
-    }
+    },
   );
 
   for await (const ev of eventsIter) {

@@ -16,7 +16,7 @@ const main = async () => {
     {
       since: nHoursAgo(1),
     },
-    { abortSignal: abortCtrl.signal } // pass `AbortController.signal` to enable abortion
+    { abortSignal: abortCtrl.signal }, // pass `AbortController.signal` to enable abortion
   );
 
   // abort fetching after 1 sec.
