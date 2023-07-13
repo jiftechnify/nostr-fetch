@@ -37,7 +37,14 @@ const MAX_LIMIT_PER_REQ_IN_BACKPRESSURE = 500;
 
 const MIN_HIGH_WATER_MARK = 5000;
 
+/**
+ * Structure of Nostr event filter except `limit`, `since` and `until`.
+ */
 export type FetchFilter = Omit<Filter, "limit" | "since" | "until">;
+
+/**
+ * Pair of timestamps which specifies time range of events to fetch.
+ */
 export type FetchTimeRangeFilter = Pick<Filter, "since" | "until">;
 
 /**
