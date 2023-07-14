@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { abbreviate, normalizeRelayUrl, normalizeRelayUrls, withTimeout } from "./utils";
+import { abbreviate, normalizeRelayUrl, normalizeRelayUrlSet, withTimeout } from "./utils";
 
 describe("normalizeRelayUrl", () => {
   test("normalizes a relay url", () => {
@@ -26,10 +26,10 @@ describe("normalizeRelayUrl", () => {
   });
 });
 
-describe("normalizeRelayUrls", () => {
+describe("normalizeRelayUrlSet", () => {
   test("normalizes relay urls and dedup", () => {
     expect(
-      normalizeRelayUrls([
+      normalizeRelayUrlSet([
         "wss://relay.example.com/",
         "wss://relay.example.com",
         "wss://relay.example.com:443",

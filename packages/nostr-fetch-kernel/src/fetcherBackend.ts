@@ -27,7 +27,7 @@ export interface NostrFetcherBackend {
    * It should *normalize* the passed `relayUrls` before establishing connections to relays.
    *
    * Hint:
-   * You should make use of the function `normalizeRelayUrls` from `@nostr-fetch/kernel/utils` to normalize relay URLs.
+   * You should make use of the function `normalizeRelayUrlSet` from `@nostr-fetch/kernel/utils` to normalize a set of relay URLs.
    *
    */
   ensureRelays(relayUrls: string[], options: EnsureRelaysOptions): Promise<string[]>;

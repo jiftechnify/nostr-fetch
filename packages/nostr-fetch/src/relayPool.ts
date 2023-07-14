@@ -6,7 +6,7 @@ import { DebugLogger, LogLevel } from "@nostr-fetch/kernel/debugLogger";
 import {
   currUnixtimeMilli,
   normalizeRelayUrl,
-  normalizeRelayUrls,
+  normalizeRelayUrlSet,
 } from "@nostr-fetch/kernel/utils";
 
 // [NIP-01](https://github.com/nostr-protocol/nips/blob/master/01.md#other-notes) says:
@@ -143,7 +143,7 @@ class RelayPoolImpl implements RelayPool {
   }
 
   public async ensureRelays(relayUrls: string[], relayOpts: RelayOptions): Promise<string[]> {
-    const normalizedUrls = normalizeRelayUrls(relayUrls);
+    const normalizedUrls = normalizeRelayUrlSet(relayUrls);
     await this.addRelays(normalizedUrls, relayOpts);
 
     const connectedRelays: string[] = [];
@@ -158,7 +158,7 @@ class RelayPoolImpl implements RelayPool {
 
   public async ensureSingleRelay(
     relayUrl: string,
-    relayOpts: RelayOptions
+    relayOpts: RelayOptions,
   ): Promise<Relay | undefined> {
     const normalizedUrl = normalizeRelayUrl(relayUrl);
     await this.addRelays([normalizedUrl], relayOpts);

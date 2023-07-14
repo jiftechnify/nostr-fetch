@@ -12,7 +12,7 @@ import {
   defaultFetcherCommonOptions,
 } from "@nostr-fetch/kernel/fetcherBackend";
 import { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
-import { abbreviate, currUnixtimeSec, normalizeRelayUrls } from "@nostr-fetch/kernel/utils";
+import { abbreviate, currUnixtimeSec, normalizeRelayUrlSet } from "@nostr-fetch/kernel/utils";
 
 import { DefaultFetcherBackend } from "./fetcherBackend";
 import {
@@ -37,7 +37,14 @@ const MAX_LIMIT_PER_REQ_IN_BACKPRESSURE = 500;
 
 const MIN_HIGH_WATER_MARK = 5000;
 
+/**
+ * Structure of Nostr event filter except `limit`, `since` and `until`.
+ */
 export type FetchFilter = Omit<Filter, "limit" | "since" | "until">;
+
+/**
+ * Pair of timestamps which specifies time range of events to fetch.
+ */
 export type FetchTimeRangeFilter = Pick<Filter, "since" | "until">;
 
 /**
@@ -47,14 +54,89 @@ export type NostrEventExt<SeenOn extends boolean = false> = NostrEvent & {
   seenOn: SeenOn extends true ? string[] : undefined;
 };
 
+/**
+ * Pair of the pubkey of event author and list of events from that author.
+ *
+ * It is the type of elements of `AsyncIterable` returned from {@linkcode NostrFetcher.fetchLatestEventsPerAuthor}.
+ */
+export type NostrEventListWithAuthor<SeenOn extends boolean> = {
+  author: string;
+  events: NostrEventExt<SeenOn>[];
+};
+
+/**
+ * Pair of the pubkye of event author and an event from that author. If no event found from the author, it will be `undefined`.
+ *
+ * It is the type of elements of `AsyncIterable` returned from {@linkcode NostrFetcher.fetchLastEventPerAuthor}.
+ */
+export type NostrEventWithAuthor<SeenOn extends boolean> = {
+  author: string;
+  event: NostrEventExt<SeenOn> | undefined;
+};
+
+/**
+ * Common options for all the fetch methods.
+ */
 export type FetchOptions<SeenOn extends boolean = false> = {
+  /**
+   * If true, the fetcher skips event signature verification.
+   *
+   * Note: This option has no effect under some relay pool adapters.
+   * Check the document of the relay pool adapter you want to use.
+   *
+   * @default false
+   */
   skipVerification?: boolean;
+
+  /**
+   * If true, `seenOn` property is appeded to every returned events.
+   * The value of `seenOn` is array of relay URLs on which the event have been seen.
+   *
+   * @default false
+   */
   withSeenOn?: SeenOn;
+
+  /**
+   * The function for listening fetch statistics.
+   *
+   * @default undefined
+   */
   statsListener?: FetchStatsListener | undefined;
+
+  /**
+   * How often fetch statistics is notified to the listener (specified via `statsListener`), in milliseconds.
+   *
+   * @default 1000
+   */
   statsNotifIntervalMs?: number;
+
+  /**
+   * The maximum amount of time allowed to attempt to connect to relays, in milliseconds.
+   *
+   * @default 5000
+   */
   connectTimeoutMs?: number;
+
+  /**
+   * The `AbortSignal` used to abort an event fetching.
+   *
+   * @default undefined
+   */
   abortSignal?: AbortSignal | undefined;
+
+  /**
+   * The maximum amount of time to wait for events from relay before a subscription is automatically aborted before EOSE, in milliseconds.
+   *
+   * @default 10000
+   */
   abortSubBeforeEoseTimeoutMs?: number;
+
+  /**
+   * `limit` value to be used in internal subscriptions.
+   * You may want to lower this value if relays you use have limit on value of `limit`.
+   *
+   * @default 5000
+   */
   limitPerReq?: number;
 };
 
@@ -69,7 +151,19 @@ const defaultFetchOptions: Required<FetchOptions> = {
   limitPerReq: MAX_LIMIT_PER_REQ,
 };
 
+/**
+ * Options for {@linkcode NostrFetcher.allEventsIterator}.
+ */
 export type AllEventsIterOptions<SeenOn extends boolean = false> = FetchOptions<SeenOn> & {
+  /**
+   * If true, the backpressure mode is enabled.
+   *
+   * In the backpressure mode, a fetcher is automatically slowed down when the consumer of events is slower than the fetcher (producer of events).
+   *
+   * This feature may be useful for jobs like transferring events from relays to other relays.
+   *
+   * @default false
+   */
   enableBackpressure?: boolean;
 };
 
@@ -78,7 +172,15 @@ const defaultAllEventsIterOptions: Required<AllEventsIterOptions> = {
   enableBackpressure: false,
 };
 
+/**
+ * Options for {@linkcode NostrFetcher.fetchAllEvents}.
+ */
 export type FetchAllOptions<SeenOn extends boolean = false> = FetchOptions<SeenOn> & {
+  /**
+   * If true, resulting events are sorted in "newest to oldest" order.
+   *
+   * @default false
+   */
   sort?: boolean;
 };
 
@@ -87,7 +189,17 @@ const defaultFetchAllOptions: Required<FetchAllOptions> = {
   sort: false,
 };
 
+/**
+ * Options for "fetch latest N events" kind of fetchers, such as {@linkcode NostrFetcher.fetchLatestEvents}.
+ */
 export type FetchLatestOptions<SeenOn extends boolean = false> = FetchOptions<SeenOn> & {
+  /**
+   * If true, the "reduced verification" mode is enabled.
+   *
+   * In the reduced verification mode, event signature verification is performed only to minimum amount of events enough to ensure validity.
+   *
+   * @default false
+   */
   reduceVerification?: boolean;
 };
 
@@ -97,7 +209,7 @@ const defaultFetchLatestOptions: Required<FetchLatestOptions> = {
 };
 
 /**
- * Type of the fiest argument of `fetchLatestEventsPerAuthor`/`fetchLastEventPerAuthor`
+ * Type of the first argument of {@linkcode NostrFetcher.fetchLatestEventsPerAuthor}/{@linkcode NostrFetcher.fetchLastEventPerAuthor}.
  */
 export type AuthorsAndRelays = RelaySetForAllAuthors | RelaySetsPerAuthor;
 
@@ -121,6 +233,13 @@ const isRelaySetsPerAuthor = (a2rs: AuthorsAndRelays): a2rs is RelaySetsPerAutho
   return Symbol.iterator in Object(a2rs);
 };
 
+/**
+ * The entry point of the Nostr event fetching.
+ *
+ * It sits on top of a Nostr relay pool implementation which manages connections to Nostr relays. It is recommended to reuse single `NostrFetcher` instance in entire app.
+ *
+ * You must instantiate `NostrFetcher` with static methods like {@linkcode NostrFetcher.init} or {@linkcode NostrFetcher.withCustomPool} instead of the constructor.
+ */
 export class NostrFetcher {
   #backend: NostrFetcherBackend;
   #relayCapChecker: RelayCapabilityChecker;
@@ -129,7 +248,7 @@ export class NostrFetcher {
   private constructor(
     backend: NostrFetcherBackend,
     relayCapChecker: RelayCapabilityChecker,
-    initOpts: Required<NostrFetcherCommonOptions>
+    initOpts: Required<NostrFetcherCommonOptions>,
   ) {
     this.#backend = backend;
     this.#relayCapChecker = relayCapChecker;
@@ -140,11 +259,11 @@ export class NostrFetcher {
   }
 
   /**
-   * Initializes `NostrFetcher` with the default relay pool implementation.
+   * Initializes {@linkcode NostrFetcher} with the default relay pool implementation.
    */
   public static init(
     options: NostrFetcherCommonOptions = {},
-    initRelayCapChecker: RelayCapCheckerInitializer = initDefaultRelayCapChecker
+    initRelayCapChecker: RelayCapCheckerInitializer = initDefaultRelayCapChecker,
   ): NostrFetcher {
     const finalOpts = { ...defaultFetcherCommonOptions, ...options };
     const backend = new DefaultFetcherBackend(finalOpts);
@@ -153,8 +272,7 @@ export class NostrFetcher {
   }
 
   /**
-   * Initializes `NostrFetcher` with the given custom relay pool implementation.
-   *
+   * Initializes {@linkcode NostrFetcher} with the given adapted custom relay pool implementation.
    *
    * @example
    * ```ts
@@ -165,7 +283,7 @@ export class NostrFetcher {
   public static withCustomPool(
     poolAdapter: NostrFetcherBackendInitializer,
     options: NostrFetcherCommonOptions = {},
-    initRelayCapChecker: RelayCapCheckerInitializer = initDefaultRelayCapChecker
+    initRelayCapChecker: RelayCapCheckerInitializer = initDefaultRelayCapChecker,
   ): NostrFetcher {
     const finalOpts = { ...defaultFetcherCommonOptions, ...options };
     const relayCapChecker = initRelayCapChecker(finalOpts);
@@ -175,7 +293,7 @@ export class NostrFetcher {
   async #ensureRelaysWithCapCheck(
     relayUrls: string[],
     opts: EnsureRelaysOptions,
-    requiredNips: number[]
+    requiredNips: number[],
   ): Promise<string[]> {
     const connectedRelays = await this.#backend.ensureRelays(relayUrls, opts);
 
@@ -192,7 +310,7 @@ export class NostrFetcher {
         if (await this.#relayCapChecker.relaySupportsNips(rurl, requiredNips)) {
           res.push(rurl);
         }
-      })
+      }),
     );
 
     this.#debugLogger?.log("info", `eligible relays: ${res}`);
@@ -210,23 +328,17 @@ export class NostrFetcher {
   /**
    * Returns an async iterable of all events matching the filter from Nostr relays specified by the array of URLs.
    *
-   * You can iterate over events using for-await-of loop.
+   * You can iterate over events using `for-await-of` loop.
    *
    * Note: there are no guarantees about the order of returned events.
    *
    * Throws {@linkcode NostrFetchError} if `timeRangeFilter` is invalid (`since` > `until`).
-   *
-   * @param relayUrls
-   * @param filter
-   * @param timeRangeFilter
-   * @param options
-   * @returns
    */
   public allEventsIterator<SeenOn extends boolean = false>(
     relayUrls: string[],
     filter: FetchFilter,
     timeRangeFilter: FetchTimeRangeFilter,
-    options: AllEventsIterOptions<SeenOn> = {}
+    options: AllEventsIterOptions<SeenOn> = {},
   ): AsyncIterable<NostrEventExt<SeenOn>> {
     assertReq(
       { relayUrls, timeRangeFilter },
@@ -235,10 +347,10 @@ export class NostrFetcher {
         checkIfTimeRangeIsValid(
           (r) => r.timeRangeFilter,
           "error",
-          "Invalid time range (since > until)"
+          "Invalid time range (since > until)",
         ),
       ],
-      this.#debugLogger
+      this.#debugLogger,
     );
 
     const filledOpts = {
@@ -262,7 +374,7 @@ export class NostrFetcher {
     relayUrls: string[],
     filter: FetchFilter,
     timeRangeFilter: FetchTimeRangeFilter,
-    options: Required<AllEventsIterOptions<SeenOn>>
+    options: Required<AllEventsIterOptions<SeenOn>>,
   ): AsyncIterable<NostrEventExt<SeenOn>> {
     const statsMngr = FetchStatsManager.init(options.statsListener, options.statsNotifIntervalMs);
 
@@ -390,7 +502,7 @@ export class NostrFetcher {
         // subscripton loop for the relay terminated
         progTracker.setProgress(rurl, 1);
         statsMngr?.setCurrentProgress(progTracker.calcTotalProgress());
-      })
+      }),
     ).then(() => {
       // all subscription loops have been terminated
       tx.close();
@@ -407,18 +519,12 @@ export class NostrFetcher {
    * Note: there are no guarantees about the order of returned events if `sort` options is not specified.
    *
    * Throws {@linkcode NostrFetchError} if `timeRangeFilter` is invalid (`since` > `until`).
-   *
-   * @param relayUrls
-   * @param filter
-   * @param timeRangeFilter
-   * @param options
-   * @returns
    */
   public async fetchAllEvents<SeenOn extends boolean = false>(
     relayUrls: string[],
     filter: FetchFilter,
     timeRangeFilter: FetchTimeRangeFilter,
-    options: FetchAllOptions<SeenOn> = {}
+    options: FetchAllOptions<SeenOn> = {},
   ): Promise<NostrEventExt<SeenOn>[]> {
     assertReq(
       { relayUrls, timeRangeFilter },
@@ -427,10 +533,10 @@ export class NostrFetcher {
         checkIfTimeRangeIsValid(
           (r) => r.timeRangeFilter,
           "error",
-          "Invalid time range (since > until)"
+          "Invalid time range (since > until)",
         ),
       ],
-      this.#debugLogger
+      this.#debugLogger,
     );
 
     const finalOpts = {
@@ -473,18 +579,12 @@ export class NostrFetcher {
    * Events are sorted in "newest to oldest" order.
    *
    * Throws {@linkcode NostrFetchError} if `limit` is a non-positive number.
-   *
-   * @param relayUrls
-   * @param filter
-   * @param limit
-   * @param options
-   * @returns
    */
   public async fetchLatestEvents<SeenOn extends boolean = false>(
     relayUrls: string[],
     filter: FetchFilter,
     limit: number,
-    options: FetchLatestOptions<SeenOn> = {}
+    options: FetchLatestOptions<SeenOn> = {},
   ): Promise<NostrEventExt<SeenOn>[]> {
     assertReq(
       { relayUrls, limit },
@@ -492,7 +592,7 @@ export class NostrFetcher {
         checkIfNonEmpty((r) => r.relayUrls, "warn", "Specify at least 1 relay URL"),
         checkIfTrue((r) => r.limit > 0, "error", '"limit" should be positive number'),
       ],
-      this.#debugLogger
+      this.#debugLogger,
     );
 
     const finalOpts = {
@@ -510,7 +610,7 @@ export class NostrFetcher {
 
     const statsMngr = FetchStatsManager.init(
       finalOpts.statsListener,
-      finalOpts.statsNotifIntervalMs
+      finalOpts.statsNotifIntervalMs,
     );
 
     const reqNips = this.#calcRequiredNips(filter);
@@ -620,7 +720,7 @@ export class NostrFetcher {
         // subscripton loop for the relay terminated
         progTracker.setProgress(rurl, limit);
         statsMngr?.setCurrentProgress(progTracker.calcTotalProgress());
-      })
+      }),
     ).then(() => {
       // all subnscription loops have been terminated
       tx.close();
@@ -666,16 +766,11 @@ export class NostrFetcher {
    * Fetches the last event matching the filter from Nostr relays specified by the array of URLs.
    *
    * Returns `undefined` if no event matching the filter exists in any relay.
-   *
-   * @param relayUrls
-   * @param filter
-   * @param options
-   * @returns
    */
   public async fetchLastEvent<SeenOn extends boolean = false>(
     relayUrls: string[],
     filter: FetchFilter,
-    options: FetchLatestOptions<SeenOn> = {}
+    options: FetchLatestOptions<SeenOn> = {},
   ): Promise<NostrEventExt<SeenOn> | undefined> {
     const finalOpts = {
       ...defaultFetchLatestOptions,
@@ -694,7 +789,7 @@ export class NostrFetcher {
   async #mapAvailableRelayToAuthors(
     a2rs: AuthorsAndRelays,
     ensureOpts: EnsureRelaysOptions,
-    reqNips: number[]
+    reqNips: number[],
   ): Promise<[map: Map<string, string[]>, allAuthors: string[]]> {
     if (isRelaySetForAllAuthors(a2rs)) {
       assertReq(
@@ -703,13 +798,13 @@ export class NostrFetcher {
           checkIfNonEmpty((r) => r.relayUrls, "warn", "Specify at least 1 relay URL"),
           checkIfNonEmpty((r) => r.authors, "warn", "Specify at least 1 author (pubkey)"),
         ],
-        this.#debugLogger
+        this.#debugLogger,
       );
 
       const eligibleRelays = await this.#ensureRelaysWithCapCheck(
         a2rs.relayUrls,
         ensureOpts,
-        reqNips
+        reqNips,
       );
       return [new Map(eligibleRelays.map((rurl) => [rurl, a2rs.authors])), a2rs.authors];
     }
@@ -723,16 +818,16 @@ export class NostrFetcher {
           checkIfTrue(
             (a2rs) => a2rs.every(([, relays]) => relays.length > 0),
             "warn",
-            "Specify at least 1 relay URL for all authors"
+            "Specify at least 1 relay URL for all authors",
           ),
         ],
-        this.#debugLogger
+        this.#debugLogger,
       );
 
       // transpose: author to rurls -> rurl to authors
       const rurl2authors = new Map<string, string[]>();
       for (const [author, rurls] of a2rsArr) {
-        const normalized = normalizeRelayUrls(rurls);
+        const normalized = normalizeRelayUrlSet(rurls);
         for (const rurl of normalized) {
           const authors = rurl2authors.get(rurl);
           rurl2authors.set(rurl, [...(authors ?? []), author]);
@@ -741,7 +836,7 @@ export class NostrFetcher {
       const eligibleRelays = await this.#ensureRelaysWithCapCheck(
         [...rurl2authors.keys()],
         ensureOpts,
-        reqNips
+        reqNips,
       );
 
       // retain eligible relays only
@@ -753,7 +848,7 @@ export class NostrFetcher {
     }
 
     throw new NostrFetchError(
-      "malformed first argument for fetchLatestEventsPerAuthor/fetchLastEventPerAuthor"
+      "malformed first argument for fetchLatestEventsPerAuthor/fetchLastEventPerAuthor",
     );
   }
 
@@ -765,28 +860,22 @@ export class NostrFetcher {
    * - `{ authors: string[], relayUrls: string[] }`: The fetcher will use the same relay set (`relayUrls`) for all `authors` to fetch events.
    * - `Map<string, string[]>`: Key must be author's pubkey and value must be relay set for that author. The fetcher will use separate relay set for each author to fetch events.
    *
-   * Result is an async iterable of `{ author (pubkey), events (from the author) }` pairs.
+   * Result is an async iterable of `{ author: <author's pubkey>, events: <events from the author> }` pairs.
    *
    * Each array of events in the result are sorted in "newest to oldest" order.
    *
    * Throws {@linkcode NostrFetchError} if `limit` is a non-positive number.
-   *
-   * @param authorsAndRelays
-   * @param otherFilter
-   * @param limit
-   * @param options
-   * @returns
    */
   public fetchLatestEventsPerAuthor<SeenOn extends boolean = false>(
     authorsAndRelays: AuthorsAndRelays,
     otherFilter: Omit<FetchFilter, "authors">,
     limit: number,
-    options: FetchLatestOptions<SeenOn> = {}
-  ): AsyncIterable<{ author: string; events: NostrEventExt<SeenOn>[] }> {
+    options: FetchLatestOptions<SeenOn> = {},
+  ): AsyncIterable<NostrEventListWithAuthor<SeenOn>> {
     assertReq(
       { limit },
       [checkIfTrue((r) => r.limit > 0, "error", '"limit" should be positive number')],
-      this.#debugLogger
+      this.#debugLogger,
     );
 
     const filledOpts = {
@@ -809,11 +898,8 @@ export class NostrFetcher {
     authorsAndRelays: AuthorsAndRelays,
     otherFilter: Omit<FetchFilter, "authors">,
     limit: number,
-    options: Required<FetchLatestOptions<SeenOn>>
-  ): AsyncIterable<{
-    author: string;
-    events: NostrEventExt<SeenOn>[];
-  }> {
+    options: Required<FetchLatestOptions<SeenOn>>,
+  ): AsyncIterable<NostrEventListWithAuthor<SeenOn>> {
     const statsMngr = FetchStatsManager.init(options.statsListener, options.statsNotifIntervalMs);
 
     // get mapping of available relay to authors and list of all authors
@@ -821,7 +907,7 @@ export class NostrFetcher {
     const [relayToAuthors, allAuthors] = await this.#mapAvailableRelayToAuthors(
       authorsAndRelays,
       options,
-      reqNips
+      reqNips,
     );
     this.#debugLogger?.log("verbose", "relayToAuthors=%O", relayToAuthors);
 
@@ -949,7 +1035,7 @@ export class NostrFetcher {
           nextUntil = oldestCreatedAt + 1;
           statsMngr?.setRelayFrontier(rurl, oldestCreatedAt);
         }
-      })
+      }),
     );
 
     // the "merger".
@@ -960,7 +1046,7 @@ export class NostrFetcher {
 
         // wait for all the buckets for the author to fulfilled
         const evsPerRelay = await Promise.all(
-          latches.itemsByKey(pubkey)?.map((d) => d.promise) ?? []
+          latches.itemsByKey(pubkey)?.map((d) => d.promise) ?? [],
         );
         logger?.log("verbose", `fulfilled all buckets for this author`);
 
@@ -1014,7 +1100,7 @@ export class NostrFetcher {
           tx.send({ author: pubkey, events: res as NostrEventExt<SeenOn>[] });
         }
         statsMngr?.addProgress(1);
-      })
+      }),
     ).then(() => {
       // finished to fetch events for all authors
       tx.close();
@@ -1032,20 +1118,15 @@ export class NostrFetcher {
    * - `{ authors: string[], relayUrls: string[] }`: The fetcher will use the same relay set (`relayUrls`) for all `authors` to fetch events.
    * - `Map<string, string[]>`: Key must be author's pubkey and value must be relay set for that author. The fetcher will use separate relay set for each author to fetch events.
    *
-   * Result is an async iterable of `{ author (pubkey), event }` pairs.
+   * Result is an async iterable of `{ author: <author's pubkey>, event: <the latest event from the author> }` pairs.
    *
    * `event` in result will be `undefined` if no event matching the filter for the author exists in any relay.
-   *
-   * @param authorsAndRelays
-   * @param otherFilter
-   * @param options
-   * @returns
    */
   public async *fetchLastEventPerAuthor<SeenOn extends boolean = false>(
     authorsAndRelays: AuthorsAndRelays,
     otherFilter: Omit<FetchFilter, "authors">,
-    options: FetchLatestOptions<SeenOn> = {}
-  ): AsyncIterable<{ author: string; event: NostrEventExt<SeenOn> | undefined }> {
+    options: FetchLatestOptions<SeenOn> = {},
+  ): AsyncIterable<NostrEventWithAuthor<SeenOn>> {
     const finalOpts = {
       ...defaultFetchLatestOptions,
       ...{
@@ -1059,7 +1140,7 @@ export class NostrFetcher {
       authorsAndRelays,
       otherFilter,
       1,
-      finalOpts
+      finalOpts,
     );
     for await (const { author, events } of latest1Iter) {
       yield { author, event: events[0] };

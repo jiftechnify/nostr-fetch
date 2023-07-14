@@ -1,12 +1,12 @@
 import NDK from "@nostr-dev-kit/ndk";
 import { ndkAdapter } from "@nostr-fetch/adapter-ndk";
-import { NostrFetcher, eventKind, normalizeRelayUrls } from "nostr-fetch";
+import { NostrFetcher, eventKind, normalizeRelayUrlSet } from "nostr-fetch";
 import { defaultRelays, nHoursAgo } from "../utils";
 
 import "websocket-polyfill";
 
-// You should normalize relay URLs by `normalizeRelayUrls` before passing them to NDK's constructor if working with nostr-fetch!
-const explicitRelays = normalizeRelayUrls([
+// You should normalize relay URLs by `normalizeRelayUrlSet` before passing them to NDK's constructor if working with nostr-fetch!
+const explicitRelays = normalizeRelayUrlSet([
   "wss://relay-jp.nostr.wirednet.jp",
   "wss://relay.damus.io",
 ]);

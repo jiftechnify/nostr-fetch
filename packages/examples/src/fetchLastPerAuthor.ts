@@ -33,7 +33,7 @@ const main = async () => {
     { authors: followees, relayUrls: defaultRelays },
     {
       kinds: [eventKind.metadata],
-    }
+    },
   );
 
   // display the name in profile for each author

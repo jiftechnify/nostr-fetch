@@ -15,7 +15,7 @@ const main = async () => {
     {
       since: nHoursAgo(1),
     },
-    { sort: true }
+    { sort: true },
   );
 
   console.log(`fetched ${events.length} events`);

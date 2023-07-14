@@ -13,7 +13,7 @@ const main = async () => {
       kinds: [eventKind.text],
     },
     100,
-    { withSeenOn: false }
+    { withSeenOn: false },
   );
 
   console.log(`got ${latestPosts.length} events`);

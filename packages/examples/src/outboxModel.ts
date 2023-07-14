@@ -30,7 +30,7 @@ const fetchWriteRelaysPerAuthors = async (authors: string[]): Promise<Map<string
     { authors, relayUrls: defaultRelays },
     {
       kinds: [eventKind.contacts, eventKind.relayList],
-    }
+    },
   );
   const res = new Map<string, string[]>();
   for await (const { author, event: ev } of iter) {
@@ -58,7 +58,7 @@ const main = async () => {
     {
       kinds: [eventKind.text],
     },
-    { statsListener: (stats) => console.error(stats) }
+    { statsListener: (stats) => console.error(stats) },
   );
   for await (const { author, event: ev } of lastPostsPerFollowee) {
     if (ev !== undefined) {
@@ -71,7 +71,7 @@ const main = async () => {
 
 const printPost = (ev: NostrEvent) => {
   console.log(
-    `last post from author: [${ev.pubkey}] (${new Date(ev.created_at * 1000).toLocaleString()})`
+    `last post from author: [${ev.pubkey}] (${new Date(ev.created_at * 1000).toLocaleString()})`,
   );
   console.log(ev.content);
   console.log();

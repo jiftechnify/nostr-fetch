@@ -1,7 +1,7 @@
+import { setupSubscriptionAbortion } from "@nostr-fetch/kernel/adapterHelpers";
 import { Channel } from "@nostr-fetch/kernel/channel";
 import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
 import {
-  FetchTillEoseAbortedSignal,
   FetchTillEoseFailedSignal,
   type EnsureRelaysOptions,
   type FetchTillEoseOptions,
@@ -9,7 +9,7 @@ import {
   type NostrFetcherCommonOptions,
 } from "@nostr-fetch/kernel/fetcherBackend";
 import type { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
-import { normalizeRelayUrls, withTimeout } from "@nostr-fetch/kernel/utils";
+import { normalizeRelayUrlSet, withTimeout } from "@nostr-fetch/kernel/utils";
 
 import type { RelayPool } from "nostr-relaypool";
 
@@ -91,7 +91,7 @@ export class NRTPoolAdapter implements NostrFetcherBackend {
     relayUrls: string[],
     { connectTimeoutMs }: EnsureRelaysOptions,
   ): Promise<string[]> {
-    const normalizedUrls = normalizeRelayUrls(relayUrls);
+    const normalizedUrls = normalizeRelayUrlSet(relayUrls);
 
     const ensure = (rurl: string) =>
       new Promise<string>((resolve, reject) => {
@@ -177,6 +177,32 @@ export class NRTPoolAdapter implements NostrFetcherBackend {
     // it's the very behavior we want here!
     const filterWithRelay = { ...filter, relay: relayUrl };
 
+    // common process for subscription abortion
+    const closeSub = () => {
+      unsub();
+      removeRelayListeners();
+    };
+
+    // error handlings
+    const onNotice = (msg: string) => {
+      closeSub();
+      tx.error(new FetchTillEoseFailedSignal(`NOTICE: ${JSON.stringify(msg)}`));
+    };
+    const onError = (msg: string) => {
+      removeRelayListeners();
+      tx.error(new FetchTillEoseFailedSignal(`ERROR: ${msg}`));
+    };
+    const removeRelayListeners = () => {
+      this.removeListener(relayUrl, "notice");
+      this.removeListener(relayUrl, "error");
+    };
+
+    this.addListener(relayUrl, "notice", onNotice);
+    this.addListener(relayUrl, "error", onError);
+
+    // setup abortion
+    const resetAutoAbortTimer = setupSubscriptionAbortion(closeSub, tx, options);
+
     // start subscription
     const unsub = this.#pool.subscribe(
       [filterWithRelay],
@@ -198,52 +224,6 @@ export class NRTPoolAdapter implements NostrFetcherBackend {
         unsubscribeOnEose: true,
       },
     );
-
-    // error handlings
-    const onNotice = (msg: string) => {
-      unsub();
-      removeRelayListeners();
-      tx.error(new FetchTillEoseFailedSignal(`NOTICE: ${JSON.stringify(msg)}`));
-    };
-    const onError = (msg: string) => {
-      removeRelayListeners();
-      tx.error(new FetchTillEoseFailedSignal(`ERROR: ${msg}`));
-    };
-    const removeRelayListeners = () => {
-      this.removeListener(relayUrl, "notice");
-      this.removeListener(relayUrl, "error");
-    };
-
-    this.addListener(relayUrl, "notice", onNotice);
-    this.addListener(relayUrl, "error", onError);
-
-    // common process for subscription abortion
-    const abortSub = (msg: string) => {
-      unsub();
-      removeRelayListeners();
-      tx.error(new FetchTillEoseAbortedSignal(msg));
-    };
-
-    // auto abortion
-    let subAutoAbortTimer: NodeJS.Timer | undefined;
-    const resetAutoAbortTimer = () => {
-      if (subAutoAbortTimer !== undefined) {
-        clearTimeout(subAutoAbortTimer);
-        subAutoAbortTimer = undefined;
-      }
-      subAutoAbortTimer = setTimeout(() => {
-        abortSub("subscription aborted before EOSE due to timeout");
-      }, options.abortSubBeforeEoseTimeoutMs);
-    };
-    resetAutoAbortTimer(); // initiate subscription auto abortion timer
-
-    // handle abortion by AbortController
-    if (options.abortSignal?.aborted) {
-      abortSub("subscription aborted by AbortController");
-    }
-    options.abortSignal?.addEventListener("abort", () => {
-      abortSub("subscription aborted by AbortController");
-    });
 
     return chIter;
   }

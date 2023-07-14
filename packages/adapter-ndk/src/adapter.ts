@@ -1,7 +1,7 @@
+import { setupSubscriptionAbortion } from "@nostr-fetch/kernel/adapterHelpers";
 import { Channel } from "@nostr-fetch/kernel/channel";
 import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
 import {
-  FetchTillEoseAbortedSignal,
   FetchTillEoseFailedSignal,
   type EnsureRelaysOptions,
   type FetchTillEoseOptions,
@@ -9,7 +9,7 @@ import {
   type NostrFetcherCommonOptions,
 } from "@nostr-fetch/kernel/fetcherBackend";
 import type { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
-import { normalizeRelayUrl, normalizeRelayUrls, withTimeout } from "@nostr-fetch/kernel/utils";
+import { normalizeRelayUrl, normalizeRelayUrlSet, withTimeout } from "@nostr-fetch/kernel/utils";
 
 import type NDK from "@nostr-dev-kit/ndk";
 import { NDKEvent, NDKRelay, NDKRelaySet, NDKRelayStatus } from "@nostr-dev-kit/ndk";
@@ -38,7 +38,7 @@ export class NDKAdapter implements NostrFetcherBackend {
     relayUrls: string[],
     { connectTimeoutMs }: EnsureRelaysOptions,
   ): Promise<string[]> {
-    const normalizedUrls = normalizeRelayUrls(relayUrls);
+    const normalizedUrls = normalizeRelayUrlSet(relayUrls);
 
     // partition relays to 2 groups:
     // 1. managed by the NDK pool or the adapter
@@ -155,6 +155,9 @@ export class NDKAdapter implements NostrFetcherBackend {
     };
     relay.on("notice", onNotice);
 
+    // setup abortion
+    const resetAutoAbortTimer = setupSubscriptionAbortion(closeSub, tx, options);
+
     // handle subscription events
     sub.on("event", (ndkEv: NDKEvent) => {
       tx.send(ndkEv.rawEvent() as NostrEvent);
@@ -165,29 +168,6 @@ export class NDKAdapter implements NostrFetcherBackend {
       tx.close();
     });
 
-    // auto abortion
-    let subAutoAbortTimer: NodeJS.Timer | undefined;
-    const resetAutoAbortTimer = () => {
-      if (subAutoAbortTimer !== undefined) {
-        clearTimeout(subAutoAbortTimer);
-        subAutoAbortTimer = undefined;
-      }
-      subAutoAbortTimer = setTimeout(() => {
-        closeSub();
-        tx.error(new FetchTillEoseAbortedSignal("subscription aborted before EOSE due to timeout"));
-      }, options.abortSubBeforeEoseTimeoutMs);
-    };
-    resetAutoAbortTimer(); // initiate subscription auto abortion timer
-
-    // handle abortion by AbortController
-    if (options.abortSignal?.aborted) {
-      closeSub();
-      tx.error(new FetchTillEoseAbortedSignal("subscription aborted by AbortController"));
-    }
-    options.abortSignal?.addEventListener("abort", () => {
-      closeSub();
-      tx.error(new FetchTillEoseAbortedSignal("subscription aborted by AbortController"));
-    });
     return chIter;
   }
 

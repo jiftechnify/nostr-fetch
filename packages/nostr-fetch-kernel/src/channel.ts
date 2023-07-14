@@ -17,7 +17,7 @@ export class Deferred<T> {
   }
 }
 
-interface ChannelSender<T> {
+export interface ChannelSender<T> {
   send(v: T): void;
   error(e: unknown): void;
   close(): void;
