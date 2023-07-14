@@ -1,7 +1,7 @@
+import { setupSubscriptionAbortion } from "@nostr-fetch/kernel/adapterHelpers";
 import { Channel } from "@nostr-fetch/kernel/channel";
 import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
 import {
-  FetchTillEoseAbortedSignal,
   FetchTillEoseFailedSignal,
   type EnsureRelaysOptions,
   type FetchTillEoseOptions,
@@ -138,6 +138,9 @@ export class SimplePoolExt implements NostrFetcherBackend {
     relay.on("notice", onNotice);
     relay.on("error", onError);
 
+    // setup abortion
+    const resetAutoAbortTimer = setupSubscriptionAbortion(closeSub, tx, options);
+
     // handle subscription events
     sub.on("event", (ev: NostrEvent) => {
       tx.send(ev);
@@ -146,30 +149,6 @@ export class SimplePoolExt implements NostrFetcherBackend {
     sub.on("eose", () => {
       closeSub();
       tx.close();
-    });
-
-    // auto abortion
-    let subAutoAbortTimer: NodeJS.Timer | undefined;
-    const resetAutoAbortTimer = () => {
-      if (subAutoAbortTimer !== undefined) {
-        clearTimeout(subAutoAbortTimer);
-        subAutoAbortTimer = undefined;
-      }
-      subAutoAbortTimer = setTimeout(() => {
-        closeSub();
-        tx.error(new FetchTillEoseAbortedSignal("subscription aborted before EOSE due to timeout"));
-      }, options.abortSubBeforeEoseTimeoutMs);
-    };
-    resetAutoAbortTimer(); // initiate subscription auto abortion timer
-
-    // handle abortion by AbortController
-    if (options.abortSignal?.aborted) {
-      closeSub();
-      tx.error(new FetchTillEoseAbortedSignal("subscription aborted by AbortController"));
-    }
-    options.abortSignal?.addEventListener("abort", () => {
-      closeSub();
-      tx.error(new FetchTillEoseAbortedSignal("subscription aborted by AbortController"));
     });
 
     return chIter;
