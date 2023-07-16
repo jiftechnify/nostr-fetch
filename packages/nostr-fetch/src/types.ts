@@ -1,3 +1,22 @@
+import { Filter } from "@nostr-fetch/kernel/nostr";
+
+/**
+ * Structure of Nostr event filter except `limit`, `since` and `until`.
+ */
+export type FetchFilter = Omit<Filter, "limit" | "since" | "until">;
+
+export type FetchFilterKeyName = keyof Omit<FetchFilter, "search">;
+
+export type FetchFilterKeyElem<K extends FetchFilterKeyName> = Exclude<
+  FetchFilter[K],
+  undefined
+>[number];
+
+/**
+ * Pair of timestamps which specifies time range of events to fetch.
+ */
+export type FetchTimeRangeFilter = Pick<Filter, "since" | "until">;
+
 /**
  * Type of errors that can be thrown from `NostrFetcher` methods.
  */

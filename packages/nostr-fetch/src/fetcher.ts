@@ -11,7 +11,7 @@ import {
   NostrFetcherCommonOptions,
   defaultFetcherCommonOptions,
 } from "@nostr-fetch/kernel/fetcherBackend";
-import { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
+import { NostrEvent } from "@nostr-fetch/kernel/nostr";
 import { abbreviate, currUnixtimeSec, normalizeRelayUrlSet } from "@nostr-fetch/kernel/utils";
 
 import { DefaultFetcherBackend } from "./fetcherBackend";
@@ -27,10 +27,18 @@ import {
   checkIfTimeRangeIsValid,
   checkIfTrue,
   createdAtDesc,
+  getKeysOfEvent,
   initDefaultRelayCapChecker,
   initSeenEvents,
 } from "./fetcherHelper";
-import { FetchStatsListener, NostrFetchError } from "./types";
+import {
+  FetchFilter,
+  FetchFilterKeyElem,
+  FetchFilterKeyName,
+  FetchStatsListener,
+  FetchTimeRangeFilter,
+  NostrFetchError,
+} from "./types";
 
 const MAX_LIMIT_PER_REQ = 5000;
 const MAX_LIMIT_PER_REQ_IN_BACKPRESSURE = 500;
@@ -38,20 +46,30 @@ const MAX_LIMIT_PER_REQ_IN_BACKPRESSURE = 500;
 const MIN_HIGH_WATER_MARK = 5000;
 
 /**
- * Structure of Nostr event filter except `limit`, `since` and `until`.
- */
-export type FetchFilter = Omit<Filter, "limit" | "since" | "until">;
-
-/**
- * Pair of timestamps which specifies time range of events to fetch.
- */
-export type FetchTimeRangeFilter = Pick<Filter, "since" | "until">;
-
-/**
  * Nostr event with extra fields.
  */
 export type NostrEventExt<SeenOn extends boolean = false> = NostrEvent & {
   seenOn: SeenOn extends true ? string[] : undefined;
+};
+
+/**
+ * Pair of the "key" of events and list of events which have that key.
+ *
+ * It is the type of elements of `AsyncIterable` returned from {@linkcode NostrFetcher.fetchLatestEventsPerKey}.
+ */
+export type NostrEventListWithKey<K extends FetchFilterKeyName, SeenOn extends boolean> = {
+  key: FetchFilterKeyElem<K>;
+  events: NostrEventExt<SeenOn>[];
+};
+
+/**
+ * Pair of the "key" of an event and the event which has that key. If no event found matching the key, it will be `undefined`.
+ *
+ * It is the type of elements of `AsyncIterable` returned from {@linkcode NostrFetcher.fetchLastEventPerKey}.
+ */
+export type NostrEventWithKey<K extends FetchFilterKeyName, SeenOn extends boolean> = {
+  key: FetchFilterKeyElem<K>;
+  event: NostrEventExt<SeenOn> | undefined;
 };
 
 /**
@@ -211,6 +229,42 @@ const defaultFetchLatestOptions: Required<FetchLatestOptions> = {
 /**
  * Type of the first argument of {@linkcode NostrFetcher.fetchLatestEventsPerAuthor}/{@linkcode NostrFetcher.fetchLastEventPerAuthor}.
  */
+export type KeysAndRelays<K extends FetchFilterKeyName> =
+  | {
+      keys: FetchFilterKeyElem<K>[];
+      relayUrls: string[];
+    }
+  | Iterable<[key: FetchFilterKeyElem<K>, relayUrls: string[]]>;
+
+/**
+ * Use same relay set for all authors
+ */
+type RelaySetForAllKeys<K extends FetchFilterKeyName> = {
+  keys: FetchFilterKeyElem<K>[];
+  relayUrls: string[];
+};
+
+/**
+ * Use saperate relay set for each author.  Typically `Map<string, string[]>`
+ */
+type RelaySetsPerKey<K extends FetchFilterKeyName> = Iterable<
+  [key: FetchFilterKeyElem<K>, relayUrls: string[]]
+>;
+
+const isRelaySetForAllKeys = <K extends FetchFilterKeyName>(
+  kr: KeysAndRelays<K>,
+): kr is RelaySetForAllKeys<K> => {
+  return "relayUrls" in kr && "keys" in kr;
+};
+const isRelaySetsPerKey = <K extends FetchFilterKeyName>(
+  kr: KeysAndRelays<K>,
+): kr is RelaySetsPerKey<K> => {
+  return Symbol.iterator in Object(kr);
+};
+
+/**
+ * Type of the first argument of {@linkcode NostrFetcher.fetchLatestEventsPerAuthor}/{@linkcode NostrFetcher.fetchLastEventPerAuthor}.
+ */
 export type AuthorsAndRelays = RelaySetForAllAuthors | RelaySetsPerAuthor;
 
 /**
@@ -231,6 +285,16 @@ const isRelaySetForAllAuthors = (a2rs: AuthorsAndRelays): a2rs is RelaySetForAll
 };
 const isRelaySetsPerAuthor = (a2rs: AuthorsAndRelays): a2rs is RelaySetsPerAuthor => {
   return Symbol.iterator in Object(a2rs);
+};
+
+const adaptAuthorsAndRelays = (ar: AuthorsAndRelays): KeysAndRelays<"authors"> => {
+  if (isRelaySetForAllAuthors(ar)) {
+    return { keys: ar.authors, relayUrls: ar.relayUrls };
+  }
+  if (isRelaySetsPerAuthor(ar)) {
+    return ar;
+  }
+  throw Error("adaptAuthorsAndRelays: unreachable");
 };
 
 /**
@@ -784,57 +848,57 @@ export class NostrFetcher {
     return latest1[0];
   }
 
-  // creates mapping of available relays to authors.
-  // returns that mapping and array of all authors.
-  async #mapAvailableRelayToAuthors(
-    a2rs: AuthorsAndRelays,
+  // creates mapping of available relays to keys.
+  // returns that mapping and array of all keys.
+  async #mapAvailableRelayToKeys<K extends FetchFilterKeyName>(
+    kr: KeysAndRelays<K>,
     ensureOpts: EnsureRelaysOptions,
     reqNips: number[],
-  ): Promise<[map: Map<string, string[]>, allAuthors: string[]]> {
-    if (isRelaySetForAllAuthors(a2rs)) {
+  ): Promise<[map: Map<string, FetchFilterKeyElem<K>[]>, allKeys: FetchFilterKeyElem<K>[]]> {
+    if (isRelaySetForAllKeys(kr)) {
       assertReq(
-        a2rs,
+        kr,
         [
           checkIfNonEmpty((r) => r.relayUrls, "warn", "Specify at least 1 relay URL"),
-          checkIfNonEmpty((r) => r.authors, "warn", "Specify at least 1 author (pubkey)"),
+          checkIfNonEmpty((r) => r.keys as unknown[], "warn", "Specify at least 1 key"),
         ],
         this.#debugLogger,
       );
 
       const eligibleRelays = await this.#ensureRelaysWithCapCheck(
-        a2rs.relayUrls,
+        kr.relayUrls,
         ensureOpts,
         reqNips,
       );
-      return [new Map(eligibleRelays.map((rurl) => [rurl, a2rs.authors])), a2rs.authors];
+      return [new Map(eligibleRelays.map((rurl) => [rurl, kr.keys])), kr.keys];
     }
 
-    if (isRelaySetsPerAuthor(a2rs)) {
-      const a2rsArr = [...a2rs];
+    if (isRelaySetsPerKey(kr)) {
+      const krArr = [...kr];
       assertReq(
-        a2rsArr,
+        krArr,
         [
-          checkIfNonEmpty((a2rs) => a2rs, "warn", "Specify at least 1 author"),
+          checkIfNonEmpty((kr) => kr, "warn", "Specify at least 1 key"),
           checkIfTrue(
-            (a2rs) => a2rs.every(([, relays]) => relays.length > 0),
+            (kr) => kr.every(([, relays]) => relays.length > 0),
             "warn",
-            "Specify at least 1 relay URL for all authors",
+            "Specify at least 1 relay URL for all keys",
           ),
         ],
         this.#debugLogger,
       );
 
-      // transpose: author to rurls -> rurl to authors
-      const rurl2authors = new Map<string, string[]>();
-      for (const [author, rurls] of a2rsArr) {
+      // transpose: key to rurls -> rurl to keys
+      const rurl2keys = new Map<string, FetchFilterKeyElem<K>[]>();
+      for (const [key, rurls] of krArr) {
         const normalized = normalizeRelayUrlSet(rurls);
         for (const rurl of normalized) {
-          const authors = rurl2authors.get(rurl);
-          rurl2authors.set(rurl, [...(authors ?? []), author]);
+          const keys = rurl2keys.get(rurl);
+          rurl2keys.set(rurl, [...(keys ?? []), key as FetchFilterKeyElem<K>]);
         }
       }
       const eligibleRelays = await this.#ensureRelaysWithCapCheck(
-        [...rurl2authors.keys()],
+        [...rurl2keys.keys()],
         ensureOpts,
         reqNips,
       );
@@ -842,36 +906,37 @@ export class NostrFetcher {
       // retain eligible relays only
       return [
         /* eslint-disable-next-line @typescript-eslint/no-non-null-assertion */
-        new Map(eligibleRelays.map((rurl) => [rurl, rurl2authors.get(rurl)!])),
-        a2rsArr.map(([author]) => author),
+        new Map(eligibleRelays.map((rurl) => [rurl, rurl2keys.get(rurl)!])),
+        krArr.map(([key]) => key),
       ];
     }
 
     throw new NostrFetchError(
-      "malformed first argument for fetchLatestEventsPerAuthor/fetchLastEventPerAuthor",
+      "malformed first argument for fetchLatestEventsPerKey/fetchLastEventPerKey",
     );
   }
 
   /**
-   * Fetches latest up to `limit` events **for each author specified by `authorsAndRelays`**.
+   * Fetches latest up to `limit` events **for each key specified by `keyName` and `keysAndRelays`**.
    *
-   * `authorsAndRelays` can be either of two types:
+   * `keysAndRelays` can be either of two types:
    *
-   * - `{ authors: string[], relayUrls: string[] }`: The fetcher will use the same relay set (`relayUrls`) for all `authors` to fetch events.
-   * - `Map<string, string[]>`: Key must be author's pubkey and value must be relay set for that author. The fetcher will use separate relay set for each author to fetch events.
+   * - `{ keys: K[], relayUrls: string[] }`: The fetcher will use the same relay set (`relayUrls`) for all `keys` to fetch events.
+   * - `Map<K, string[]>`: Key must be the key of event and value must be relay set for that key. The fetcher will use separate relay set for each key to fetch events.
    *
-   * Result is an async iterable of `{ author: <author's pubkey>, events: <events from the author> }` pairs.
+   * Result is an async iterable of `{ key: <key of events>, events: <events which have that key> }` pairs.
    *
    * Each array of events in the result are sorted in "newest to oldest" order.
    *
    * Throws {@linkcode NostrFetchError} if `limit` is a non-positive number.
    */
-  public fetchLatestEventsPerAuthor<SeenOn extends boolean = false>(
-    authorsAndRelays: AuthorsAndRelays,
-    otherFilter: Omit<FetchFilter, "authors">,
+  public fetchLatestEventsPerKey<K extends FetchFilterKeyName, SeenOn extends boolean = false>(
+    keyName: K,
+    keysAndRelays: KeysAndRelays<K>,
+    otherFilter: Omit<FetchFilter, K>,
     limit: number,
     options: FetchLatestOptions<SeenOn> = {},
-  ): AsyncIterable<NostrEventListWithAuthor<SeenOn>> {
+  ): AsyncIterable<NostrEventListWithKey<K, SeenOn>> {
     assertReq(
       { limit },
       [checkIfTrue((r) => r.limit > 0, "error", '"limit" should be positive number')],
@@ -891,41 +956,42 @@ export class NostrFetcher {
       skipVerification: filledOpts.skipVerification || filledOpts.reduceVerification,
     };
 
-    return this.#fetchLatestEventPerAuthorBody(authorsAndRelays, otherFilter, limit, finalOpts);
+    return this.#fetchLatestEventPerKeyBody(keyName, keysAndRelays, otherFilter, limit, finalOpts);
   }
 
-  async *#fetchLatestEventPerAuthorBody<SeenOn extends boolean>(
-    authorsAndRelays: AuthorsAndRelays,
-    otherFilter: Omit<FetchFilter, "authors">,
+  async *#fetchLatestEventPerKeyBody<K extends FetchFilterKeyName, SeenOn extends boolean = false>(
+    keyName: K,
+    keysAndRelays: KeysAndRelays<K>,
+    otherFilter: Omit<FetchFilter, K>,
     limit: number,
     options: Required<FetchLatestOptions<SeenOn>>,
-  ): AsyncIterable<NostrEventListWithAuthor<SeenOn>> {
+  ): AsyncIterable<NostrEventListWithKey<K, SeenOn>> {
     const statsMngr = FetchStatsManager.init(options.statsListener, options.statsNotifIntervalMs);
 
-    // get mapping of available relay to authors and list of all authors
+    // get mapping of available relay to keys and list of all keys
     const reqNips = this.#calcRequiredNips(otherFilter);
-    const [relayToAuthors, allAuthors] = await this.#mapAvailableRelayToAuthors(
-      authorsAndRelays,
+    const [relayToKeys, allKeys] = await this.#mapAvailableRelayToKeys(
+      keysAndRelays,
       options,
       reqNips,
     );
-    this.#debugLogger?.log("verbose", "relayToAuthors=%O", relayToAuthors);
+    this.#debugLogger?.log("verbose", "relayToKeys=%O", relayToKeys);
 
-    const [tx, chIter] = Channel.make<{ author: string; events: NostrEventExt<SeenOn>[] }>();
+    const [tx, chIter] = Channel.make<NostrEventListWithKey<K, SeenOn>>();
     const globalSeenEvents = initSeenEvents(options.withSeenOn);
     const initialUntil = currUnixtimeSec();
 
-    statsMngr?.setProgressMax(allAuthors.length);
-    statsMngr?.initRelayStats([...relayToAuthors.keys()], initialUntil);
+    statsMngr?.setProgressMax(allKeys.length);
+    statsMngr?.initRelayStats([...relayToKeys.keys()], initialUntil);
 
-    // for each pair of author and relay URL, create a promise that act as "latch", so that the "merger" can wait for a subscription to complete
-    const latches = new KeyRelayMatrix(relayToAuthors, () => new Deferred<NostrEvent[]>());
+    // for each pair of key and relay URL, create a promise that act as "latch", so that the "merger" can wait for a subscription to complete
+    const latches = new KeyRelayMatrix(relayToKeys, () => new Deferred<NostrEvent[]>());
 
     // the "fetcher" fetches events from each relay
     Promise.all(
-      [...relayToAuthors].map(async ([rurl, authors]) => {
+      [...relayToKeys].map(async ([rurl, keys]) => {
         // repeat subscription until one of the following conditions is met:
-        // 1. have fetched required number of events for all authors
+        // 1. have fetched required number of events for all keys
         // 2. the relay didn't return new event
         // 3. aborted by AbortController
         // E. an error occurred while fetching events
@@ -933,32 +999,31 @@ export class NostrFetcher {
         const logger = this.#debugLogger?.subLogger(rurl);
 
         let nextUntil = initialUntil;
-        const evBucketsPerAuthor = new EventBuckets(authors, limit);
+        const evBucketsPerKey = new EventBuckets(keys, limit);
         const localSeenEventIds = new Set<string>();
 
         // procedure to complete the subscription in the middle, resolving all remaining promises.
         // resolve() is called even if a promise is already resolved, but it's not a problem.
         const resolveAllOnEarlyBreak = () => {
           logger?.log("verbose", `resolving bucket on early return`);
-          for (const pk of authors) {
-            latches.get(pk, rurl)?.resolve(evBucketsPerAuthor.getBucket(pk) ?? []);
+          for (const pk of keys) {
+            latches.get(pk, rurl)?.resolve(evBucketsPerKey.getBucket(pk) ?? []);
           }
         };
 
         while (true) {
-          const { keys: nextAuthors, limit: nextLimit } =
-            evBucketsPerAuthor.calcKeysAndLimitForNextReq();
+          const { keys: nextKeys, limit: nextLimit } = evBucketsPerKey.calcKeysAndLimitForNextReq();
 
-          if (nextAuthors.length === 0) {
+          if (nextKeys.length === 0) {
             // termination condition 1
-            logger?.log("verbose", `fulfilled buckets for all authors`);
+            logger?.log("verbose", `fulfilled buckets for all keys`);
             statsMngr?.setRelayStatus(rurl, "completed");
             break;
           }
 
           const refinedFilter = {
             ...otherFilter,
-            authors: nextAuthors,
+            [keyName]: nextKeys,
             until: nextUntil,
             limit: Math.min(nextLimit, MAX_LIMIT_PER_REQ),
           };
@@ -982,13 +1047,15 @@ export class NostrFetcher {
 
                 globalSeenEvents.report(e, rurl);
 
-                // add the event to the bucket for the author(pubkey)
-                const addRes = evBucketsPerAuthor.add(e.pubkey, e);
-                if (addRes.state === "fulfilled") {
-                  // notify that event fetching is completed for the author at this relay
-                  // by resolveing the Promise corresponds to the author and the relay
-                  latches.get(e.pubkey, rurl)?.resolve(addRes.events);
-                  logger?.log("verbose", `fulfilled a bucket for author=${e.pubkey}`);
+                // add the event to the bucket for the keys
+                for (const evKey of getKeysOfEvent(keyName, e)) {
+                  const addRes = evBucketsPerKey.add(evKey, e);
+                  if (addRes.state === "fulfilled") {
+                    // notify that event fetching is completed for the key at this relay
+                    // by resolveing the Promise corresponds to the key and the relay
+                    latches.get(evKey, rurl)?.resolve(addRes.events);
+                    logger?.log("verbose", `fulfilled a bucket for key=${evKey}`);
+                  }
                 }
 
                 statsMngr?.eventFetched(rurl);
@@ -1039,16 +1106,14 @@ export class NostrFetcher {
     );
 
     // the "merger".
-    // for each author: merges result from relays, sorts events, takes latest events and sends it to the result channel.
+    // for each key: merges result from relays, sorts events, takes latest events and sends it to the result channel.
     Promise.all(
-      allAuthors.map(async (pubkey) => {
-        const logger = this.#debugLogger?.subLogger(abbreviate(pubkey, 6));
+      allKeys.map(async (key) => {
+        const logger = this.#debugLogger?.subLogger(abbreviate(String(key), 6));
 
-        // wait for all the buckets for the author to fulfilled
-        const evsPerRelay = await Promise.all(
-          latches.itemsByKey(pubkey)?.map((d) => d.promise) ?? [],
-        );
-        logger?.log("verbose", `fulfilled all buckets for this author`);
+        // wait for all the buckets for the key to fulfilled
+        const evsPerRelay = await Promise.all(latches.itemsByKey(key)?.map((d) => d.promise) ?? []);
+        logger?.log("verbose", `fulfilled all buckets for this key`);
 
         // merge and sort
         const evsDeduped = (() => {
@@ -1091,23 +1156,95 @@ export class NostrFetcher {
         if (options.withSeenOn) {
           // append "seen on" data to events if `withSeenOn` is true.
           tx.send({
-            author: pubkey,
+            key,
             events: res.map((e) => {
               return { ...e, seenOn: globalSeenEvents.getSeenOn(e.id) };
             }) as NostrEventExt<SeenOn>[],
           });
         } else {
-          tx.send({ author: pubkey, events: res as NostrEventExt<SeenOn>[] });
+          tx.send({ key, events: res as NostrEventExt<SeenOn>[] });
         }
         statsMngr?.addProgress(1);
       }),
     ).then(() => {
-      // finished to fetch events for all authors
+      // finished to fetch events for all keys
       tx.close();
       statsMngr?.stop();
     });
 
     yield* chIter;
+  }
+
+  /**
+   * Fetches the last event **for each key specified by `keysAndRelays`**.
+   *
+   * `keysAndRelays` can be either of two types:
+   *
+   * - `{ keys: K[], relayUrls: string[] }`: The fetcher will use the same relay set (`relayUrls`) for all `keys` to fetch events.
+   * - `Map<K, string[]>`: Key must be key of the event and value must be relay set for that key. The fetcher will use separate relay set for each key to fetch events.
+   *
+   * Result is an async iterable of `{ key: <key of events>, event: <the latest event which have that key> }` pairs.
+   *
+   * `event` in result will be `undefined` if no event matching the filter exists in any relay.
+   */
+  public async *fetchLastEventPerKey<K extends FetchFilterKeyName, SeenOn extends boolean = false>(
+    keyName: K,
+    keysAndRelays: KeysAndRelays<K>,
+    otherFilter: Omit<FetchFilter, K>,
+    options: FetchLatestOptions<SeenOn> = {},
+  ): AsyncIterable<NostrEventWithKey<K, SeenOn>> {
+    const finalOpts = {
+      ...defaultFetchLatestOptions,
+      ...{
+        // override default value of `abortSubBeforeEoseTimeoutMs` (10000 -> 1000)
+        abortSubBeforeEoseTimeoutMs: 1000,
+        ...options,
+      },
+    } as Required<FetchLatestOptions<SeenOn>>;
+
+    const latest1Iter = this.fetchLatestEventsPerKey(
+      keyName,
+      keysAndRelays,
+      otherFilter,
+      1,
+      finalOpts,
+    );
+    for await (const { key, events } of latest1Iter) {
+      yield { key, event: events[0] };
+    }
+  }
+
+  /**
+   * Fetches latest up to `limit` events **for each author specified by `authorsAndRelays`**.
+   *
+   * `authorsAndRelays` can be either of two types:
+   *
+   * - `{ authors: string[], relayUrls: string[] }`: The fetcher will use the same relay set (`relayUrls`) for all `authors` to fetch events.
+   * - `Map<string, string[]>`: Key must be author's pubkey and value must be relay set for that author. The fetcher will use separate relay set for each author to fetch events.
+   *
+   * Result is an async iterable of `{ author: <author's pubkey>, events: <events from the author> }` pairs.
+   *
+   * Each array of events in the result are sorted in "newest to oldest" order.
+   *
+   * Throws {@linkcode NostrFetchError} if `limit` is a non-positive number.
+   *
+   * Note: it's just an wrapper of `fetchLatestEventsPerKey`.
+   */
+  public async *fetchLatestEventsPerAuthor<SeenOn extends boolean = false>(
+    authorsAndRelays: AuthorsAndRelays,
+    otherFilter: Omit<FetchFilter, "authors">,
+    limit: number,
+    options: FetchLatestOptions<SeenOn> = {},
+  ): AsyncIterable<NostrEventListWithAuthor<SeenOn>> {
+    for await (const { key, events } of this.fetchLatestEventsPerKey(
+      "authors",
+      adaptAuthorsAndRelays(authorsAndRelays),
+      otherFilter,
+      limit,
+      options,
+    )) {
+      yield { author: key, events };
+    }
   }
 
   /**
@@ -1121,29 +1258,21 @@ export class NostrFetcher {
    * Result is an async iterable of `{ author: <author's pubkey>, event: <the latest event from the author> }` pairs.
    *
    * `event` in result will be `undefined` if no event matching the filter for the author exists in any relay.
+   *
+   * Note: it's just a wrapper of `fetchLastEventPerKey`.
    */
   public async *fetchLastEventPerAuthor<SeenOn extends boolean = false>(
     authorsAndRelays: AuthorsAndRelays,
     otherFilter: Omit<FetchFilter, "authors">,
     options: FetchLatestOptions<SeenOn> = {},
   ): AsyncIterable<NostrEventWithAuthor<SeenOn>> {
-    const finalOpts = {
-      ...defaultFetchLatestOptions,
-      ...{
-        // override default value of `abortSubBeforeEoseTimeoutMs` (10000 -> 1000)
-        abortSubBeforeEoseTimeoutMs: 1000,
-        ...options,
-      },
-    } as Required<FetchLatestOptions<SeenOn>>;
-
-    const latest1Iter = this.fetchLatestEventsPerAuthor(
-      authorsAndRelays,
+    for await (const { key, event } of this.fetchLastEventPerKey(
+      "authors",
+      adaptAuthorsAndRelays(authorsAndRelays),
       otherFilter,
-      1,
-      finalOpts,
-    );
-    for await (const { author, events } of latest1Iter) {
-      yield { author, event: events[0] };
+      options,
+    )) {
+      yield { author: key, event };
     }
   }
 
