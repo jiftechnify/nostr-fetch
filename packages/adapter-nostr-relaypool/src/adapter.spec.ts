@@ -64,7 +64,7 @@ describe.skip("NRTPoolAdapter", () => {
     test("aborts subscription on NOTICE", async () => {
       setupMockRelayServer(wsServer, [
         { type: "events", eventsSpec: { content: "test", n: 9 } },
-        { type: "notice", notice: "dummy notice" },
+        { type: "notice", notice: "too many concurrent REQs" },
         { type: "events", eventsSpec: { content: "after notice", n: 1 } },
       ]);
 

@@ -18,7 +18,7 @@ type MockRelaySubResponseAction =
     }
   | {
       type: "notice";
-      notice: unknown;
+      notice: string;
     }
   | {
       type: "error";
@@ -53,7 +53,7 @@ const playSubScenario = async (
         break;
 
       case "notice":
-        socket.send(r2cNoticeMsg("dummy notice"));
+        socket.send(r2cNoticeMsg(action.notice));
         break;
 
       case "error":

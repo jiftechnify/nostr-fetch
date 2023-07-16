@@ -60,7 +60,7 @@ describe("DefaultFetcherBackend", () => {
     test("aborts subscription on NOTICE", async () => {
       setupMockRelayServer(wsServer, [
         { type: "events", eventsSpec: { content: "test", n: 9 } },
-        { type: "notice", notice: "dummy notice" },
+        { type: "notice", notice: "too many concurrent REQs" },
         { type: "events", eventsSpec: { content: "after notice", n: 1 } },
       ]);
 
@@ -100,7 +100,7 @@ describe("DefaultFetcherBackend", () => {
       const iter = backend.fetchTillEose(
         url,
         {},
-        optsWithDefault({ abortSubBeforeEoseTimeoutMs: 1000 })
+        optsWithDefault({ abortSubBeforeEoseTimeoutMs: 1000 }),
       );
       const evs = await collectAsyncIter(iter);
       expect(evs.length).toBe(9);

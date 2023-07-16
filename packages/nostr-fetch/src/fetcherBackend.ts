@@ -75,9 +75,9 @@ export class DefaultFetcherBackend implements NostrFetcherBackend {
     const [tx, chIter] = Channel.make<NostrEvent>();
 
     // relay error handlings
-    const onNotice = (n: unknown) => {
+    const onNotice = (n: string) => {
       // ignore if the message seems to have nothing to do with REQs by fetcher
-      if (!isNoticeForReqError(String(n))) {
+      if (!isNoticeForReqError(n)) {
         return;
       }
 
@@ -87,7 +87,7 @@ export class DefaultFetcherBackend implements NostrFetcherBackend {
         logger?.log("error", `failed to close subscription (id: ${sub.subId}): ${err}`);
       }
       removeRelayListeners();
-      tx.error(new FetchTillEoseFailedSignal(`NOTICE: ${JSON.stringify(n)}`));
+      tx.error(new FetchTillEoseFailedSignal(`NOTICE: ${n}`));
     };
     const onError = () => {
       // WebSocket error closes the connection, so calling close() is meaningless
