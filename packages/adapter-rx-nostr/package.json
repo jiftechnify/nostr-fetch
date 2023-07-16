@@ -46,7 +46,6 @@
   },
   "devDependencies": {
     "nostr-fetch": "^0.11.0",
-    "nostr-typedef": "^0.3.0",
     "rx-nostr": "^1.1.0",
     "rxjs": "^7.8.0"
   },

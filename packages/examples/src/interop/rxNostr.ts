@@ -20,7 +20,7 @@ const main = async () => {
       since: nHoursAgo(1),
     },
     {
-      skipVerification: false,
+      skipVerification: true,
     },
   );
 
