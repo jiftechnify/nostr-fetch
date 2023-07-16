@@ -38,7 +38,7 @@ const playSubScenario = async (
   ws: WS,
   socket: MockWebSocket,
   scenario: MockRelaySubResponseScenario,
-  subId: string
+  subId: string,
 ) => {
   for (const action of scenario) {
     switch (action.type) {
