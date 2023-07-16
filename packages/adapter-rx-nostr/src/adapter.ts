@@ -8,7 +8,7 @@ import {
   type NostrFetcherBackend,
   type NostrFetcherCommonOptions,
 } from "@nostr-fetch/kernel/fetcherBackend";
-import type { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
+import { isNoticeForReqError, type Filter, type NostrEvent } from "@nostr-fetch/kernel/nostr";
 import { normalizeRelayUrl, normalizeRelayUrlSet } from "@nostr-fetch/kernel/utils";
 
 import { RxNostr, createRxOneshotReq, filterType, verify } from "rx-nostr";
@@ -151,7 +151,10 @@ export class RxNostrAdapter implements NostrFetcherBackend {
       .createAllMessageObservable()
       .pipe(
         filterType("NOTICE"),
-        filter(({ from }) => normalizeRelayUrl(from) === relayUrl),
+        filter(
+          ({ from, message: [, notice] }) =>
+            normalizeRelayUrl(from) === relayUrl && isNoticeForReqError(notice),
+        ),
       )
       .subscribe(({ message: [, notice] }) => {
         closeSub();

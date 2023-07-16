@@ -7,7 +7,7 @@ import {
   type NostrFetcherBackend,
   type NostrFetcherCommonOptions,
 } from "@nostr-fetch/kernel/fetcherBackend";
-import type { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
+import { isNoticeForReqError, type Filter, type NostrEvent } from "@nostr-fetch/kernel/nostr";
 
 import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
 import { RelayPool, initRelayPool } from "./relayPool";
@@ -63,7 +63,7 @@ export class DefaultFetcherBackend implements NostrFetcherBackend {
   public async *fetchTillEose(
     relayUrl: string,
     filter: Filter,
-    options: FetchTillEoseOptions
+    options: FetchTillEoseOptions,
   ): AsyncIterable<NostrEvent> {
     const logger = this.#debugLogger?.subLogger(relayUrl);
 
@@ -76,6 +76,11 @@ export class DefaultFetcherBackend implements NostrFetcherBackend {
 
     // relay error handlings
     const onNotice = (n: unknown) => {
+      // ignore if the message seems to have nothing to do with REQs by fetcher
+      if (!isNoticeForReqError(String(n))) {
+        return;
+      }
+
       try {
         sub.close();
       } catch (err) {
@@ -109,8 +114,8 @@ export class DefaultFetcherBackend implements NostrFetcherBackend {
       if (aborted) {
         tx.error(
           new FetchTillEoseAbortedSignal(
-            `subscription (id: ${sub.subId}) aborted before EOSE due to timeout`
-          )
+            `subscription (id: ${sub.subId}) aborted before EOSE due to timeout`,
+          ),
         );
       } else {
         tx.close();
@@ -141,13 +146,17 @@ export class DefaultFetcherBackend implements NostrFetcherBackend {
     if (options.abortSignal?.aborted) {
       closeSub();
       tx.error(
-        new FetchTillEoseAbortedSignal(`subscription (id: ${sub.subId}) aborted by AbortController`)
+        new FetchTillEoseAbortedSignal(
+          `subscription (id: ${sub.subId}) aborted by AbortController`,
+        ),
       );
     }
     options.abortSignal?.addEventListener("abort", () => {
       closeSub();
       tx.error(
-        new FetchTillEoseAbortedSignal(`subscription (id: ${sub.subId}) aborted by AbortController`)
+        new FetchTillEoseAbortedSignal(
+          `subscription (id: ${sub.subId}) aborted by AbortController`,
+        ),
       );
     });
 

@@ -8,7 +8,7 @@ import {
   type NostrFetcherBackend,
   type NostrFetcherCommonOptions,
 } from "@nostr-fetch/kernel/fetcherBackend";
-import type { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
+import { isNoticeForReqError, type Filter, type NostrEvent } from "@nostr-fetch/kernel/nostr";
 import { normalizeRelayUrl, normalizeRelayUrlSet, withTimeout } from "@nostr-fetch/kernel/utils";
 
 import type NDK from "@nostr-dev-kit/ndk";
@@ -147,6 +147,11 @@ export class NDKAdapter implements NostrFetcherBackend {
     // error handlings
     // TODO: how to handle WebSocket error?
     const onNotice = (_: unknown, notice: string) => {
+      // ignore if the message seems to have nothing to do with REQs by fetcher
+      if (!isNoticeForReqError(notice)) {
+        return;
+      }
+
       closeSub();
       tx.error(new FetchTillEoseFailedSignal(`NOTICE: ${notice}`));
     };

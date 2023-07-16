@@ -1,6 +1,6 @@
 import { fail } from "assert";
 import { describe, expect, test } from "vitest";
-import { NostrEvent, parseR2CMessage, validateEvent } from "./nostr";
+import { NostrEvent, isNoticeForReqError, parseR2CMessage, validateEvent } from "./nostr";
 
 const validEventJSON = `{
   "id": "381e2ea15a5b16f4ebdaa68ed3d9a112dc4ea6cc95641ef7eb57f1ec826f07e4",
@@ -197,6 +197,22 @@ describe("validateEvent", () => {
     ];
     for (const ev of malformedEvs) {
       expect(validateEvent(ev)).toBe(false);
+    }
+  });
+});
+
+describe("isNoticeForReqError", () => {
+  test("returns true if notice message stands for REQ errors can be caused by nostr-fetch", () => {
+    const noticeForReqErr = [
+      "too many concurrent REQs",
+      "Subscription rejected: Too many subscriptions",
+      'invalid: "ids" must contain less than or equal to 1000',
+      'invalid: "[2].limit" must be less than or equal to 5000',
+      "message too large",
+      "Maximum concurrent subscription count reached",
+    ];
+    for (const notice of noticeForReqErr) {
+      expect(isNoticeForReqError(notice)).toBe(true);
     }
   });
 });
