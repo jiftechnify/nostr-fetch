@@ -82,7 +82,7 @@ export type C2RMessageType = C2RMessage[0];
 // relay to client messages
 type R2CEvent = [type: "EVENT", subId: string, event: NostrEvent];
 type R2CEose = [type: "EOSE", subId: string];
-type R2CNotice = [type: "NOTICE", notice: unknown];
+type R2CNotice = [type: "NOTICE", notice: string];
 
 export type R2CMessage = R2CEvent | R2CEose | R2CNotice;
 export type R2CMessageType = R2CMessage[0];
@@ -272,3 +272,24 @@ const relayInfoHasSupportedNips = (relayInfo: unknown): relayInfo is RelayInfoWi
 export const generateSubId = () => {
   return Date.now().toString() + Math.random().toString(32).substring(2, 4);
 };
+
+const reqErrRegexps = [
+  /^too many concurrent REQs$/i,
+  /^Subscription rejected/i,
+  /^invalid:(.*)must (contain|be) less than or equal to/i,
+  /^message too large$/i,
+  /^Maximum concurrent subscription count reached$/i,
+];
+
+/**
+ * Checks if the NOTICE message seems to have to do with REQs by fetcher.
+ *
+ * Considers following relay implementations:
+ *
+ * - strfry
+ * - nostream
+ * - nostr-rs-relay
+ * - relayer
+ */
+export const isNoticeForReqError = (notice: string): boolean =>
+  reqErrRegexps.some((r) => r.test(notice));

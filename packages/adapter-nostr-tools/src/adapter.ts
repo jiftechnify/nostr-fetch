@@ -8,7 +8,7 @@ import {
   type NostrFetcherBackend,
   type NostrFetcherCommonOptions,
 } from "@nostr-fetch/kernel/fetcherBackend";
-import { NostrEvent, type Filter } from "@nostr-fetch/kernel/nostr";
+import { NostrEvent, isNoticeForReqError, type Filter } from "@nostr-fetch/kernel/nostr";
 import { normalizeRelayUrl, normalizeRelayUrlSet, withTimeout } from "@nostr-fetch/kernel/utils";
 
 import type { SimplePool, Relay as ToolsRelay } from "nostr-tools";
@@ -122,7 +122,12 @@ export class SimplePoolExt implements NostrFetcherBackend {
     };
 
     // error handlings
-    const onNotice = (n: unknown) => {
+    const onNotice = (n: string) => {
+      // ignore if the message seems to have nothing to do with REQs by fetcher
+      if (!isNoticeForReqError(n)) {
+        return;
+      }
+
       closeSub();
       tx.error(new FetchTillEoseFailedSignal(`NOTICE: ${JSON.stringify(n)}`));
     };

@@ -32,7 +32,7 @@ export type WSCloseEvent = {
 
 export type RelayConnectCb = Callback<void>;
 export type RelayDisconnectCb = Callback<WSCloseEvent | undefined>;
-export type RelayNoticeCb = Callback<unknown>;
+export type RelayNoticeCb = Callback<string>;
 export type RelayErrorCb = Callback<void>;
 
 export type RelayEventCbTypes = {

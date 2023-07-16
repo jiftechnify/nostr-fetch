@@ -8,7 +8,7 @@ import {
   type NostrFetcherBackend,
   type NostrFetcherCommonOptions,
 } from "@nostr-fetch/kernel/fetcherBackend";
-import type { Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
+import { isNoticeForReqError, type Filter, type NostrEvent } from "@nostr-fetch/kernel/nostr";
 import { normalizeRelayUrlSet, withTimeout } from "@nostr-fetch/kernel/utils";
 
 import type { RelayPool } from "nostr-relaypool";
@@ -185,6 +185,11 @@ export class NRTPoolAdapter implements NostrFetcherBackend {
 
     // error handlings
     const onNotice = (msg: string) => {
+      // ignore if the message seems to have nothing to do with REQs by fetcher
+      if (!isNoticeForReqError(msg)) {
+        return;
+      }
+
       closeSub();
       tx.error(new FetchTillEoseFailedSignal(`NOTICE: ${JSON.stringify(msg)}`));
     };
