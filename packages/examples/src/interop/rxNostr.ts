@@ -1,13 +1,14 @@
-import { relayPoolAdapter } from "@nostr-fetch/adapter-nostr-relaypool";
+import { rxNostrAdapter } from "@nostr-fetch/adapter-rx-nostr";
 import { NostrFetcher, eventKind } from "nostr-fetch";
-import { RelayPool } from "nostr-relaypool";
+import { createRxNostr } from "rx-nostr";
+import "websocket-polyfill";
 
 import { defaultRelays, nHoursAgo } from "../utils";
 
 const main = async () => {
   // initialize fetcher based on nostr-relaypool's `RelayPool`
-  const pool = new RelayPool();
-  const fetcher = NostrFetcher.withCustomPool(relayPoolAdapter(pool));
+  const rxNostr = createRxNostr();
+  const fetcher = NostrFetcher.withCustomPool(rxNostrAdapter(rxNostr));
 
   // fetch all text events (kind: 1) posted in the last hour from the relays
   const eventsIter = fetcher.allEventsIterator(
@@ -17,6 +18,9 @@ const main = async () => {
     },
     {
       since: nHoursAgo(1),
+    },
+    {
+      skipVerification: true,
     },
   );
 

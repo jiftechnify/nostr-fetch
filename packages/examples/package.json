@@ -19,9 +19,12 @@
     "@nostr-fetch/adapter-ndk": "^0.11.0",
     "@nostr-fetch/adapter-nostr-relaypool": "^0.11.1",
     "@nostr-fetch/adapter-nostr-tools": "^0.11.0",
+    "@nostr-fetch/adapter-rx-nostr": "^0.11.0",
     "nostr-fetch": "^0.11.0",
     "nostr-relaypool": "^0.6.28",
     "nostr-tools": "^1.10.1",
+    "rx-nostr": "^1.1.0",
+    "rxjs": "^7.8.0",
     "websocket-polyfill": "^0.0.3",
     "ws": "^8.13.0"
   },
