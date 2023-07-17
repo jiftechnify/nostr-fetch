@@ -10,6 +10,8 @@ import { finishEvent, getPublicKey } from "nostr-tools";
 
 export type FakeEventsSpec = {
   content: string;
+  kind?: number;
+  tags?: string[][];
   createdAt?: number | { since: number; until: number };
   authorName?: string;
   invalidSig?: boolean;
@@ -29,8 +31,8 @@ export const privkeyFromAuthorName = (name: string) => bytesToHex(sha256(name));
 export const pubkeyFromAuthorName = (name: string) => getPublicKey(privkeyFromAuthorName(name));
 
 export const generateFakeEvents = (spec: FakeEventsSpec): NostrEvent[] => {
-  const { content, createdAt, authorName, invalidSig, n } = {
-    ...{ createdAt: 0, authorName: "test", invalidSig: false, n: 1 },
+  const { content, kind, tags, createdAt, authorName, invalidSig, n } = {
+    ...{ kind: 1, tags: [], createdAt: 0, authorName: "test", invalidSig: false, n: 1 },
     ...spec,
   };
   const privkey = privkeyFromAuthorName(authorName);
@@ -38,8 +40,8 @@ export const generateFakeEvents = (spec: FakeEventsSpec): NostrEvent[] => {
   const res: NostrEvent[] = [];
   for (let i = 0; i < n; i++) {
     const ev = {
-      kind: 1,
-      tags: [],
+      kind,
+      tags,
       content: `${content} ${i}`,
       created_at: genCreatedAt(createdAt),
     };
