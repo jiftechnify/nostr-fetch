@@ -144,7 +144,10 @@ export class RxNostrAdapter implements NostrFetcherBackend {
         resetAutoAbortTimer();
         tx.send(event);
       },
-      complete: () => tx.close(),
+      complete: () => {
+        closeSub();
+        tx.close();
+      },
     });
 
     const noticeSub = this.#rxNostr
