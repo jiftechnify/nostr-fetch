@@ -2,6 +2,8 @@ import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
 import { NostrFetcherCommonOptions } from "@nostr-fetch/kernel/fetcherBackend";
 import { NostrEvent, querySupportedNips } from "@nostr-fetch/kernel/nostr";
 import {
+  FetchFilterKeyElem,
+  FetchFilterKeyName,
   FetchStats,
   FetchStatsListener,
   NostrFetchError,
@@ -27,7 +29,7 @@ type AssertionResult =
 export const assertReq = <T>(
   req: T,
   assertions: ((req: T) => AssertionResult)[],
-  logger: DebugLogger | undefined
+  logger: DebugLogger | undefined,
 ): void => {
   const errors = [];
   for (const assert of assertions) {
@@ -52,7 +54,7 @@ export const assertReq = <T>(
 export function checkIfTrue<T>(
   predicate: (req: T) => boolean,
   severity: "error" | "warn",
-  msg: string
+  msg: string,
 ): (req: T) => AssertionResult {
   return (req: T) => (predicate(req) ? { severity: "none" } : { severity, msg });
 }
@@ -60,7 +62,7 @@ export function checkIfTrue<T>(
 export function checkIfNonEmpty<T, U>(
   getArray: (req: T) => U[],
   severity: "error" | "warn",
-  msg: string
+  msg: string,
 ): (req: T) => AssertionResult {
   return (req: T) => (getArray(req).length !== 0 ? { severity: "none" } : { severity, msg });
 }
@@ -68,7 +70,7 @@ export function checkIfNonEmpty<T, U>(
 export function checkIfTimeRangeIsValid<T>(
   getTimeRange: (req: T) => { since?: number; until?: number },
   severity: "error" | "warn",
-  msg: string
+  msg: string,
 ): (req: T) => AssertionResult {
   return (req: T) => {
     const { since, until } = getTimeRange(req);
@@ -85,6 +87,26 @@ export function checkIfTimeRangeIsValid<T>(
  * comparator represents descending order by `created_at` of events (a.k.a. "newest to oldest" order)
  */
 export const createdAtDesc = (a: NostrEvent, b: NostrEvent): number => b.created_at - a.created_at;
+
+/**
+ * get keys corresponds to `keyName` from the event.
+ */
+export const getKeysOfEvent = <K extends FetchFilterKeyName>(
+  keyName: K,
+  ev: NostrEvent,
+): FetchFilterKeyElem<K>[] => {
+  switch (keyName) {
+    case "ids":
+      return [ev.id];
+    case "authors":
+      return [ev.pubkey];
+    case "kinds":
+      return [ev.kind];
+  }
+  // tag key -> values of tags with the target name
+  const tagVals = ev.tags.filter((t) => t[0] === keyName.charAt(1)).map((t) => t[1] ?? "");
+  return [...new Set(tagVals)];
+};
 
 // type of a result of EventBuckets#add
 type EventBucketAddResult =
@@ -151,7 +173,7 @@ export class EventBuckets<K> {
           limit: limit + (this.#limitPerKey - numEvents),
         };
       },
-      { keys: [] as K[], limit: 0 }
+      { keys: [] as K[], limit: 0 },
     );
   }
 }
@@ -230,7 +252,7 @@ class DefaultRelayCapChecker implements RelayCapabilityChecker {
 }
 
 export type RelayCapCheckerInitializer = (
-  opts: Required<NostrFetcherCommonOptions>
+  opts: Required<NostrFetcherCommonOptions>,
 ) => RelayCapabilityChecker;
 
 export const initDefaultRelayCapChecker = (opts: Required<NostrFetcherCommonOptions>) =>
@@ -315,7 +337,7 @@ export class FetchStatsManager {
 
   static init(
     cb: FetchStatsListener | undefined,
-    notifIntervalMs: number
+    notifIntervalMs: number,
   ): FetchStatsManager | undefined {
     return cb !== undefined ? new FetchStatsManager(cb, notifIntervalMs) : undefined;
   }
@@ -367,7 +389,7 @@ export class FetchStatsManager {
           numFetchedEvents: 0,
           frontier: initUntil,
         },
-      ])
+      ]),
     );
   }
 

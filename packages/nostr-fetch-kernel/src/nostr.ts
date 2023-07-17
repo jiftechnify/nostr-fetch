@@ -12,7 +12,8 @@ export type NostrEvent = {
 };
 
 /**
- * Known Nostr event kinds.
+ * Standardized Nostr event kinds.
+ * cf. https://github.com/nostr-protocol/nips#event-kinds
  */
 export const eventKind = {
   metadata: 0,
@@ -59,7 +60,13 @@ export const eventKind = {
 } as const;
 
 /**
- * Filter for event subscription
+ * Standardized single letter tag names.
+ * cf. https://github.com/nostr-protocol/nips#standardized-tags
+ */
+type SingleLetterTags = "a" | "d" | "e" | "g" | "i" | "k" | "l" | "L" | "p" | "r" | "t";
+
+/**
+ * Filter for Nostr event subscription.
  */
 export type Filter = {
   ids?: string[];
@@ -69,7 +76,8 @@ export type Filter = {
   until?: number;
   limit?: number;
   search?: string;
-  [tag: `#${string}`]: string[];
+} & {
+  [tag in `#${SingleLetterTags}`]?: string[];
 };
 
 // client to relay messages
