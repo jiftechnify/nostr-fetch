@@ -6,7 +6,7 @@ import "websocket-polyfill";
 import { defaultRelays, nHoursAgo } from "../utils";
 
 const main = async () => {
-  // initialize fetcher based on nostr-tools `SimplePool`
+  // initialize fetcher based on nostr-tools SimplePool
   const pool = new SimplePool();
   const fetcher = NostrFetcher.withCustomPool(simplePoolAdapter(pool));
 
