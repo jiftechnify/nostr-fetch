@@ -6,7 +6,7 @@ import "websocket-polyfill";
 import { defaultRelays, nHoursAgo } from "../utils";
 
 const main = async () => {
-  // initialize fetcher based on nostr-relaypool's `RelayPool`
+  // initialize fetcher based on RxNostr
   const rxNostr = createRxNostr();
   const fetcher = NostrFetcher.withCustomPool(rxNostrAdapter(rxNostr));
 

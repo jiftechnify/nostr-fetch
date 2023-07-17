@@ -5,7 +5,7 @@ import { RelayPool } from "nostr-relaypool";
 import { defaultRelays, nHoursAgo } from "../utils";
 
 const main = async () => {
-  // initialize fetcher based on nostr-relaypool's `RelayPool`
+  // initialize fetcher based on nostr-relaypool's RelayPool
   const pool = new RelayPool();
   const fetcher = NostrFetcher.withCustomPool(relayPoolAdapter(pool));
 
