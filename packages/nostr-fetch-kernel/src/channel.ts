@@ -3,6 +3,7 @@ export interface Deferred<T> {
   reject(e?: unknown): void;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 export class Deferred<T> {
   promise: Promise<T>;
   constructor() {
