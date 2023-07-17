@@ -209,6 +209,8 @@ npm run example fetchLastPerAuthor <your hex pubkey>
     + [`fetchAllEvents`](#fetchallevents)
     + [`fetchLatestEvents`](#fetchlatestevents)
     + [`fetchLastEvent`](#fetchlastevent)
+    + [`fetchLatestEventsPerKey`](#fetchlatesteventsperkey)
+    + [`fetchLastEventPerKey`](#fetchlasteventperkey)
     + [`fetchLatestEventsPerAuthor`](#fetchlatesteventsperauthor)
     + [`fetchLastEventPerAuthor`](#fetchlasteventperauthor)
 
@@ -254,7 +256,7 @@ public allEventsIterator(
     relayUrls: string[],
     filter: FetchFilter,
     timeRangeFilter: FetchTimeRangeFilter,
-    options: AllEventsIterOptions = {}
+    options?: AllEventsIterOptions
 ): AsyncIterable<NostrEvent>
 ```
 
@@ -285,7 +287,7 @@ public async fetchAllEvents(
     relayUrls: string[],
     filter: FetchFilter,
     timeRangeFilter: FetchTimeRangeFilter,
-    options: FetchAllOptions = {}
+    options?: FetchAllOptions
 ): Promise<NostrEvent[]>
 ```
 
@@ -306,7 +308,7 @@ public async fetchLatestEvents(
     relayUrls: string[],
     filter: FetchFilter,
     limit: number,
-    options: FetchLatestOptions = {}
+    options?: FetchLatestOptions
 ): Promise<NostrEvent[]>
 ```
 
@@ -322,13 +324,70 @@ Events in the result will be sorted in "newest to oldest" order.
 public async fetchLastEvent(
     relayUrls: string[],
     filter: FetchFilter,
-    options: FetchLatestOptions = {}
+    options?: FetchLatestOptions
 ): Promise<NostrEvent | undefined>
 ```
 
 Fetches the last event matching the filter from Nostr relays specified by the array of URLs.
 
 Returns `undefined` if no event matching the filter exists in any relay.
+
+---
+
+#### `fetchLatestEventsPerKey`
+
+```ts
+public fetchLatestEventsPerKey<KN extends FetchFilterKeyName>(
+    keyName: KN,
+    keysAndRelays: KeysAndRelays<KN>,
+    otherFilter: Omit<FetchFilter, KN>,
+    limit: number,
+    options?: FetchLatestOptions
+): AsyncIterable<NostrEventListWithKey<KN>>
+```
+
+Fetches latest up to `limit` events **for each key specified by `keyName` and `keysAndRelays`**.
+
+`keysAndRelays` can be either of two types:
+
+- `{ keys: K[], relayUrls: string[] }`: The fetcher will use the same relay set (`relayUrls`) for all `keys` to fetch events.
+- `Map<K, string[]>`: Key must be the key of event and value must be relay set for that key. The fetcher will use separate relay set for each key to fetch events.
+
+> **Note**
+>
+> The type `K` is `number` if `keyName` is `"kinds"`. Otherwise, `K` is `string`.
+
+Result is an async iterable of `{ key: <key of events>, events: <events which have that key> }` pairs.
+
+Each array of events in the result are sorted in "newest to oldest" order.
+
+---
+
+#### `fetchLastEventPerKey`
+
+```ts
+public fetchLatestEventsPerKey<KN extends FetchFilterKeyName>(
+    keyName: KN,
+    keysAndRelays: KeysAndRelays<KN>,
+    otherFilter: Omit<FetchFilter, KN>,
+    options?: FetchLatestOptions
+): AsyncIterable<NostrEventWithKey<KN>>
+```
+
+Fetches the last event **for each key specified by `keysAndRelays`**.
+
+`keysAndRelays` can be either of two types:
+
+- `{ keys: K[], relayUrls: string[] }`: The fetcher will use the same relay set (`relayUrls`) for all `keys` to fetch events.
+- `Map<K, string[]>`: Key must be key of the event and value must be relay set for that key. The fetcher will use separate relay set for each key to fetch events.
+
+> **Note**
+>
+> The type `K` is `number` if `keyName` is `"kinds"`. Otherwise, `K` is `string`.
+
+Result is an async iterable of `{ key: <key of events>, event: <the latest event which have that key> }` pairs.
+
+`event` in result will be `undefined` if no event matching the filter exists in any relay.
 
 ---
 
@@ -344,14 +403,7 @@ public fetchLatestEventsPerAuthor(
 ```
 Fetches latest up to `limit` events **for each author specified by `authorsAndRelays`**.
 
-`authorsAndRelays` can be either of two types:
-
-- `{ authors: string[], relayUrls: string[] }`: The fetcher will use the same relay set (`relayUrls`) for all `authors` to fetch events.
-- `Map<string, string[]>`: Key must be author's pubkey and value must be relay set for that author. The fetcher will use separate relay set for each author to fetch events.
-
-Result is an async iterable of `{ author (pubkey), events (from that author) }` pairs.
-
-Each array of events in the result are sorted in "newest to oldest" order.
+It is just a wrapper of `fetchLatestEventsPerKey` specialized to `"authors"` key.
 
 ---
 
@@ -367,12 +419,5 @@ public fetchLastEventPerAuthor(
 
 Fetches the last event **for each author specified by `authorsAndRelays`**.
 
-`authorsAndRelays` can be either of two types:
-
-- `{ authors: string[], relayUrls: string[] }`: The fetcher will use the same relay set (`relayUrls`) for all `authors` to fetch events.
-- `Map<string, string[]>`: Key must be author's pubkey and value must be relay set for that author. The fetcher will use separate relay set for each author to fetch events.
-
-Result is an async iterable of `{ author (pubkey), event }` pairs.
-
-`event` in result will be `undefined` if no event matching the filter for the author exists in any relay.
+It is just a wrapper of `fetchLastEventPerKey` specialized to `"authors"` key.
 
