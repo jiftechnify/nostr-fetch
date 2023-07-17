@@ -8,15 +8,8 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 ### Bug Fixes
 
 * change type of NOTICE message, fix broken tests ([09ed97f](https://github.com/jiftechnify/nostr-fetch/commit/09ed97fb145236cb4866aa053f6e7d431c06e01e))
+* ignore NOTICE if it doesn't have to do with REQs by fetcher ([08c6545](https://github.com/jiftechnify/nostr-fetch/commit/08c654517eb176d20c5596bb675cd1ca8df8f62e))
 
 ### Features
 
 * rx-nostr adapter ([7cdd6a3](https://github.com/jiftechnify/nostr-fetch/commit/7cdd6a3745e010260c82184507eea8bc12d252b4))
-
-# [0.11.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.10.1...v0.11.0) (2023-07-09)
-
-**Note:** Version bump only for package @nostr-fetch/testutil
-
-# [0.10.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.9.0...v0.10.0) (2023-07-04)
-
-**Note:** Version bump only for package @nostr-fetch/testutil

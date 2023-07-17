@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.12.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.11.2...v0.12.0) (2023-07-17)
+
+### Features
+
+* rename normalizeRelayUrls -> normalizeRelayUrlSet ([f2b5d2a](https://github.com/jiftechnify/nostr-fetch/commit/f2b5d2ae5e14d5ca84bbbec70deedc85a42d1c06))
+* rx-nostr adapter ([7cdd6a3](https://github.com/jiftechnify/nostr-fetch/commit/7cdd6a3745e010260c82184507eea8bc12d252b4))
+
 ## [0.11.2](https://github.com/jiftechnify/nostr-fetch/compare/v0.11.1...v0.11.2) (2023-07-09)
 
 ### Bug Fixes

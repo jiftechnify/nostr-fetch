@@ -1,6 +1,6 @@
 {
   "name": "@nostr-fetch/kernel",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "description": "Kernel of nostr-fetch",
   "keywords": [
     "nostr"
@@ -47,8 +47,8 @@
     "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
-    "@noble/hashes": "^1.2.0",
-    "@noble/curves": "^1.1.0"
+    "@noble/curves": "^1.1.0",
+    "@noble/hashes": "^1.2.0"
   },
   "volta": {
     "node": "18.14.2"
