@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.12.1](https://github.com/jiftechnify/nostr-fetch/compare/v0.12.0...v0.12.1) (2023-07-17)
+
+### Bug Fixes
+
+* unsubscribe observers on EOSE ([f777959](https://github.com/jiftechnify/nostr-fetch/commit/f7779594d2f46d7b7a64a577edb001f4cba5f746))
+
 # [0.12.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.11.2...v0.12.0) (2023-07-17)
 
 ### Bug Fixes
