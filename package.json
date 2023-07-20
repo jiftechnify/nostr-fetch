@@ -43,6 +43,9 @@
     "vitest-websocket-mock": "^0.2.0",
     "websocket-polyfill": "^0.0.3"
   },
+  "resolutions": {
+    "**/@scure/bip39": "^1.2.1"
+  },
   "volta": {
     "node": "18.14.2"
   }
