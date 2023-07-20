@@ -55,6 +55,7 @@ export const eventKind = {
   article: 30023,
   appSpecificData: 30078,
   liveEvent: 30311,
+  classifiedListing: 30402,
   handlerRecommendation: 31989,
   handlerInformation: 31990,
 } as const;
