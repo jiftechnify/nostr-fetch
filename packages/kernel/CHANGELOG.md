@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.12.2](https://github.com/jiftechnify/nostr-fetch/compare/v0.12.1...v0.12.2) (2023-07-24)
+
+### Bug Fixes
+
+* update standardized event kinds ([5bf190d](https://github.com/jiftechnify/nostr-fetch/commit/5bf190df0d52f86d9d338d178e5a343522cc561b))
+
 ## [0.12.1](https://github.com/jiftechnify/nostr-fetch/compare/v0.12.0...v0.12.1) (2023-07-17)
 
 **Note:** Version bump only for package @nostr-fetch/kernel

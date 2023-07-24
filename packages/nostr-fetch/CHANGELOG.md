@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.12.2](https://github.com/jiftechnify/nostr-fetch/compare/v0.12.1...v0.12.2) (2023-07-24)
+
+### Bug Fixes
+
+* export filter types ([d0f12fc](https://github.com/jiftechnify/nostr-fetch/commit/d0f12fcfe4ecbcba5efa80896c2a638db235e2cf))
+
 ## [0.12.1](https://github.com/jiftechnify/nostr-fetch/compare/v0.12.0...v0.12.1) (2023-07-17)
 
 **Note:** Version bump only for package nostr-fetch

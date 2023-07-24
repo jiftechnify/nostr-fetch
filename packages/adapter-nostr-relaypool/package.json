@@ -1,6 +1,6 @@
 {
   "name": "@nostr-fetch/adapter-nostr-relaypool",
-  "version": "0.12.1",
+  "version": "0.12.2",
   "description": "The adapter for nostr-relaypool's RelayPool that make it interoperable with nostr-fetch",
   "author": "jiftechnify <jiftech.stlfy@gmail.com>",
   "repository": "https://github.com/jiftechnify/nostr-fetch",
@@ -42,14 +42,14 @@
     "build:types": "tsc -p tsconfig.build.json || exit 0"
   },
   "dependencies": {
-    "@nostr-fetch/kernel": "^0.12.1"
+    "@nostr-fetch/kernel": "^0.12.2"
   },
   "devDependencies": {
-    "nostr-fetch": "^0.12.1",
+    "nostr-fetch": "^0.12.2",
     "nostr-relaypool": "^0.6.28"
   },
   "peerDependencies": {
-    "nostr-fetch": "^0.12.1",
+    "nostr-fetch": "^0.12.2",
     "nostr-relaypool": "^0.6.28"
   },
   "volta": {
