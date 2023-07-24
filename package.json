@@ -26,7 +26,7 @@
     "@types/fs-extra": "^11.0.1",
     "@types/node": "^20.4.1",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
-    "@typescript-eslint/parser": "^5.60.0",
+    "@typescript-eslint/parser": "^6.1.0",
     "conventional-changelog-cli": "^3.0.0",
     "copy-file-util": "^1.0.0",
     "esbuild": "^0.18.11",
