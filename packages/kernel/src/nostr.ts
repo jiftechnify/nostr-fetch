@@ -53,9 +53,11 @@ export const eventKind = {
   marketplaceStall: 30017,
   marketplaceProduct: 30018,
   article: 30023,
+  draftArticle: 30024,
   appSpecificData: 30078,
   liveEvent: 30311,
   classifiedListing: 30402,
+  draftClassifiedListing: 30403,
   handlerRecommendation: 31989,
   handlerInformation: 31990,
 } as const;
