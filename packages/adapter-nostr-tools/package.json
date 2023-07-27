@@ -52,8 +52,5 @@
   "peerDependencies": {
     "nostr-fetch": "^0.12.2",
     "nostr-tools": "^1.3.0"
-  },
-  "volta": {
-    "node": "18.14.2"
   }
 }
