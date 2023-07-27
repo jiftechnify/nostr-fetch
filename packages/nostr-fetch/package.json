@@ -47,8 +47,5 @@
   },
   "devDependencies": {
     "@nostr-fetch/testutil": "^0.12.2"
-  },
-  "volta": {
-    "node": "18.14.2"
   }
 }
