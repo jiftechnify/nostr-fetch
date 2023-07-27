@@ -421,3 +421,10 @@ Fetches the last event **for each author specified by `authorsAndRelays`**.
 
 It is just a wrapper of `fetchLastEventPerKey` specialized to `"authors"` key.
 
+
+## Support me!
+You can support this project by:
+
+- ⭐ Starring the repo
+- ⚡️ Sending some sats to my lightning address: jiftechnify@eclair.c-stellar.net
+- 🐝 Sending funds via [PkgZap](https://pkgzap.albylabs.com/)
