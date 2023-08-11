@@ -35,6 +35,7 @@ export const eventKind = {
   liveChatMessage: 1311,
   report: 1984,
   label: 1985,
+  communityPostApproval: 4550,
   zapRequest: 9734,
   zap: 9735,
   muteList: 10000,
@@ -64,6 +65,7 @@ export const eventKind = {
   calendarEventRsvp: 31925,
   handlerRecommendation: 31989,
   handlerInformation: 31990,
+  communityDefinition: 34550,
 } as const;
 
 /**
