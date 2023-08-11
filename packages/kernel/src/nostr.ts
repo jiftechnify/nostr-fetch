@@ -58,6 +58,10 @@ export const eventKind = {
   liveEvent: 30311,
   classifiedListing: 30402,
   draftClassifiedListing: 30403,
+  dateBasedCalendarEvent: 31922,
+  timeBasedCalendarEvent: 31923,
+  calendar: 31924,
+  calendarEventRsvp: 31925,
   handlerRecommendation: 31989,
   handlerInformation: 31990,
 } as const;
