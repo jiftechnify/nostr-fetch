@@ -322,7 +322,7 @@ export class FetchStatsManager {
   };
   #relayStatsMap: Map<string, RelayFetchStats> = new Map();
   #cb: FetchStatsListener;
-  #timer: NodeJS.Timer | undefined;
+  #timer: NodeJS.Timeout | undefined;
 
   private constructor(cb: FetchStatsListener, notifInterval: number) {
     this.#cb = cb;

@@ -56,7 +56,7 @@ class RelayPoolImpl implements RelayPool {
   // keys are **normalized** relay URLs
   #relays: Map<string, ManagedRelay> = new Map();
 
-  #watchdogTimer: NodeJS.Timer;
+  #watchdogTimer: NodeJS.Timeout;
   #debugLogger: DebugLogger | undefined;
 
   constructor(options: Required<RelayPoolOptions>) {
