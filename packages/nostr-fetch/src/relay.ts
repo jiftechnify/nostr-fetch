@@ -63,7 +63,7 @@ class RelayImpl implements Relay {
   #subscriptions: Map<string, RelaySubscription> = new Map();
 
   #msgQueue: string[] = [];
-  #handleMsgsInterval: NodeJS.Timer | undefined;
+  #handleMsgsInterval: NodeJS.Timeout | undefined;
 
   constructor(relayUrl: string, options: RelayOptions) {
     this.#relayUrl = relayUrl;
