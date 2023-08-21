@@ -39,7 +39,7 @@ export const setupSubscriptionAbortion = (
   options: FetchTillEoseOptions,
 ): (() => void) => {
   // auto abortion
-  let subAutoAbortTimer: NodeJS.Timer | undefined;
+  let subAutoAbortTimer: NodeJS.Timeout | undefined;
   const resetAutoAbortTimer = () => {
     if (subAutoAbortTimer !== undefined) {
       clearTimeout(subAutoAbortTimer);
