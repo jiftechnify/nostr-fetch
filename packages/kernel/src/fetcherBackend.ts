@@ -84,6 +84,22 @@ export class FetchTillEoseAbortedSignal extends Error {
 }
 
 /**
+ * Check if `err` is {@linkcode FetchTillEoseFailedSignal}.
+ *
+ * Note that you can't check that using `instanceof` operator.
+ */
+export const isFetchTillEoseFailedSignal = (err: unknown): err is FetchTillEoseFailedSignal =>
+  err instanceof Error && err.name === "FetchTillEoseFailedSignal";
+
+/**
+ * Check if `err` is {@linkcode FetchTillEoseAbortedSignal}.
+ *
+ * Note that you can't check that using `instanceof` operator.
+ */
+export const isFetchTillEoseAbortedSignal = (err: unknown): err is FetchTillEoseAbortedSignal =>
+  err instanceof Error && err.name === "FetchTillEoseAbortedSignal";
+
+/**
  * Common options for `NostrFetcher` and all `NostrFetcherBackend` implementations.
  */
 export type NostrFetcherCommonOptions = {

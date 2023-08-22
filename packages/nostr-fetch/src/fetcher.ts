@@ -3,13 +3,13 @@ import { verifyEventSig } from "@nostr-fetch/kernel/crypto";
 import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
 import {
   EnsureRelaysOptions,
-  FetchTillEoseAbortedSignal,
-  FetchTillEoseFailedSignal,
   FetchTillEoseOptions,
   NostrFetcherBackend,
   NostrFetcherBackendInitializer,
   NostrFetcherCommonOptions,
   defaultFetcherCommonOptions,
+  isFetchTillEoseAbortedSignal,
+  isFetchTillEoseFailedSignal,
 } from "@nostr-fetch/kernel/fetcherBackend";
 import { NostrEvent } from "@nostr-fetch/kernel/nostr";
 import { abbreviate, currUnixtimeSec, normalizeRelayUrlSet } from "@nostr-fetch/kernel/utils";
@@ -516,13 +516,13 @@ export class NostrFetcher {
               }
             }
           } catch (err) {
-            if (err instanceof FetchTillEoseFailedSignal) {
+            if (isFetchTillEoseFailedSignal(err)) {
               // an error occurred while fetching events
               logger?.log("error", err);
               statsMngr?.setRelayStatus(rurl, "failed");
               break;
             }
-            if (err instanceof FetchTillEoseAbortedSignal) {
+            if (isFetchTillEoseAbortedSignal(err)) {
               // fetch aborted
               logger?.log("info", err.message);
               isAboutToAbort = true;
@@ -740,13 +740,13 @@ export class NostrFetcher {
               }
             }
           } catch (err) {
-            if (err instanceof FetchTillEoseFailedSignal) {
+            if (isFetchTillEoseFailedSignal(err)) {
               // an error occurred while fetching events
               logger?.log("error", err);
               statsMngr?.setRelayStatus(rurl, "failed");
               break;
             }
-            if (err instanceof FetchTillEoseAbortedSignal) {
+            if (isFetchTillEoseAbortedSignal(err)) {
               // fetch aborted
               logger?.log("info", err.message);
               isAboutToAbort = true;
@@ -1063,14 +1063,14 @@ export class NostrFetcher {
               }
             }
           } catch (err) {
-            if (err instanceof FetchTillEoseFailedSignal) {
+            if (isFetchTillEoseFailedSignal(err)) {
               // an error occurred while fetching events
               logger?.log("error", err);
               statsMngr?.setRelayStatus(rurl, "failed");
               resolveAllOnEarlyBreak();
               break;
             }
-            if (err instanceof FetchTillEoseAbortedSignal) {
+            if (isFetchTillEoseAbortedSignal(err)) {
               // fetch aborted
               logger?.log("info", err.message);
               isAboutToAbort = true;
