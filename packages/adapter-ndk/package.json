@@ -37,9 +37,8 @@
     "fix": "run-s fix:*",
     "fix:format": "prettier --write --log-level warn src/**/*.ts",
     "fix:js": "eslint --fix src/",
-    "build": "npm-run-all -p build:*",
-    "build:modules": "node build.js",
-    "build:types": "tsc -p tsconfig.build.json || exit 0"
+    "build": "run-s tsc build:*",
+    "build:modules": "node build.js"
   },
   "dependencies": {
     "@nostr-fetch/kernel": "^0.12.2"
