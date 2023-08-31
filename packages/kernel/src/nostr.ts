@@ -35,6 +35,7 @@ export const eventKind = {
   liveChatMessage: 1311,
   report: 1984,
   label: 1985,
+  communityPostApproval: 4550,
   zapRequest: 9734,
   zap: 9735,
   muteList: 10000,
@@ -58,15 +59,25 @@ export const eventKind = {
   liveEvent: 30311,
   classifiedListing: 30402,
   draftClassifiedListing: 30403,
+  dateBasedCalendarEvent: 31922,
+  timeBasedCalendarEvent: 31923,
+  calendar: 31924,
+  calendarEventRsvp: 31925,
   handlerRecommendation: 31989,
   handlerInformation: 31990,
+  communityDefinition: 34550,
 } as const;
 
 /**
  * Standardized single letter tag names.
  * cf. https://github.com/nostr-protocol/nips#standardized-tags
  */
-type SingleLetterTags = "a" | "d" | "e" | "g" | "i" | "k" | "l" | "L" | "p" | "r" | "t";
+type SingleLetterTags = "a" | "d" | "e" | "g" | "i" | "k" | "l" | "L" | "m" | "p" | "r" | "t" | "x";
+
+/**
+ * Keys of filter props for tag queries.
+ */
+type TagQueryKey = `#${SingleLetterTags}`;
 
 /**
  * Filter for Nostr event subscription.
@@ -80,7 +91,7 @@ export type Filter = {
   limit?: number;
   search?: string;
 } & {
-  [tag in `#${SingleLetterTags}`]?: string[];
+  [tag in TagQueryKey]?: string[];
 };
 
 // client to relay messages
