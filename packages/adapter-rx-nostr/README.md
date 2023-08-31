@@ -17,3 +17,10 @@ const main = async () => {
     // ...
 }
 ```
+
+## Minimum Supported Version of rx-nostr
+
+| adapter version | rx-nostr version |
+|-----------------|------------------|
+| < 0.13.0        | 1.1.0            |
+| >= 0.13.0       | 1.2.0            |
