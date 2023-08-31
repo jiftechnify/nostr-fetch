@@ -308,7 +308,7 @@ class SeenEventsSet implements SeenEvents<false> {
 }
 
 export class FetchStatsManager {
-  #stats: Omit<FetchStats, "relays"> = {
+  #stats: Omit<FetchStats, "relays" | "elapsedTimeMs"> = {
     progress: {
       max: 1, // prevent division by 0
       current: 0,
@@ -320,6 +320,7 @@ export class FetchStatsManager {
       runningSubs: 0,
     },
   };
+  #startedAt: number = performance.now();
   #relayStatsMap: Map<string, RelayFetchStats> = new Map();
   #cb: FetchStatsListener;
   #timer: NodeJS.Timeout | undefined;
@@ -332,7 +333,11 @@ export class FetchStatsManager {
   }
 
   #renderStats(): FetchStats {
-    return { ...this.#stats, relays: Object.fromEntries(this.#relayStatsMap) };
+    return {
+      ...this.#stats,
+      elapsedTimeMs: performance.now() - this.#startedAt,
+      relays: Object.fromEntries(this.#relayStatsMap),
+    };
   }
 
   static init(

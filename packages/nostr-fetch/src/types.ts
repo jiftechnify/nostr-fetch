@@ -61,6 +61,8 @@ export type RelayFetchStats = {
  * Various statistics of the event fetching.
  */
 export type FetchStats = {
+  /** Elapsed time in millisecond */
+  elapsedTimeMs: number;
   /** Overall progress of the event fetching. */
   progress: {
     max: number;
