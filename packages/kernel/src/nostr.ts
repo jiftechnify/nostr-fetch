@@ -72,7 +72,12 @@ export const eventKind = {
  * Standardized single letter tag names.
  * cf. https://github.com/nostr-protocol/nips#standardized-tags
  */
-type SingleLetterTags = "a" | "d" | "e" | "g" | "i" | "k" | "l" | "L" | "p" | "r" | "t";
+type SingleLetterTags = "a" | "d" | "e" | "g" | "i" | "k" | "l" | "L" | "m" | "p" | "r" | "t" | "x";
+
+/**
+ * Keys of filter props for tag queries.
+ */
+type TagQueryKey = `#${SingleLetterTags}`;
 
 /**
  * Filter for Nostr event subscription.
@@ -86,7 +91,7 @@ export type Filter = {
   limit?: number;
   search?: string;
 } & {
-  [tag in `#${SingleLetterTags}`]?: string[];
+  [tag in TagQueryKey]?: string[];
 };
 
 // client to relay messages
