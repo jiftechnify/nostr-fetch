@@ -14,3 +14,9 @@ import { simplePoolAdapter } from '@nostr-fetch/adapter-nostr-tools'
 const pool = new SimplePool();
 const fetcher = NostrFetcher.withCustomPool(simplePoolAdapter(pool));
 ```
+
+## Minimum Supported Version of nostr-tools
+
+| adapter version | nostr-tools version |
+|-----------------|---------------------|
+| *               | 1.3.0               |

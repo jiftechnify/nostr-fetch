@@ -16,7 +16,6 @@ import { NDKEvent, NDKRelay, NDKRelaySet, NDKRelayStatus } from "@nostr-dev-kit/
 
 export class NDKAdapter implements NostrFetcherBackend {
   #ndk: NDK;
-  #implicitRelays: Map<string, NDKRelay> = new Map();
 
   #debugLogger: DebugLogger | undefined;
 
@@ -41,11 +40,11 @@ export class NDKAdapter implements NostrFetcherBackend {
     const normalizedUrls = normalizeRelayUrlSet(relayUrls);
 
     // partition relays to 2 groups:
-    // 1. managed by the NDK pool or the adapter
+    // 1. managed by the NDK pool
     // 2. unconnected
     const { managedRurls, unconnRurls } = normalizedUrls.reduce(
       ({ managedRurls, unconnRurls }, rurl) => {
-        if (this.#ndk.pool.relays.has(rurl) || this.#implicitRelays.has(rurl)) {
+        if (this.#ndk.pool.relays.has(rurl)) {
           return { managedRurls: [...managedRurls, rurl], unconnRurls: unconnRurls };
         }
         return { managedRurls: managedRurls, unconnRurls: [...unconnRurls, rurl] };
@@ -54,18 +53,25 @@ export class NDKAdapter implements NostrFetcherBackend {
     );
     this.#debugLogger?.log("verbose", "managed=%O, unconnected=%O", managedRurls, unconnRurls);
 
-    const ensure = async (rurl: string) => {
+    const ensure = (rurl: string): Promise<void> => {
       const logger = this.#debugLogger?.subLogger(rurl);
+      return new Promise<void>((resolve, reject) => {
+        const r = new NDKRelay(rurl);
+        r.on("connect", () => {
+          resolve();
+        });
+        r.on("disconnect", () => {
+          console.info(r.status);
+          logger?.log("info", "disconnected");
+        });
+        r.on("notice", (_: unknown, notice: string) => logger?.log("warn", `NOTICE: ${notice}`));
 
-      const r = new NDKRelay(rurl);
-      await r.connect();
-
-      r.on("disconnect", () => {
-        console.info(r.status);
-        logger?.log("info", "disconnected");
+        try {
+          this.#ndk.pool.useTemporaryRelay(r, 86400000); // virtually infinite lifetime
+        } catch {
+          reject(Error("failed to add temporary relay to NDK pool"));
+        }
       });
-      r.on("notice", (_: unknown, notice: string) => logger?.log("warn", `NOTICE: ${notice}`));
-      return r;
     };
 
     // attempt to connect to all unconnected relays
@@ -73,14 +79,12 @@ export class NDKAdapter implements NostrFetcherBackend {
     await Promise.all(
       unconnRurls.map(async (rurl) => {
         try {
-          const r = await withTimeout(
+          await withTimeout(
             ensure(rurl),
             connectTimeoutMs,
             `attempt to connect to the relay ${rurl} timed out`,
           );
-
           connectedRurls.push(rurl);
-          this.#implicitRelays.set(rurl, r);
         } catch (err) {
           this.#debugLogger?.log("error", err);
         }
@@ -92,13 +96,9 @@ export class NDKAdapter implements NostrFetcherBackend {
   private getRelayIfConnected(relayUrl: string): NDKRelay | undefined {
     const normalized = normalizeRelayUrl(relayUrl);
 
-    const r1 = this.#ndk.pool.relays.get(normalized);
-    if (r1 !== undefined && r1.status === NDKRelayStatus.CONNECTED) {
-      return r1;
-    }
-    const r2 = this.#implicitRelays.get(normalized);
-    if (r2 !== undefined && r2.status === NDKRelayStatus.CONNECTED) {
-      return r2;
+    const r = this.#ndk.pool.relays.get(normalized);
+    if (r !== undefined && r.status === NDKRelayStatus.CONNECTED) {
+      return r;
     }
     return undefined;
   }
@@ -179,12 +179,16 @@ export class NDKAdapter implements NostrFetcherBackend {
   /**
    * Cleans up all the internal states of the fetcher.
    *
-   * Disconnects from relays managed by the adapter.
+   * Actually it does nothing.
    */
   public shutdown(): void {
-    for (const relay of this.#implicitRelays.values()) {
-      relay.disconnect();
+    // do nothing
+  }
+
+  // for test (avoid unhandled rejection on clean up of the mock relay server)
+  public _hardShutdown(): void {
+    for (const rurl of this.#ndk.pool.relays.keys()) {
+      this.#ndk.pool.removeRelay(rurl);
     }
-    this.#implicitRelays.clear();
   }
 }
