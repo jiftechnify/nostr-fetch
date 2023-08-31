@@ -461,7 +461,7 @@ export class NostrFetcher {
         : undefined;
     const progTracker = new ProgressTracker(eligibleRelayUrls);
     statsMngr?.setProgressMax(eligibleRelayUrls.length);
-    statsMngr?.initRelayStats(eligibleRelayUrls, initialUntil);
+    statsMngr?.initRelayStats(relayUrls, eligibleRelayUrls, initialUntil);
 
     // fetch events from each relay
     Promise.all(
@@ -686,7 +686,7 @@ export class NostrFetcher {
 
     const progTracker = new ProgressTracker(eligibleRelayUrls);
     statsMngr?.setProgressMax(eligibleRelayUrls.length * limit);
-    statsMngr?.initRelayStats(eligibleRelayUrls, initialUntil);
+    statsMngr?.initRelayStats(relayUrls, eligibleRelayUrls, initialUntil);
 
     // fetch at most `limit` events from each relay
     Promise.all(
@@ -854,7 +854,13 @@ export class NostrFetcher {
     kr: KeysAndRelays<K>,
     ensureOpts: EnsureRelaysOptions,
     reqNips: number[],
-  ): Promise<[map: Map<string, FetchFilterKeyElem<K>[]>, allKeys: FetchFilterKeyElem<K>[]]> {
+  ): Promise<
+    [
+      map: Map<string, FetchFilterKeyElem<K>[]>,
+      allKeys: FetchFilterKeyElem<K>[],
+      allRelays: string[],
+    ]
+  > {
     if (isRelaySetForAllKeys(kr)) {
       assertReq(
         kr,
@@ -870,7 +876,7 @@ export class NostrFetcher {
         ensureOpts,
         reqNips,
       );
-      return [new Map(eligibleRelays.map((rurl) => [rurl, kr.keys])), kr.keys];
+      return [new Map(eligibleRelays.map((rurl) => [rurl, kr.keys])), kr.keys, kr.relayUrls];
     }
 
     if (isRelaySetsPerKey(kr)) {
@@ -897,17 +903,15 @@ export class NostrFetcher {
           rurl2keys.set(rurl, [...(keys ?? []), key as FetchFilterKeyElem<K>]);
         }
       }
-      const eligibleRelays = await this.#ensureRelaysWithCapCheck(
-        [...rurl2keys.keys()],
-        ensureOpts,
-        reqNips,
-      );
+      const allRelays = [...rurl2keys.keys()];
+      const eligibleRelays = await this.#ensureRelaysWithCapCheck(allRelays, ensureOpts, reqNips);
 
       // retain eligible relays only
       return [
         /* eslint-disable-next-line @typescript-eslint/no-non-null-assertion */
         new Map(eligibleRelays.map((rurl) => [rurl, rurl2keys.get(rurl)!])),
         krArr.map(([key]) => key),
+        allRelays,
       ];
     }
 
@@ -970,7 +974,7 @@ export class NostrFetcher {
 
     // get mapping of available relay to keys and list of all keys
     const reqNips = this.#calcRequiredNips(otherFilter);
-    const [relayToKeys, allKeys] = await this.#mapAvailableRelayToKeys(
+    const [relayToKeys, allKeys, allRelays] = await this.#mapAvailableRelayToKeys(
       keysAndRelays,
       options,
       reqNips,
@@ -982,7 +986,7 @@ export class NostrFetcher {
     const initialUntil = currUnixtimeSec();
 
     statsMngr?.setProgressMax(allKeys.length);
-    statsMngr?.initRelayStats([...relayToKeys.keys()], initialUntil);
+    statsMngr?.initRelayStats(allRelays, [...relayToKeys.keys()], initialUntil);
 
     // for each pair of key and relay URL, create a promise that act as "latch", so that the "merger" can wait for a subscription to complete
     const latches = new KeyRelayMatrix(relayToKeys, () => new Deferred<NostrEvent[]>());

@@ -1,6 +1,7 @@
 import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
 import { NostrFetcherCommonOptions } from "@nostr-fetch/kernel/fetcherBackend";
 import { NostrEvent, querySupportedNips } from "@nostr-fetch/kernel/nostr";
+import { normalizeRelayUrlSet } from ".";
 import {
   FetchFilterKeyElem,
   FetchFilterKeyName,
@@ -385,17 +386,30 @@ export class FetchStatsManager {
   }
 
   /* relay stats */
-  initRelayStats(rurls: string[], initUntil: number): void {
-    this.#relayStatsMap = new Map(
-      rurls.map((rurl) => [
-        rurl,
-        {
-          status: "fetching",
-          numFetchedEvents: 0,
-          frontier: initUntil,
-        },
-      ]),
-    );
+  initRelayStats(allReleys: string[], connectedRelays: string[], initUntil: number): void {
+    const connectedSet = new Set(connectedRelays);
+    const failedRelays = normalizeRelayUrlSet(allReleys).filter((r) => !connectedSet.has(r));
+
+    console.log(allReleys, connectedRelays, failedRelays);
+
+    const connectedEntries: [string, RelayFetchStats][] = connectedRelays.map((rurl) => [
+      rurl,
+      {
+        status: "fetching",
+        numFetchedEvents: 0,
+        frontier: initUntil,
+      },
+    ]);
+    const failedEntries: [string, RelayFetchStats][] = failedRelays.map((rurl) => [
+      rurl,
+      {
+        status: "connection-failed",
+        numFetchedEvents: 0,
+        frontier: 0,
+      },
+    ]);
+
+    this.#relayStatsMap = new Map([...connectedEntries, ...failedEntries]);
   }
 
   setRelayStatus(rurl: string, status: RelayStatus): void {
