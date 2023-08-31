@@ -27,7 +27,7 @@
     "@types/node": "^20.4.1",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.1.0",
-    "conventional-changelog-cli": "^3.0.0",
+    "conventional-changelog-cli": "^4.0.0",
     "copy-file-util": "^1.0.0",
     "esbuild": "^0.19.2",
     "esbuild-register": "^3.3.3",
