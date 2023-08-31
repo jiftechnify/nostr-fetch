@@ -1,11 +1,11 @@
 export * from "./fetcher";
 export {
-  FetchFilter,
-  FetchStats,
-  FetchStatsListener,
-  FetchTimeRangeFilter,
   NostrFetchError,
+  type FetchFilter,
+  type FetchStats,
+  type FetchStatsListener,
+  type FetchTimeRangeFilter,
 } from "./types";
 
-export { NostrEvent, eventKind } from "@nostr-fetch/kernel/nostr";
+export { eventKind, type NostrEvent } from "@nostr-fetch/kernel/nostr";
 export { normalizeRelayUrl, normalizeRelayUrlSet } from "@nostr-fetch/kernel/utils";
