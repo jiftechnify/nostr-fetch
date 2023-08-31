@@ -49,9 +49,9 @@ export class RxNostrAdapter implements NostrFetcherBackend {
     for (const rurl of normalizedUrls) {
       const relayConf = relayConfs.get(rurl);
       if (relayConf === undefined) {
-        this.#rxNostr.addRelay({ url: rurl, read: true, write: false });
+        await this.#rxNostr.addRelay({ url: rurl, read: true, write: false });
       } else if (!relayConf.read) {
-        this.#rxNostr.addRelay({ url: rurl, read: true, write: relayConf.write });
+        await this.#rxNostr.addRelay({ url: rurl, read: true, write: relayConf.write });
       }
     }
 

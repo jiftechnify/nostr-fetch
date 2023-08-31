@@ -45,12 +45,12 @@
   },
   "devDependencies": {
     "nostr-fetch": "^0.12.2",
-    "rx-nostr": "^1.1.0",
+    "rx-nostr": "^1.2.0",
     "rxjs": "^7.8.0"
   },
   "peerDependencies": {
     "nostr-fetch": "^0.12.2",
-    "rx-nostr": "^1.1.0",
+    "rx-nostr": "^1.2.0",
     "rxjs": "^7.8.0"
   }
 }
