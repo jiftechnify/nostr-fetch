@@ -178,7 +178,7 @@ export class RxNostrAdapter implements NostrFetcherBackend {
   /**
    * Cleans up all the internal states of the fetcher.
    *
-   * Disconnects from relays managed by the adapter.
+   * Actually it does nothing.
    */
   public shutdown(): void {
     // do nothing

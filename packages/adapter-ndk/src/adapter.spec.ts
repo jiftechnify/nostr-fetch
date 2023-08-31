@@ -1,4 +1,4 @@
-import { FetchTillEoseOptions, NostrFetcherBackend } from "@nostr-fetch/kernel/fetcherBackend";
+import { FetchTillEoseOptions } from "@nostr-fetch/kernel/fetcherBackend";
 import { setupMockRelayServer } from "@nostr-fetch/testutil/mockRelayServer";
 import { NDKAdapter } from "./adapter";
 
@@ -36,7 +36,7 @@ describe("NDKAdapter", () => {
     };
 
     const url = "ws://localhost:8000/";
-    let backend: NostrFetcherBackend;
+    let backend: NDKAdapter;
     let wsServer: WS;
 
     beforeEach(async () => {
@@ -46,7 +46,7 @@ describe("NDKAdapter", () => {
       backend = new NDKAdapter(ndk, { minLogLevel: "none" });
     });
     afterEach(() => {
-      backend.shutdown(); // if we omit this line, a strange error occurs on the next line...
+      backend._hardShutdown(); // if we omit this line, a strange error occurs on the next line...
       WS.clean();
     });
 
