@@ -212,6 +212,11 @@ const defaultFetchAllOptions: Required<FetchAllOptions> = {
  */
 export type FetchLatestOptions<SeenOn extends boolean = false> = FetchOptions<SeenOn> & {
   /**
+   * Takes unixtime in second.  If specified, fetch latest events **as of the time**.
+   */
+  asOf?: number | undefined;
+
+  /**
    * If true, the "reduced verification" mode is enabled.
    *
    * In the reduced verification mode, event signature verification is performed only to minimum amount of events enough to ensure validity.
@@ -223,6 +228,7 @@ export type FetchLatestOptions<SeenOn extends boolean = false> = FetchOptions<Se
 
 const defaultFetchLatestOptions: Required<FetchLatestOptions> = {
   ...defaultFetchOptions,
+  asOf: undefined,
   reduceVerification: true,
 };
 
@@ -682,7 +688,7 @@ export class NostrFetcher {
 
     const [tx, chIter] = Channel.make<NostrEvent>();
     const globalSeenEvents = initSeenEvents(finalOpts.withSeenOn);
-    const initialUntil = currUnixtimeSec();
+    const initialUntil = finalOpts.asOf ?? currUnixtimeSec();
 
     const progTracker = new ProgressTracker(eligibleRelayUrls);
     statsMngr?.setProgressMax(eligibleRelayUrls.length * limit);
@@ -979,7 +985,7 @@ export class NostrFetcher {
 
     const [tx, chIter] = Channel.make<NostrEventListWithKey<K, SeenOn>>();
     const globalSeenEvents = initSeenEvents(options.withSeenOn);
-    const initialUntil = currUnixtimeSec();
+    const initialUntil = options.asOf ?? currUnixtimeSec();
 
     statsMngr?.setProgressMax(allKeys.length);
     statsMngr?.initRelayStats([...relayToKeys.keys()], initialUntil);
