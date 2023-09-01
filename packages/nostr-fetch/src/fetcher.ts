@@ -213,6 +213,8 @@ const defaultFetchAllOptions: Required<FetchAllOptions> = {
 export type FetchLatestOptions<SeenOn extends boolean = false> = FetchOptions<SeenOn> & {
   /**
    * Takes unixtime in second.  If specified, fetch latest events **as of the time**.
+   *
+   * Note: it is useful only for fetching *regular* events. Using this for replaceable events will result in an unexpected behavior.
    */
   asOf?: number | undefined;
 
