@@ -2,15 +2,23 @@
 A utility library that allows JS/TS apps to effortlessly fetch *past* events from Nostr relays.
 
 ## Installation
+
 ```
-# npm
 npm install nostr-fetch
 
-# yarn
 yarn add nostr-fetch
 
-# pnpm
 pnpm add nostr-fetch
+```
+
+### Using from Browsers without Bundlers
+You can also use nostr-fetch in your HTML via `<script>` tags, thanks to [jsDelivr](https://www.jsdelivr.com/).
+
+```html
+<script type="module">
+  import { NostrFetcher } from "https://cdn.jsdelivr.net/npm/nostr-fetch@0.13.0/+esm"
+  // ...
+</script>
 ```
 
 ## Usage
