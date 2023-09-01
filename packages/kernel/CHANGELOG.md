@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.13.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.12.2...v0.13.0) (2023-09-01)
+
+### Bug Fixes
+
+* add standardized event kinds (NIP-52) ([34875c2](https://github.com/jiftechnify/nostr-fetch/commit/34875c264ce199356d72c8b2e883c20209cd7594))
+* add standardized event kinds (NIP-72) ([e867ba7](https://github.com/jiftechnify/nostr-fetch/commit/e867ba7ecdb6221c0a5b4af3aa9adcb064ceede0))
+* type of timeout ID ([1dbebe3](https://github.com/jiftechnify/nostr-fetch/commit/1dbebe3a0730d82f6b2c60206a7feb514123dfdc))
+
 ## [0.12.2](https://github.com/jiftechnify/nostr-fetch/compare/v0.12.1...v0.12.2) (2023-07-24)
 
 ### Bug Fixes

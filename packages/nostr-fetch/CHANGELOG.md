@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.13.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.12.2...v0.13.0) (2023-09-01)
+
+### Bug Fixes
+
+* type of timeout ID ([87c5063](https://github.com/jiftechnify/nostr-fetch/commit/87c5063431acfbe7c9af8b3dd5ec84e4ef9f465b))
+* type of timeout ID ([1dbebe3](https://github.com/jiftechnify/nostr-fetch/commit/1dbebe3a0730d82f6b2c60206a7feb514123dfdc))
+
+### Features
+
+* add abiility to fetch latest events as of specified time ([98ed306](https://github.com/jiftechnify/nostr-fetch/commit/98ed3062c59b26e496767ed727a764ede0539fc1))
+
 ## [0.12.2](https://github.com/jiftechnify/nostr-fetch/compare/v0.12.1...v0.12.2) (2023-07-24)
 
 ### Bug Fixes
