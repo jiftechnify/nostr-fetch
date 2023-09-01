@@ -109,6 +109,7 @@ describe.concurrent("NostrFetcher", () => {
     .addRelay("wss://latest1/", {
       eventsSpec: [
         { content: "test1 old", createdAt: { since: 0, until: 500 }, n: 10 },
+        { content: "test1 middle", createdAt: { since: 600, until: 800 }, n: 10 },
         { content: "test1 latest", createdAt: { since: 1000, until: 2000 }, n: 10 },
       ],
       sendEventInterval: 5,
@@ -116,6 +117,7 @@ describe.concurrent("NostrFetcher", () => {
     .addRelay("wss://latest2/", {
       eventsSpec: [
         { content: "test2 old", createdAt: { since: 0, until: 500 }, n: 10 },
+        { content: "test2 middle", createdAt: { since: 600, until: 800 }, n: 10 },
         { content: "test2 latest", createdAt: { since: 1000, until: 2000 }, n: 10 },
       ],
       sendEventInterval: 10,
@@ -123,7 +125,7 @@ describe.concurrent("NostrFetcher", () => {
     .addRelay("wss://latest3-with-invalid-sig/", {
       eventsSpec: [
         { content: "test3 old", createdAt: { since: 0, until: 500 }, n: 10 },
-        { content: "test3 near-latest", createdAt: 750, n: 1 },
+        { content: "test3 near-latest", createdAt: 999, n: 1 },
         { content: "test3 latest", createdAt: { since: 1000, until: 2000 }, n: 9 },
         {
           content: "test3 invalid",
@@ -185,6 +187,23 @@ describe.concurrent("NostrFetcher", () => {
         { content: "to alice", tags: [["p", "alice"]], n: 2 },
         { content: "to bob", tags: [["p", "bob"]], n: 2 },
         { content: "to cat", tags: [["p", "cat"]], n: 2 },
+      ],
+    })
+    .addRelay("wss://per-author-as-of1/", {
+      eventsSpec: [
+        { content: "A old", authorName: "alice", createdAt: { since: 0, until: 100 }, n: 10 },
+        { content: "A middle", authorName: "alice", createdAt: { since: 200, until: 400 }, n: 10 },
+        { content: "B old", authorName: "bob", createdAt: { since: 0, until: 100 }, n: 10 },
+        { content: "B latest", authorName: "bob", createdAt: { since: 600, until: 700 }, n: 10 },
+        { content: "C middle", authorName: "cat", createdAt: { since: 200, until: 400 }, n: 10 },
+        { content: "C latest", authorName: "cat", createdAt: { since: 600, until: 700 }, n: 10 },
+      ],
+    })
+    .addRelay("wss://per-author-as-of2/", {
+      eventsSpec: [
+        { content: "A latest", authorName: "alice", createdAt: { since: 600, until: 700 }, n: 10 },
+        { content: "B middle", authorName: "bob", createdAt: { since: 200, until: 400 }, n: 10 },
+        { content: "C old", authorName: "cat", createdAt: { since: 0, until: 100 }, n: 10 },
       ],
     })
     .addRelay("wss://multi-ptag/", {
@@ -443,6 +462,18 @@ describe.concurrent("NostrFetcher", () => {
       expect(evs).toStrictEqual(sorted);
     });
 
+    test("fetches latest N events as of specified time", async () => {
+      // "middle" events have timestamp 600-800
+      const evs = await fetcher.fetchLatestEvents(["wss://latest1/", "wss://latest2/"], {}, 20, {
+        asOf: 900,
+      });
+      expect(evs.length).toBe(20);
+      assert(evs.every(({ content }) => content.includes("middle")));
+
+      const sorted = evs.slice().sort(createdAtDesc);
+      expect(evs).toStrictEqual(sorted);
+    });
+
     test("moves up near-latest events in reduced verification mode", async () => {
       const evs = await fetcher.fetchLatestEvents(
         ["wss://latest1/", "wss://latest3-with-invalid-sig/"],
@@ -558,6 +589,27 @@ describe.concurrent("NostrFetcher", () => {
           .every(({ content }) => content.includes("test3") || content.includes("test1")),
       );
       /* eslint-enable @typescript-eslint/no-non-null-assertion */
+    });
+
+    test("asOf works correctly", async () => {
+      const iter = fetcher.fetchLatestEventsPerKey(
+        "authors",
+        {
+          keys: [pkA, pkB, pkC],
+          relayUrls: ["wss://per-author-as-of1/", "wss://per-author-as-of2/"],
+        },
+        {},
+        10,
+        { asOf: 500 },
+      );
+      for await (const { events } of iter) {
+        expect(events.length).toBe(10);
+        assert(events.every((ev) => ev.content.includes("middle")));
+
+        // check if events are sorted
+        const sorted = events.slice().sort(createdAtDesc);
+        expect(events).toStrictEqual(sorted);
+      }
     });
 
     test("withSeenOn: true works correctly", async () => {
