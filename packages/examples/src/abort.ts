@@ -5,7 +5,6 @@ import { defaultRelays, nHoursAgo } from "./utils";
 
 const main = async () => {
   const fetcher = NostrFetcher.init();
-  const abortCtrl = new AbortController();
 
   // fetch all text events (kind: 1) posted in the last hour from the relays
   const evIter = fetcher.allEventsIterator(
@@ -14,13 +13,10 @@ const main = async () => {
       kinds: [eventKind.text],
     },
     {
-      since: nHoursAgo(1),
+      since: nHoursAgo(24),
     },
-    { abortSignal: abortCtrl.signal }, // pass `AbortController.signal` to enable abortion
+    { abortSignal: AbortSignal.timeout(1000) }, // pass an `AbortSignal` to enable cancallation
   );
-
-  // abort fetching after 1 sec.
-  setTimeout(() => abortCtrl.abort(), 1000);
 
   for await (const ev of evIter) {
     console.log(ev.content);
