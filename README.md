@@ -169,18 +169,13 @@ import { eventKind, NostrFecher } from 'nostr-fetch'
 const fetcher = NostrFetcher.init();
 const relayUrls = [/* relay URLs */];
 
-const abortCtrl = new AbortController();
-
 const evIter = fetcher.allEventsIterator(
     relayUrls,
     {/* filter */},
     {/* time range */},
-    /* pass `AbortController.signal` here to enable abortion! */
-    { abortSignal: abortCtrl.signal } 
+    /* pass an `AbortSsignal` here to enable abortion! */
+    { abortSignal: AbortSignal.timeout(1000) },
 );
-
-// abort after 1 sec
-setTimeout(() => abortCtrl.abort(), 1000);
 
 for await (const ev of evIter) {
     // ...
