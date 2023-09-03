@@ -2,8 +2,6 @@ node_modules/
 dist/
 docs/
 
-yarn.lock
-
 # Logs
 logs
 *.log
