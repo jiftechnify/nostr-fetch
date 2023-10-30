@@ -1,6 +1,7 @@
 import { verifyEventSig } from "@nostr-fetch/kernel/crypto";
 import type { C2RMessage, Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
 import { generateSubId, parseR2CMessage } from "@nostr-fetch/kernel/nostr";
+import { WebSocketReadyState } from "@nostr-fetch/kernel/webSocket";
 
 type Callback<E> = E extends void ? () => void : (ev: E) => void;
 
@@ -75,7 +76,7 @@ class RelayImpl implements Relay {
   }
 
   public get wsReadyState(): number {
-    return this.#ws?.readyState ?? WebSocket.CONNECTING;
+    return this.#ws?.readyState ?? WebSocketReadyState.CONNECTING;
   }
 
   private forwardToSub(subId: string, forwardFn: (sub: RelaySubscription) => void) {
@@ -199,7 +200,7 @@ class RelayImpl implements Relay {
   }
 
   _sendC2RMessage(msg: C2RMessage) {
-    if (this.#ws === undefined || this.#ws.readyState !== WebSocket.OPEN) {
+    if (this.#ws === undefined || this.#ws.readyState !== WebSocketReadyState.OPEN) {
       throw Error("not connected to the relay");
     }
     this.#ws.send(JSON.stringify(msg));

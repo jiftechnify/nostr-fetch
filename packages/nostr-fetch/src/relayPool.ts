@@ -8,6 +8,7 @@ import {
   normalizeRelayUrl,
   normalizeRelayUrlSet,
 } from "@nostr-fetch/kernel/utils";
+import { WebSocketReadyState } from "@nostr-fetch/kernel/webSocket";
 
 // [NIP-01](https://github.com/nostr-protocol/nips/blob/master/01.md#other-notes) says:
 // > When a websocket is closed by the relay with a status code 4000 that means the client shouldn't try to connect again.
@@ -79,7 +80,7 @@ class RelayPoolImpl implements RelayPool {
     return (
       (relay.state === "connectFailed" && currUnixtimeMilli() - relay.failedAt > 30 * 1000) ||
       (relay.state === "disconnected" && relay.reconnectable) ||
-      (relay.state === "alive" && relay.relay.wsReadyState === WebSocket.CLOSED) // is it possible?
+      (relay.state === "alive" && relay.relay.wsReadyState === WebSocketReadyState.CLOSED) // is it possible?
     );
   }
 
