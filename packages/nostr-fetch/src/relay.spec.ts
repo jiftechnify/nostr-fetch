@@ -12,6 +12,7 @@ import type {
 } from "./relay";
 import { initRelay } from "./relay";
 
+import { WebSocketReadyState } from "@nostr-fetch/kernel/webSocket";
 import { setTimeout as delay } from "node:timers/promises";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import WS from "vitest-websocket-mock";
@@ -37,10 +38,10 @@ describe("Relay", () => {
       await expect(
         r.connect().then((r) => {
           return { url: r.url, readyState: r.wsReadyState };
-        })
+        }),
       ).resolves.toStrictEqual({
         url: rurl,
-        readyState: WebSocket.OPEN,
+        readyState: WebSocketReadyState.OPEN,
       });
 
       r.close();
