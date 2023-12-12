@@ -2284,9 +2284,9 @@ conventional-recommended-bump@^7.0.1:
     meow "^8.1.2"
 
 copy-file-util@^1.0.0:
-  version "1.1.1"
-  resolved "https://registry.yarnpkg.com/copy-file-util/-/copy-file-util-1.1.1.tgz#a63d96c4590fa862a1af0756a6f41ff28dbd7a45"
-  integrity sha512-J6odscbA9Tzpj8zXZ/tZQ5AagxHodsVkFhdvZ3oyCwe/ugRzoJ0quqKt0cwidZTWHXH/xqAsLpt3CjSEnM8eAA==
+  version "1.1.2"
+  resolved "https://registry.yarnpkg.com/copy-file-util/-/copy-file-util-1.1.2.tgz#113d55097232560f29754e7f9d79d20992488eff"
+  integrity sha512-1J3+QoYxeVj0oli0tfOS2hHxgIew2Vaa0OJ7TsUFzIU9Q2yiaPnjHMTnLtml5inTbjIiQ6J/ml2eeIGyMmyx1w==
   dependencies:
     chalk "~5.3"
     cli-argv-util "~1.2"
