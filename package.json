@@ -39,8 +39,8 @@
     "prettier": "^3.0.0",
     "turbo": "^1.9.3",
     "typescript": "^5.1.0",
-    "vitest": "^0.34.1",
-    "vitest-websocket-mock": "^0.2.0",
+    "vitest": "^1.0.4",
+    "vitest-websocket-mock": "^0.3.0",
     "websocket-polyfill": "^0.0.3"
   },
   "volta": {
