@@ -42,8 +42,5 @@
     "vitest": "^1.0.4",
     "vitest-websocket-mock": "^0.3.0",
     "websocket-polyfill": "^0.0.3"
-  },
-  "volta": {
-    "node": "18.14.2"
   }
 }
