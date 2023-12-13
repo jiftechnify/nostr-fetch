@@ -29,16 +29,9 @@ export type FakeRelaySpec = {
   connectDurMs?: number;
   supportedNips?: number[];
   sendEventInterval?: number;
-  exclusiveInterval?: boolean;
 };
 
-const afterSince = (ev: NostrEvent, since: number, exclusiveInterval: boolean): boolean =>
-  (exclusiveInterval && ev.created_at > since) || (!exclusiveInterval && ev.created_at >= since);
-
-const beforeUntil = (ev: NostrEvent, until: number, exclusiveInterval: boolean): boolean =>
-  (exclusiveInterval && ev.created_at < until) || (!exclusiveInterval && ev.created_at <= until);
-
-const matchEvent = (ev: NostrEvent, f: Filter, exclusiveInterval: boolean): boolean => {
+const matchEvent = (ev: NostrEvent, f: Filter): boolean => {
   if (f.ids !== undefined && !f.ids.includes(ev.id)) {
     return false;
   }
@@ -51,10 +44,10 @@ const matchEvent = (ev: NostrEvent, f: Filter, exclusiveInterval: boolean): bool
   if (f.search !== undefined && !ev.content.includes(f.search)) {
     return false;
   }
-  if (f.since !== undefined && !afterSince(ev, f.since, exclusiveInterval)) {
+  if (f.since !== undefined && ev.created_at < f.since) {
     return false;
   }
-  if (f.until !== undefined && !beforeUntil(ev, f.until, exclusiveInterval)) {
+  if (f.until !== undefined && ev.created_at > f.until) {
     return false;
   }
   return true;
@@ -113,15 +106,12 @@ class FakeRelay {
           onEose();
           return;
         }
-        if (
-          filter.since !== undefined &&
-          !afterSince(ev, filter.since, this.#spec.exclusiveInterval)
-        ) {
+        if (filter.since !== undefined && ev.created_at < filter.since) {
           onEose();
           return;
         }
 
-        if (matchEvent(ev, filter, this.#spec.exclusiveInterval)) {
+        if (matchEvent(ev, filter)) {
           if (this.#spec.sendEventInterval > 0) {
             await delay(this.#spec.sendEventInterval);
           }

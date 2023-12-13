@@ -551,8 +551,7 @@ export class NostrFetcher {
           }
 
           // set next `until` to `created_at` of the oldest event returned in this time.
-          // `+ 1` is needed to make it work collectly even if we used relays which has "exclusive" behaviour with respect to `until`.
-          nextUntil = oldestCreatedAt + 1;
+          nextUntil = oldestCreatedAt;
           statsMngr?.setRelayFrontier(rurl, oldestCreatedAt);
 
           // update progress
@@ -785,8 +784,7 @@ export class NostrFetcher {
           }
 
           // set next `until` to `created_at` of the oldest event returned in this time.
-          // `+ 1` is needed to make it work collectly even if we used relays which has "exclusive" behaviour with respect to `until`.
-          nextUntil = oldestCreatedAt + 1;
+          nextUntil = oldestCreatedAt;
           statsMngr?.setRelayFrontier(rurl, oldestCreatedAt);
         }
         // subscripton loop for the relay terminated
@@ -1111,7 +1109,8 @@ export class NostrFetcher {
             break;
           }
 
-          nextUntil = oldestCreatedAt + 1;
+          // set next `until` to `created_at` of the oldest event returned in this time.
+          nextUntil = oldestCreatedAt;
           statsMngr?.setRelayFrontier(rurl, oldestCreatedAt);
         }
       }),
