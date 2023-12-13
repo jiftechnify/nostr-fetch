@@ -121,6 +121,11 @@ export class DefaultFetcherBackend implements NostrFetcherBackend {
         tx.close();
       }
     });
+    sub.on("closed", (msg) => {
+      tx.error(
+        new FetchTillEoseFailedSignal(`subscription (id: ${sub.subId}) closed by relay: ${msg}`),
+      );
+    });
 
     // common process to close subscription
     const closeSub = () => {
