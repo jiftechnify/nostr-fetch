@@ -104,15 +104,18 @@ export type C2RMessageType = C2RMessage[0];
 // relay to client messages
 type R2CEvent = [type: "EVENT", subId: string, event: NostrEvent];
 type R2CEose = [type: "EOSE", subId: string];
+type R2CClosed = [type: "CLOSED", subId: string, message: string];
 type R2CNotice = [type: "NOTICE", notice: string];
 
-export type R2CMessage = R2CEvent | R2CEose | R2CNotice;
+export type R2CMessage = R2CEvent | R2CEose | R2CClosed | R2CNotice;
 export type R2CMessageType = R2CMessage[0];
 
 export type R2CSubMessage = R2CEvent | R2CEose;
 export type R2CSubMessageType = R2CSubMessage[0];
 
-const msgTypeNames: string[] = ["EVENT", "EOSE", "NOTICE", "OK", "AUTH", "COUNT"];
+const supportedR2CMsgTypes: R2CMessageType[] = ["EVENT", "EOSE", "CLOSED", "NOTICE"];
+const isSupportedR2CMsgType = (s: string): s is R2CMessageType =>
+  (supportedR2CMsgTypes as string[]).includes(s);
 
 export const parseR2CMessage = (rawMsg: string): R2CMessage | undefined => {
   let parsed: unknown;
@@ -129,12 +132,8 @@ export const parseR2CMessage = (rawMsg: string): R2CMessage | undefined => {
   }
 
   const msgType = parsed[0] as string;
-  if (!msgTypeNames.includes(msgType)) {
-    console.error("unknown R2C message type:", parsed[0]);
-    return undefined;
-  }
-  if (msgType === "OK" || msgType === "AUTH" || msgType === "COUNT") {
-    console.warn("ignoring R2C OK/AUTH/COUNT message");
+  if (!isSupportedR2CMsgType(msgType)) {
+    console.error("unsupported R2C message type:", parsed[0]);
     return undefined;
   }
   switch (msgType) {
@@ -160,6 +159,13 @@ export const parseR2CMessage = (rawMsg: string): R2CMessage | undefined => {
         return undefined;
       }
       return parsed as R2CEose;
+    }
+    case "CLOSED": {
+      if (parsed.length !== 3 || typeof parsed[1] !== "string" || typeof parsed[2] !== "string") {
+        console.error("malformed R2C CLOSED");
+        return undefined;
+      }
+      return parsed as R2CClosed;
     }
     case "NOTICE": {
       if (parsed.length !== 2) {

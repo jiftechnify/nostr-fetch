@@ -113,6 +113,11 @@ class RelayImpl implements Relay {
           this.forwardToSub(subId, (sub) => sub._forwardEose());
           break;
         }
+        case "CLOSED": {
+          const [, subId, msg] = parsed;
+          this.forwardToSub(subId, (sub) => sub._forwardClosed(msg));
+          break;
+        }
         case "NOTICE": {
           const [, notice] = parsed;
           this.#listeners.notice.forEach((cb) => cb(notice));
@@ -213,10 +218,12 @@ type EoseEventPayload = {
 
 export type SubEventCb = Callback<NostrEvent>;
 export type SubEoseCb = Callback<EoseEventPayload>;
+export type SubClosedCb = Callback<string>;
 
 export type SubEventCbTypes = {
   event: SubEventCb;
   eose: SubEoseCb;
+  closed: SubClosedCb;
 };
 
 export type SubEventTypes = keyof SubEventCbTypes;
@@ -248,6 +255,7 @@ class RelaySubscription implements Subscription {
   #listeners: SubListenersTable = {
     event: new Set(),
     eose: new Set(),
+    closed: new Set(),
   };
 
   #abortSubTimer: NodeJS.Timeout | undefined;
@@ -314,5 +322,13 @@ class RelaySubscription implements Subscription {
       clearTimeout(this.#abortSubTimer);
     }
     this.#listeners.eose.forEach((cb) => cb({ aborted: false }));
+  }
+
+  _forwardClosed(msg: string) {
+    this.#listeners.closed.forEach((cb) => cb(msg));
+
+    // subscription has been closed by the relay -> clean up things
+    this.#clearListeners();
+    this.#relay._removeSub(this.#subId);
   }
 }

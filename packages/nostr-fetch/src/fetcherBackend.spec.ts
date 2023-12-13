@@ -1,4 +1,8 @@
-import { FetchTillEoseOptions, NostrFetcherBackend } from "@nostr-fetch/kernel/fetcherBackend";
+import {
+  FetchTillEoseOptions,
+  NostrFetcherBackend,
+  isFetchTillEoseFailedSignal,
+} from "@nostr-fetch/kernel/fetcherBackend";
 import { setupMockRelayServer } from "@nostr-fetch/testutil/mockRelayServer";
 import { DefaultFetcherBackend } from "./fetcherBackend";
 
@@ -55,6 +59,25 @@ describe("DefaultFetcherBackend", () => {
 
       await expect(wsServer).toReceiveMessage(["REQ", "test", {}]);
       await expect(wsServer).toReceiveMessage(["CLOSE", "test"]);
+    });
+
+    test("handles subscription close by relay w/ CLOSED message", async () => {
+      setupMockRelayServer(wsServer, [{ type: "closed", message: "invalid: malformed filter" }]);
+
+      await backend.ensureRelays([url], { connectTimeoutMs: 1000 });
+      const iter = backend.fetchTillEose(url, {}, defaultOpts);
+      try {
+        for await (const _ of iter) {
+          // do nothing
+        }
+        expect.unreachable("should throw FetchTillEoseFailedSignal");
+      } catch (err) {
+        if (isFetchTillEoseFailedSignal(err)) {
+          expect(err.message).toMatch("invalid: malformed filter");
+        } else {
+          expect.unreachable("should throw FetchTillEoseFailedSignal");
+        }
+      }
     });
 
     test("aborts subscription on NOTICE", async () => {

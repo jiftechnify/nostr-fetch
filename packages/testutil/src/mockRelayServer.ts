@@ -17,6 +17,10 @@ type MockRelaySubResponseAction =
       intervalMs?: number;
     }
   | {
+      type: "closed";
+      message: string;
+    }
+  | {
       type: "notice";
       notice: string;
     }
@@ -31,6 +35,7 @@ type MockRelaySubResponseScenario = MockRelaySubResponseAction[];
 
 const r2cEventMsg = (subId: string, ev: NostrEvent) => JSON.stringify(["EVENT", subId, ev]);
 const r2cEoseMsg = (subId: string) => JSON.stringify(["EOSE", subId]);
+const r2cClosedMsg = (subId: string, message: string) => JSON.stringify(["CLOSED", subId, message]);
 const r2cNoticeMsg = (notice: string) => JSON.stringify(["NOTICE", notice]);
 
 // play the "subscription response scenario" on subscription request
@@ -41,6 +46,7 @@ const playSubScenario = async (
   subId: string,
 ) => {
   for (const action of scenario) {
+    console.log("playSubScenario", action);
     switch (action.type) {
       case "events":
         for (const ev of generateFakeEvents(action.eventsSpec)) {
@@ -50,6 +56,10 @@ const playSubScenario = async (
           }
           socket.send(r2cEventMsg(subId, ev));
         }
+        break;
+
+      case "closed":
+        socket.send(r2cClosedMsg(subId, action.message));
         break;
 
       case "notice":
