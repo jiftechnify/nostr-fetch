@@ -42,6 +42,21 @@ describe("parseR2CMessage", () => {
     expect(subId).toBe("sub_id");
   });
 
+  test("parses CLOSED message", () => {
+    const closedJSON = `["CLOSED", "sub_id", "reason"]`;
+
+    const parsed = parseR2CMessage(closedJSON);
+    if (parsed === undefined) {
+      fail("parsing failed unexpectedly");
+    }
+    if (parsed[0] !== "CLOSED") {
+      fail(`unexpected message type: ${parsed[0]}`);
+    }
+    const [, subId, reason] = parsed;
+    expect(subId).toBe("sub_id");
+    expect(reason).toBe("reason");
+  });
+
   test("parses NOTICE message", () => {
     const noticeJSON = `["NOTICE", "error!"]`;
 
@@ -90,6 +105,19 @@ describe("parseR2CMessage", () => {
     const malformedEoseJSON = [`["EOSE"]`, `["EOSE", 42]`, `["EOSE", null]`];
 
     for (const msgJSON of malformedEoseJSON) {
+      expect(parseR2CMessage(msgJSON)).toBeUndefined();
+    }
+  });
+
+  test("fails on malformed CLOSED message", () => {
+    const malformedClosedJSON = [
+      `["CLOSED"]`,
+      `["CLOSED", 42]`,
+      `["CLOSED", null]`,
+      `["CLOSED", "sub_id", null]`,
+    ];
+
+    for (const msgJSON of malformedClosedJSON) {
       expect(parseR2CMessage(msgJSON)).toBeUndefined();
     }
   });
