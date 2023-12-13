@@ -6,6 +6,7 @@ import type {
   RelayDisconnectCb,
   RelayErrorCb,
   RelayNoticeCb,
+  SubClosedCb,
   SubEoseCb,
   SubEventCb,
   WSCloseEvent,
@@ -149,6 +150,7 @@ describe("Relay", () => {
     let spyCbs: {
       event: SubEventCb;
       eose: SubEoseCb;
+      closed: SubClosedCb;
     };
 
     beforeEach(() => {
@@ -156,6 +158,7 @@ describe("Relay", () => {
       spyCbs = {
         event: vi.fn((_) => {}),
         eose: vi.fn((_) => {}),
+        closed: vi.fn((_) => {}),
       };
     });
     afterEach(() => {
@@ -177,6 +180,7 @@ describe("Relay", () => {
       sub.on("event", spyCbs.event);
       sub.on("eose", spyCbs.eose);
       sub.on("eose", () => waitEose.resolve());
+      sub.on("closed", spyCbs.closed);
 
       sub.req();
       await expect(server).toReceiveMessage(["REQ", "normal", {}]);
@@ -189,6 +193,34 @@ describe("Relay", () => {
       // mock relay sends: 5 EVENTs then EOSE
       expect(spyCbs.event).toBeCalledTimes(5);
       expect(spyCbs.eose).toBeCalledTimes(1);
+      expect(spyCbs.closed).not.toBeCalled();
+    });
+
+    test("CLOSED by relay", async () => {
+      const r = initRelay(rurl, { connectTimeoutMs: 5000 });
+      setupMockRelayServer(server, [{ type: "closed", message: "closed by relay" }]);
+
+      await r.connect();
+
+      const waitClosed = new Deferred<void>();
+
+      const sub = r.prepareSub([{}], {
+        skipVerification: false,
+        abortSubBeforeEoseTimeoutMs: 1000,
+        subId: "malformed_sub",
+      });
+      sub.on("event", spyCbs.event);
+      sub.on("eose", spyCbs.eose);
+      sub.on("closed", spyCbs.closed);
+      sub.on("closed", () => waitClosed.resolve());
+
+      sub.req();
+      await waitClosed.promise;
+
+      expect(spyCbs.closed).toBeCalledTimes(1);
+      expect(spyCbs.closed).toBeCalledWith("closed by relay");
+      expect(spyCbs.event).not.toBeCalled();
+      expect(spyCbs.eose).not.toBeCalled();
     });
 
     test("aborts before EOSE if relay doesn't return events for a while", async () => {
