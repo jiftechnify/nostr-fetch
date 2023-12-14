@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.14.1](https://github.com/jiftechnify/nostr-fetch/compare/v0.14.0...v0.14.1) (2023-12-14)
+
+### Bug Fixes
+
+* **adapter-ndk:** bump minimum supported NDK version to 1.0.0 ([1138901](https://github.com/jiftechnify/nostr-fetch/commit/11389019fc32065b6d4663c086f324b8763c0ceb))
+
 # [0.14.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.13.1...v0.14.0) (2023-12-14)
 
 ### Bug Fixes

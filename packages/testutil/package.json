@@ -1,6 +1,6 @@
 {
   "name": "@nostr-fetch/testutil",
-  "version": "0.14.0",
+  "version": "0.14.1",
   "description": "common test utilities for nostr-fetch",
   "private": true,
   "license": "MIT",

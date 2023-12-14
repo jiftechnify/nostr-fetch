@@ -3,6 +3,10 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.14.1](https://github.com/jiftechnify/nostr-fetch/compare/v0.14.0...v0.14.1) (2023-12-14)
+
+**Note:** Version bump only for package @nostr-fetch/adapter-nostr-tools
+
 # [0.14.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.13.1...v0.14.0) (2023-12-14)
 
 ### Bug Fixes

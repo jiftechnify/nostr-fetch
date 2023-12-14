@@ -1,6 +1,6 @@
 {
   "name": "nostr-fetch",
-  "version": "0.14.0",
+  "version": "0.14.1",
   "description": "A utility library that allows JS/TS apps to effortlessly fetch past events from Nostr relays",
   "keywords": [
     "nostr"
@@ -45,7 +45,7 @@
     "@nostr-fetch/kernel": "^0.14.0"
   },
   "devDependencies": {
-    "@nostr-fetch/testutil": "^0.14.0"
+    "@nostr-fetch/testutil": "^0.14.1"
   },
   "funding": {
     "type": "lightning",
