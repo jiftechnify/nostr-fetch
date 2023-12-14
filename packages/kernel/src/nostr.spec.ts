@@ -1,6 +1,12 @@
 import { fail } from "assert";
 import { describe, expect, test } from "vitest";
-import { NostrEvent, isNoticeForReqError, parseR2CMessage, validateEvent } from "./nostr";
+import {
+  FilterMatcher,
+  NostrEvent,
+  isNoticeForReqError,
+  parseR2CMessage,
+  validateEvent,
+} from "./nostr";
 
 const validEventJSON = `{
   "id": "381e2ea15a5b16f4ebdaa68ed3d9a112dc4ea6cc95641ef7eb57f1ec826f07e4",
@@ -226,6 +232,174 @@ describe("validateEvent", () => {
     for (const ev of malformedEvs) {
       expect(validateEvent(ev)).toBe(false);
     }
+  });
+});
+
+describe("FilterMatcher", () => {
+  const ev = {
+    id: "id1",
+    pubkey: "pk1",
+    created_at: 1629123456,
+    kind: 1,
+    tags: [
+      ["e", "e1"],
+      ["p", "p1"],
+    ],
+    content: "",
+    sig: "sig",
+  };
+
+  test("should return true when event matches the filter", () => {
+    const filters = [
+      {},
+      { ids: ["id1"] },
+      { ids: ["id1", "id2"] },
+      { kinds: [1] },
+      { kinds: [1, 2] },
+      { authors: ["pk1"] },
+      { authors: ["pk1", "pk2"] },
+      { "#e": ["e1"] },
+      { "#e": ["e1", "e2"] },
+      { "#p": ["p1"] },
+      { "#p": ["p1", "p2"] },
+      { since: 1629000000, until: 1630000000 },
+      { since: 1629000000 },
+      { since: 1629123456 }, // matches if since == created_at
+      { until: 1630000000 },
+      { until: 1629123456 }, // matches if until == created_at
+      {
+        ids: ["id1"],
+        kinds: [1],
+        authors: ["pk1"],
+        "#e": ["e1"],
+        "#p": ["p1"],
+        since: 1629000000,
+        until: 1630000000,
+      },
+    ];
+    for (const f of filters) {
+      const matcher = new FilterMatcher([f]);
+      expect(matcher.match(ev)).toBe(true);
+    }
+  });
+
+  test("should return false when event does not match the filter", () => {
+    const filters = [
+      { ids: ["id2"] },
+      { ids: ["id2", "id3"] },
+      { kinds: [2] },
+      { kinds: [2, 3] },
+      { authors: ["pk2"] },
+      { authors: ["pk2", "pk3"] },
+      { "#e": ["e2"] },
+      { "#e": ["e2", "e3"] },
+      { "#p": ["p2"] },
+      { "#p": ["p2", "p3"] },
+      { "#a": ["a1"] }, // missing tag
+      { since: 1630000000 },
+      { until: 1629000000 },
+      // matches except one filter...
+      {
+        ids: ["id2"], // mismatch
+        kinds: [1],
+        authors: ["pk1"],
+        "#e": ["e1"],
+        "#p": ["p1"],
+        since: 1629000000,
+        until: 1630000000,
+      },
+      {
+        ids: ["id1"],
+        kinds: [2], // mismatch
+        authors: ["pk1"],
+        "#e": ["e1"],
+        "#p": ["p1"],
+        since: 1629000000,
+        until: 1630000000,
+      },
+      {
+        ids: ["id1"],
+        kinds: [1],
+        authors: ["pk2"], // mismatch
+        "#e": ["e1"],
+        "#p": ["p1"],
+        since: 1629000000,
+        until: 1630000000,
+      },
+      {
+        ids: ["id1"],
+        kinds: [1],
+        authors: ["pk1"],
+        "#e": ["e2"], // mismatch
+        "#p": ["p1"],
+        since: 1629000000,
+        until: 1630000000,
+      },
+      {
+        ids: ["id1"],
+        kinds: [1],
+        authors: ["pk1"],
+        "#e": ["e1"],
+        "#p": ["p2"], // mismatch
+        since: 1629000000,
+        until: 1630000000,
+      },
+      {
+        ids: ["id1"],
+        kinds: [1],
+        authors: ["pk1"],
+        "#e": ["e1"],
+        "#p": ["p1"],
+        "#a": ["a1"], // missing tag
+        since: 1629000000,
+        until: 1630000000,
+      },
+      {
+        ids: ["id1"],
+        kinds: [1],
+        authors: ["pk1"],
+        "#e": ["e1"],
+        "#p": ["p1"],
+        since: 1630000000, // mismatch
+      },
+      {
+        ids: ["id1"],
+        kinds: [1],
+        authors: ["pk1"],
+        "#e": ["e1"],
+        "#p": ["p1"],
+        until: 1629000000, // mismatch
+      },
+    ];
+
+    for (const f of filters) {
+      const matcher = new FilterMatcher([f]);
+      const matched = matcher.match(ev);
+      console.log(f, matched);
+      expect(matched).toBe(false);
+    }
+  });
+
+  test("should return true if at least one filter matches", () => {
+    const f = new FilterMatcher([
+      { ids: ["id2"] },
+      { kinds: [2] },
+      { "#a": ["a1"] },
+      { since: 1630000000 },
+      { authors: ["pk1"] }, // matches
+    ]);
+    expect(f.match(ev)).toBe(true);
+  });
+
+  test("should return false if no filters match", () => {
+    const f = new FilterMatcher([
+      { ids: ["id2"] },
+      { kinds: [2] },
+      { "#a": ["a1"] },
+      { since: 1630000000 },
+      { authors: ["pk2"] },
+    ]);
+    expect(f.match(ev)).toBe(false);
   });
 });
 

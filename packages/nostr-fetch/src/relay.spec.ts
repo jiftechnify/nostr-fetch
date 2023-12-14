@@ -174,6 +174,7 @@ describe("Relay", () => {
       const waitEose = new Deferred<void>();
       const sub = r.prepareSub([{}], {
         skipVerification: false,
+        skipFilterMatching: false,
         abortSubBeforeEoseTimeoutMs: 1000,
         subId: "normal",
       });
@@ -206,6 +207,7 @@ describe("Relay", () => {
 
       const sub = r.prepareSub([{}], {
         skipVerification: false,
+        skipFilterMatching: false,
         abortSubBeforeEoseTimeoutMs: 1000,
         subId: "malformed_sub",
       });
@@ -236,6 +238,7 @@ describe("Relay", () => {
       const waitEose = new Deferred<void>();
       const sub = r.prepareSub([{}], {
         skipVerification: false,
+        skipFilterMatching: false,
         abortSubBeforeEoseTimeoutMs: 1000,
       });
       sub.on("event", spyCbs.event);
@@ -262,6 +265,7 @@ describe("Relay", () => {
       const waitEose = new Deferred<void>();
       const sub = r.prepareSub([{}], {
         skipVerification: false,
+        skipFilterMatching: false,
         abortSubBeforeEoseTimeoutMs: 1000,
       });
       sub.on("event", spyCbs.event);
@@ -286,6 +290,57 @@ describe("Relay", () => {
       const waitEose = new Deferred<void>();
       const sub = r.prepareSub([{}], {
         skipVerification: true,
+        skipFilterMatching: false,
+        abortSubBeforeEoseTimeoutMs: 1000,
+      });
+      sub.on("event", spyCbs.event);
+      sub.on("eose", () => waitEose.resolve());
+
+      sub.req();
+      await waitEose.promise;
+      sub.close();
+
+      // 5 valid events + 1 invalid event
+      expect(spyCbs.event).toBeCalledTimes(6);
+    });
+
+    test("match events with filters by default", async () => {
+      const r = initRelay(rurl, { connectTimeoutMs: 5000 });
+      setupMockRelayServer(server, [
+        { type: "events", eventsSpec: { kind: 1, content: "test", n: 5 } },
+        { type: "events", eventsSpec: { kind: 0, content: "malicious", n: 1 } },
+      ]);
+      await r.connect();
+
+      const waitEose = new Deferred<void>();
+      const sub = r.prepareSub([{ kinds: [1] }], {
+        skipVerification: false,
+        skipFilterMatching: false,
+        abortSubBeforeEoseTimeoutMs: 1000,
+      });
+      sub.on("event", spyCbs.event);
+      sub.on("eose", () => waitEose.resolve());
+
+      sub.req();
+      await waitEose.promise;
+      sub.close();
+
+      // 5 valid events only
+      expect(spyCbs.event).toBeCalledTimes(5);
+    });
+
+    test("skips matching events with filters if enabled", async () => {
+      const r = initRelay(rurl, { connectTimeoutMs: 5000 });
+      setupMockRelayServer(server, [
+        { type: "events", eventsSpec: { kind: 1, content: "test", n: 5 } },
+        { type: "events", eventsSpec: { kind: 0, content: "malicious", n: 1 } },
+      ]);
+      await r.connect();
+
+      const waitEose = new Deferred<void>();
+      const sub = r.prepareSub([{ kinds: [1] }], {
+        skipVerification: false,
+        skipFilterMatching: true,
         abortSubBeforeEoseTimeoutMs: 1000,
       });
       sub.on("event", spyCbs.event);

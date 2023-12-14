@@ -8,6 +8,7 @@ export type EnsureRelaysOptions = {
 export type FetchTillEoseOptions = {
   subId?: string;
   skipVerification: boolean;
+  skipFilterMatching: boolean;
   connectTimeoutMs: number;
   abortSubBeforeEoseTimeoutMs: number;
   abortSignal: AbortSignal | undefined;

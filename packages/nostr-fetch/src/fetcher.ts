@@ -107,6 +107,15 @@ export type FetchOptions<SeenOn extends boolean = false> = {
   skipVerification?: boolean;
 
   /**
+   * If true, the fetcher skips a check that events from relays are certainly match with filters in REQuest.
+   *
+   * By default, fetchers perform the check to protect clients from malicious relays.
+   *
+   * @default false
+   */
+  skipFilterMatching?: boolean;
+
+  /**
    * If true, `seenOn` property is appeded to every returned events.
    * The value of `seenOn` is array of relay URLs on which the event have been seen.
    *
@@ -160,6 +169,7 @@ export type FetchOptions<SeenOn extends boolean = false> = {
 
 const defaultFetchOptions: Required<FetchOptions> = {
   skipVerification: false,
+  skipFilterMatching: false,
   withSeenOn: false,
   statsListener: undefined,
   statsNotifIntervalMs: 1000,
