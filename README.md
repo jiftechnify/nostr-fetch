@@ -16,7 +16,7 @@ You can also use nostr-fetch in your HTML via `<script>` tags, thanks to [jsDeli
 
 ```html
 <script type="module">
-  import { NostrFetcher } from "https://cdn.jsdelivr.net/npm/nostr-fetch@0.13.0/+esm"
+  import { NostrFetcher } from "https://cdn.jsdelivr.net/npm/nostr-fetch@0.14.1/+esm"
   // ...
 </script>
 ```
