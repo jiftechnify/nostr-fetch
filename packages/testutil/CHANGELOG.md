@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.14.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.13.1...v0.14.0) (2023-12-14)
+
+### Bug Fixes
+
+* add R2C CLOSED message handling ([6bdc45e](https://github.com/jiftechnify/nostr-fetch/commit/6bdc45ee77923720bef5480138c5279cb603dc53))
+
 ## [0.13.1](https://github.com/jiftechnify/nostr-fetch/compare/v0.13.0...v0.13.1) (2023-10-30)
 
 **Note:** Version bump only for package @nostr-fetch/testutil

@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.14.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.13.1...v0.14.0) (2023-12-14)
+
+### Bug Fixes
+
+* add handling of subscription close by relay to default fetcher backend ([193bfa5](https://github.com/jiftechnify/nostr-fetch/commit/193bfa563269a9b18b383796a5abc766115f7c87))
+* add R2C CLOSED message handling ([6bdc45e](https://github.com/jiftechnify/nostr-fetch/commit/6bdc45ee77923720bef5480138c5279cb603dc53))
+* simplify event go-backing algorithm ([9c2781e](https://github.com/jiftechnify/nostr-fetch/commit/9c2781ec4c56b48e1d07113e252f241cf4e5b2de))
+
+### Features
+
+* check if events match the filters by default ([d6ce40d](https://github.com/jiftechnify/nostr-fetch/commit/d6ce40d9dc4fe51b52a0f6255d9e6f6811803d66))
+
 ## [0.13.1](https://github.com/jiftechnify/nostr-fetch/compare/v0.13.0...v0.13.1) (2023-10-30)
 
 **Note:** Version bump only for package nostr-fetch

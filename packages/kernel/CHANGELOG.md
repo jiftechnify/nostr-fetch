@@ -3,6 +3,16 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.14.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.13.1...v0.14.0) (2023-12-14)
+
+### Bug Fixes
+
+* support CLOSED R2C message ([316b99c](https://github.com/jiftechnify/nostr-fetch/commit/316b99cd324a5f4751678c51c9cb96bc4460d7ac))
+
+### Features
+
+* check if events match the filters by default ([d6ce40d](https://github.com/jiftechnify/nostr-fetch/commit/d6ce40d9dc4fe51b52a0f6255d9e6f6811803d66))
+
 ## [0.13.1](https://github.com/jiftechnify/nostr-fetch/compare/v0.13.0...v0.13.1) (2023-10-30)
 
 **Note:** Version bump only for package @nostr-fetch/kernel

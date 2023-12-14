@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.14.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.13.1...v0.14.0) (2023-12-14)
+
+### Bug Fixes
+
+* make adapters aware of the skipFilterMatching option ([461431c](https://github.com/jiftechnify/nostr-fetch/commit/461431cadc173bfbce18448d1121c6d5eb1adc73))
+
 ## [0.13.1](https://github.com/jiftechnify/nostr-fetch/compare/v0.13.0...v0.13.1) (2023-10-30)
 
 **Note:** Version bump only for package @nostr-fetch/adapter-rx-nostr
