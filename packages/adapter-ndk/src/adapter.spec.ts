@@ -27,6 +27,7 @@ describe("NDKAdapter", () => {
       abortSubBeforeEoseTimeoutMs: 5000,
       connectTimeoutMs: 1000,
       skipVerification: false,
+      skipFilterMatching: false,
     };
     const optsWithDefault = (opts: Partial<FetchTillEoseOptions>) => {
       return {

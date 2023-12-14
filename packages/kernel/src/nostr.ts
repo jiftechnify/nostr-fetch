@@ -234,6 +234,71 @@ const is64BytesHexStr = (s: string): boolean => {
   return /^[a-f0-9]{128}$/.test(s);
 };
 
+type CompiledFilter = {
+  ids: Set<string> | undefined;
+  kinds: Set<number> | undefined;
+  authors: Set<string> | undefined;
+  tags: [string, Set<string>][];
+  since: number | undefined;
+  until: number | undefined;
+};
+
+const compileFilter = (f: Filter): CompiledFilter => {
+  const ids = f.ids ? new Set(f.ids) : undefined;
+  const kinds = f.kinds ? new Set(f.kinds) : undefined;
+  const authors = f.authors ? new Set(f.authors) : undefined;
+
+  const tags: [string, Set<string>][] = [];
+  for (const k of Object.keys(f)) {
+    if (k.startsWith("#") && k.length === 2) {
+      tags.push([k.charAt(1), new Set(f[k as TagQueryKey] ?? [])] as [string, Set<string>]);
+    }
+  }
+  return { ids, kinds, authors, tags, since: f.since, until: f.until };
+};
+
+const getTagValuesByName = (ev: NostrEvent, tagName: string): string[] =>
+  ev.tags.filter((t) => t[0] === tagName).map((t) => t[1] ?? "");
+
+const matchWithCompiledFilter = (f: CompiledFilter, ev: NostrEvent): boolean => {
+  if (f.ids !== undefined && !f.ids.has(ev.id)) {
+    return false;
+  }
+  if (f.kinds !== undefined && !f.kinds.has(ev.kind)) {
+    return false;
+  }
+  if (f.authors !== undefined && !f.authors.has(ev.pubkey)) {
+    return false;
+  }
+  if (f.since !== undefined && ev.created_at < f.since) {
+    return false;
+  }
+  if (f.until !== undefined && ev.created_at > f.until) {
+    return false;
+  }
+  const tagMatched = f.tags.every(([tagName, queryVals]) => {
+    const tagVals = getTagValuesByName(ev, tagName);
+    if (tagVals.length === 0) {
+      // required tag is missing
+      return false;
+    }
+    return tagVals.some((e) => queryVals.has(e));
+  });
+  return tagMatched;
+};
+
+export class FilterMatcher {
+  #filters: CompiledFilter[];
+
+  constructor(filters: Filter[]) {
+    this.#filters = filters.map(compileFilter);
+  }
+
+  public match(ev: NostrEvent): boolean {
+    return this.#filters.some((f) => matchWithCompiledFilter(f, ev));
+  }
+}
+
 /* Check Relay's Capabilities */
 /**
  * Queries supported NIP numbers of the given relay.

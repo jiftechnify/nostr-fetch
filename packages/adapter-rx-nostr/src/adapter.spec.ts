@@ -27,6 +27,7 @@ describe.skip("RxNostrAdapter", () => {
       abortSubBeforeEoseTimeoutMs: 5000,
       connectTimeoutMs: 1000,
       skipVerification: false,
+      skipFilterMatching: false,
     };
     const optsWithDefault = (opts: Partial<FetchTillEoseOptions>) => {
       return {
@@ -147,8 +148,27 @@ describe.skip("RxNostrAdapter", () => {
       const evs = await collectAsyncIter(iter);
       expect(evs.length).toBe(11);
 
-      await expect(wsServer).toReceiveMessage(["REQ", "test", {}]);
-      await expect(wsServer).toReceiveMessage(["CLOSE", "test"]);
+      await expect(wsServer).toReceiveMessage(["REQ", expect.anything(), {}]);
+      await expect(wsServer).toReceiveMessage(["CLOSE", expect.anything()]);
+    });
+
+    test("skips filter matching if enabled", async () => {
+      setupMockRelayServer(wsServer, [
+        { type: "events", eventsSpec: { kind: 1, content: "test", n: 10 } },
+        { type: "events", eventsSpec: { kind: 0, content: "malicious", n: 1 } },
+      ]);
+
+      await backend.ensureRelays([url], { connectTimeoutMs: 1000 });
+      const iter = backend.fetchTillEose(
+        url,
+        { kinds: [1] },
+        optsWithDefault({ skipFilterMatching: true }),
+      );
+      const evs = await collectAsyncIter(iter);
+      expect(evs.length).toBe(11);
+
+      await expect(wsServer).toReceiveMessage(["REQ", expect.anything(), { kinds: [1] }]);
+      await expect(wsServer).toReceiveMessage(["CLOSE", expect.anything()]);
     });
   });
 });

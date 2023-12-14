@@ -28,6 +28,7 @@ describe("DefaultFetcherBackend", () => {
       abortSubBeforeEoseTimeoutMs: 5000,
       connectTimeoutMs: 1000,
       skipVerification: false,
+      skipFilterMatching: false,
       subId: "test",
     };
     const optsWithDefault = (opts: Partial<FetchTillEoseOptions>) => {
