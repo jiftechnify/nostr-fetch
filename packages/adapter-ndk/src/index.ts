@@ -12,6 +12,8 @@ import type {
  * Note: if you use this adapter, `skipVerification` option is ignored and it always behaves as if `false` is specified (always verify signatures).
  * Moreover, `reduceVerification` option becomes meaningless with this adapter.
  *
+ * Note: if you use this adapter, `skipFilterMatching` option is ignored and it always behaves as if `false` is specified (always check if events match with filters).
+ *
  * @example
  * ```
  * import NDK from '@nostr-dev-kit/ndk';

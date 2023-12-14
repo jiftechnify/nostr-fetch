@@ -14,6 +14,8 @@ import type { RelayPool } from "nostr-relaypool";
  *
  * If your `RelayPool` is initialized with `skipVerification: false`, `reduceVerification` option becomes meaningless.
  *
+ * Note: if you use this adapter, `skipFilterMatching` option is ignored and it always behaves as if `false` is specified (always check if events match with filters).
+ *
  * @example
  * ```
  * import { RelayPool } from 'nostr-relaypool';

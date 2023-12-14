@@ -8,7 +8,12 @@ import {
   type NostrFetcherBackend,
   type NostrFetcherCommonOptions,
 } from "@nostr-fetch/kernel/fetcherBackend";
-import { isNoticeForReqError, type Filter, type NostrEvent } from "@nostr-fetch/kernel/nostr";
+import {
+  FilterMatcher,
+  isNoticeForReqError,
+  type Filter,
+  type NostrEvent,
+} from "@nostr-fetch/kernel/nostr";
 import { normalizeRelayUrl, normalizeRelayUrlSet } from "@nostr-fetch/kernel/utils";
 
 import { RxNostr, createRxOneshotReq, filterType, verify } from "rx-nostr";
@@ -124,6 +129,7 @@ export class RxNostrAdapter implements NostrFetcherBackend {
   ): AsyncIterable<NostrEvent> {
     const [tx, chIter] = Channel.make<NostrEvent>();
 
+    const nfilterMatcher = new FilterMatcher([nostrFilter]);
     const req = createRxOneshotReq(
       options.subId ? { filters: [nostrFilter], subId: options.subId } : { filters: [nostrFilter] },
     );
@@ -137,6 +143,9 @@ export class RxNostrAdapter implements NostrFetcherBackend {
     let observable = this.#rxNostr.use(req, { scope: [relayUrl] });
     if (!options.skipVerification) {
       observable = observable.pipe(verify());
+    }
+    if (!options.skipFilterMatching) {
+      observable = observable.pipe(filter(({ event }) => nfilterMatcher.match(event)));
     }
 
     const sub = observable.subscribe({

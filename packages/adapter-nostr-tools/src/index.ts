@@ -9,6 +9,8 @@ import type { SimplePool } from "nostr-tools";
 /**
  * Wraps a nostr-tools' `SimplePool`, allowing it to interoperate with nostr-fetch.
  *
+ * Note: if you use this adapter, `skipFilterMatching` option is ignored and it always behaves as if `false` is specified (always check if events match with filters).
+ *
  * @example
  * ```
  * import { SimplePool } from 'nostr-tools';
