@@ -10,18 +10,9 @@ const targetScriptPath = `packages/examples/src/${target}.ts`;
 
 const exampleArgs = process.argv.slice(3);
 
-const proc = cp.spawn(
-  "node",
-  [
-    "--loader",
-    "esbuild-register/loader",
-    "-r",
-    "esbuild-register",
-    targetScriptPath,
-    ...exampleArgs,
-  ],
-  { stdio: "inherit" }
-);
+const proc = cp.spawn("node", ["--import", "tsx", targetScriptPath, ...exampleArgs], {
+  stdio: "inherit",
+});
 proc.on("exit", (code) => {
   if (code != null && code !== 0) {
     process.exit(code);
