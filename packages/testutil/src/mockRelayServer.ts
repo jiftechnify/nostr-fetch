@@ -46,7 +46,6 @@ const playSubScenario = async (
   subId: string,
 ) => {
   for (const action of scenario) {
-    console.log("playSubScenario", action);
     switch (action.type) {
       case "events":
         for (const ev of generateFakeEvents(action.eventsSpec)) {

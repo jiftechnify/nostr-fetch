@@ -15,7 +15,7 @@
     "tsx": "tsx"
   },
   "dependencies": {
-    "@nostr-dev-kit/ndk": "^0.8.4",
+    "@nostr-dev-kit/ndk": "^1.0.0",
     "@nostr-fetch/adapter-ndk": "^0.14.0",
     "@nostr-fetch/adapter-nostr-relaypool": "^0.14.0",
     "@nostr-fetch/adapter-nostr-tools": "^0.14.0",

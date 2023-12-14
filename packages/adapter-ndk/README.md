@@ -28,7 +28,8 @@ const main = async () => {
 
 ## Minimum Supported Version of NDK
 
-| adapter version | NDK version |
-|-----------------|-------------|
-| < 0.13.0        | 0.7.5       |
-| >= 0.13.0       | 0.8.4       |
+| adapter version       | NDK version |
+|-----------------------|-------------|
+| < 0.13.0              | 0.7.5       |
+| >= 0.13.0 && < 0.14.1 | 0.8.4       |
+| >= 0.14.1             | 1.0.0       |
