@@ -58,21 +58,20 @@ describe.concurrent("NostrFetcher", () => {
       eventsSpec: [
         {
           content: "test3 early",
-          createdAt: { since: 0, until: 1000 },
+          createdAt: { since: 0, until: 999 },
           n: 10,
         },
         {
           content: "test3 within range",
-          createdAt: { since: 1001, until: 1999 }, // it's correct because this relay is "exclusive" wrt since/until
+          createdAt: { since: 1000, until: 2000 },
           n: 10,
         },
         {
           content: "test3 late",
-          createdAt: { since: 2000, until: 3000 },
+          createdAt: { since: 2001, until: 3000 },
           n: 10,
         },
       ],
-      exclusiveInterval: true,
     })
     .addRelay("wss://dup1/", {
       eventsSpec: [{ content: "dup" }],
