@@ -21,6 +21,18 @@ You can also use nostr-fetch in your HTML via `<script>` tags, thanks to [jsDeli
 </script>
 ```
 
+### Note for Node.js Users
+On Node.js, you must install and import `websocket-polyfill` to work nostr-fetch correctly.
+
+```
+npm install websocket-polyfill
+```
+
+```ts
+import { ... } from "nostr-fetch";
+import "websocket-polyfill";
+```
+
 ## Usage
 
 ### Basics
@@ -164,7 +176,7 @@ const fetcher = NostrFetcher.withCustomPool(simplePoolAdapter(pool));
 ### Cancelling by AbortController
 
 ```ts
-import { eventKind, NostrFecher } from 'nostr-fetch'
+import { eventKind, NostrFecher } from "nostr-fetch"
 
 const fetcher = NostrFetcher.init();
 const relayUrls = [/* relay URLs */];
