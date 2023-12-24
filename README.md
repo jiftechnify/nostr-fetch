@@ -21,6 +21,18 @@ You can also use nostr-fetch in your HTML via `<script>` tags, thanks to [jsDeli
 </script>
 ```
 
+### Note for Node.js Users
+On Node.js, you must install and import `websocket-polyfill` to work nostr-fetch correctly.
+
+```
+npm install websocket-polyfill
+```
+
+```ts
+import { ... } from "nostr-fetch";
+import "websocket-polyfill";
+```
+
 ## Usage
 
 ### Basics
