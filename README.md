@@ -176,7 +176,7 @@ const fetcher = NostrFetcher.withCustomPool(simplePoolAdapter(pool));
 ### Cancelling by AbortController
 
 ```ts
-import { eventKind, NostrFecher } from 'nostr-fetch'
+import { eventKind, NostrFecher } from "nostr-fetch"
 
 const fetcher = NostrFetcher.init();
 const relayUrls = [/* relay URLs */];
