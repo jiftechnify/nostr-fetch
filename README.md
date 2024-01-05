@@ -166,12 +166,13 @@ const fetcher = NostrFetcher.withCustomPool(simplePoolAdapter(pool));
 
 #### Table of Available Adapters
 
-| Package         | Relay Pool Impl. | Adapter Package                        | Adapter             |
-|-----------------|------------------|----------------------------------------|---------------------|
-| [`nostr-tools`](https://github.com/nbd-wtf/nostr-tools)     | `SimplePool`     | `@nostr-fetch/adapter-nostr-tools`     | `simplePoolAdapter` |
+| Package                                                               | Relay Pool Impl. | Adapter Package                        | Adapter             |
+|-----------------------------------------------------------------------|------------------|----------------------------------------|---------------------|
+| [`nostr-tools`](https://github.com/nbd-wtf/nostr-tools) (v1)          | `SimplePool`     | `@nostr-fetch/adapter-nostr-tools`     | `simplePoolAdapter` |
+| [`nostr-tools`](https://github.com/nbd-wtf/nostr-tools) (v2)          | `SimplePool`     | `@nostr-fetch/adapter-nostr-tools-v2`  | `simplePoolAdapter` |
 | [`nostr-relaypool`](https://github.com/adamritter/nostr-relaypool-ts) | `RelayPool`      | `@nostr-fetch/adapter-nostr-relaypool` | `relayPoolAdapter`  |
-| [`@nostr-dev-kit/ndk`](https://github.com/nostr-dev-kit/ndk) | `NDK` | `@nostr-fetch/adapter-ndk` | `ndkAdapter` |
-| [`rx-nostr`](https://github.com/penpenpng/rx-nostr) | `RxNostr` | `@nostr-fetch/adapter-rx-nostr` | `rxNostrAdapter` |
+| [`@nostr-dev-kit/ndk`](https://github.com/nostr-dev-kit/ndk)          | `NDK`            | `@nostr-fetch/adapter-ndk`             | `ndkAdapter`        |
+| [`rx-nostr`](https://github.com/penpenpng/rx-nostr)                   | `RxNostr`        | `@nostr-fetch/adapter-rx-nostr`        | `rxNostrAdapter`    |
 
 ### Cancelling by AbortController
 
