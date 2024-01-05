@@ -1,6 +1,6 @@
 {
   "name": "@nostr-fetch/adapter-ndk",
-  "version": "0.14.1",
+  "version": "0.15.0",
   "description": "The adapter for NDK(Nostr Dev Kit) that make it interoperable with nostr-fetch",
   "author": "jiftechnify <jiftech.stlfy@gmail.com>",
   "repository": "https://github.com/jiftechnify/nostr-fetch",
@@ -41,14 +41,14 @@
     "build:modules": "node build.js"
   },
   "dependencies": {
-    "@nostr-fetch/kernel": "^0.14.0"
+    "@nostr-fetch/kernel": "^0.15.0"
   },
   "devDependencies": {
     "@nostr-dev-kit/ndk": "^1.0.0",
-    "nostr-fetch": "^0.14.1"
+    "nostr-fetch": "^0.15.0"
   },
   "peerDependencies": {
     "@nostr-dev-kit/ndk": "^1.0.0",
-    "nostr-fetch": "^0.14.1"
+    "nostr-fetch": "^0.15.0"
   }
 }
