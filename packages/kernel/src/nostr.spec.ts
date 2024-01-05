@@ -375,7 +375,6 @@ describe("FilterMatcher", () => {
     for (const f of filters) {
       const matcher = new FilterMatcher([f]);
       const matched = matcher.match(ev);
-      console.log(f, matched);
       expect(matched).toBe(false);
     }
   });
