@@ -11,7 +11,8 @@ import {
 import { NostrEvent, isNoticeForReqError, type Filter } from "@nostr-fetch/kernel/nostr";
 import { normalizeRelayUrl, normalizeRelayUrlSet, withTimeout } from "@nostr-fetch/kernel/utils";
 
-import type { SimplePool, Relay as ToolsRelay } from "nostr-tools";
+import type { AbstractSimplePool } from "nostr-tools/abstract-pool";
+import type { AbstractRelay as ToolsRelay } from "nostr-tools/abstract-relay";
 
 type CloseCb = () => void;
 type NoticeCb = (msg: string) => void;
@@ -27,7 +28,7 @@ type SimplePoolListenersTable = {
 };
 
 export class SimplePoolAdapter implements NostrFetcherBackend {
-  #pool: SimplePool;
+  #pool: AbstractSimplePool;
 
   // storing refs to `ToolsRelay`s to allow to take out them synchronously.
   // keys are **normalized** relay URLs.
@@ -41,7 +42,7 @@ export class SimplePoolAdapter implements NostrFetcherBackend {
 
   #debugLogger: DebugLogger | undefined;
 
-  constructor(sp: SimplePool, options: Required<NostrFetcherCommonOptions>) {
+  constructor(sp: AbstractSimplePool, options: Required<NostrFetcherCommonOptions>) {
     this.#pool = sp;
     if (options.minLogLevel !== "none") {
       this.#debugLogger = new DebugLogger(options.minLogLevel);
