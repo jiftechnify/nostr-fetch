@@ -116,7 +116,7 @@ export type FetchOptions<SeenOn extends boolean = false> = {
   skipFilterMatching?: boolean;
 
   /**
-   * If true, `seenOn` property is appeded to every returned events.
+   * If true, `seenOn` property is appended to every returned events.
    * The value of `seenOn` is array of relay URLs on which the event have been seen.
    *
    * @default false
@@ -580,7 +580,7 @@ export class NostrFetcher {
           // receive backpressure: wait until the channel is drained enough
           await tx.waitUntilDrained();
         }
-        // subscripton loop for the relay terminated
+        // subscription loop for the relay terminated
         progTracker.setProgress(rurl, 1);
         statsMngr?.setCurrentProgress(progTracker.calcTotalProgress());
       }),
@@ -797,7 +797,7 @@ export class NostrFetcher {
           nextUntil = oldestCreatedAt;
           statsMngr?.setRelayFrontier(rurl, oldestCreatedAt);
         }
-        // subscripton loop for the relay terminated
+        // subscription loop for the relay terminated
         progTracker.setProgress(rurl, limit);
         statsMngr?.setCurrentProgress(progTracker.calcTotalProgress());
       }),

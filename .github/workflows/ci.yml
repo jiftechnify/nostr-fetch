@@ -16,10 +16,10 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Use Node ${{ matrix.node }}
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
 
@@ -36,3 +36,13 @@ jobs:
 
       - name: Lint, Test and Build
         run: yarn run-all-gha
+
+  typos:
+    name: Detect typos
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Run typos
+        uses: crate-ci/typos@v1.17.0

@@ -37,7 +37,7 @@ export class NostrFetchError extends Error {
  * - `completed`: the fetcher have fetched enough events from the relay
  * - `aborted`: Fetching from the relay is aborted
  * - `failed`: An error occurred during fetching from the relay
- * - `connection-failed`: An error occured during connecting to the relay
+ * - `connection-failed`: An error occurred during connecting to the relay
  */
 export type RelayStatus = "fetching" | "completed" | "aborted" | "failed" | "connection-failed";
 

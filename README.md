@@ -209,7 +209,7 @@ npm install && npm run build
 # the command executes packages/examples/src/fetchAll.ts
 npm run example fetchAll
 
-# some exaples takes a hex pubkey as an argument
+# some examples takes a hex pubkey as an argument
 npm run example fetchLastPerAuthor <your hex pubkey>
 ```
 
@@ -257,7 +257,7 @@ This opens up interoperability with other relay pool implementations such as [no
 
 Cleans up the internal relay pool.
 
-If you use a fetcher instance initialized via `NostrFetcher.init`, calling this method closes conenctions to all the connected relays.
+If you use a fetcher instance initialized via `NostrFetcher.init`, calling this method closes connections to all the connected relays.
 
 ---
 

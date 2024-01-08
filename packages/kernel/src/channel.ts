@@ -57,7 +57,7 @@ export class Channel<T> {
   }
 
   /**
-   * Makes an asyncronous channel.
+   * Makes an asynchronous channel.
    *
    * Return a pair of a sender endpoint and an iterator which iterate over items sent to the channel.
    *
