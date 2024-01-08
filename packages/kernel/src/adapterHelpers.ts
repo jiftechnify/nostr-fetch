@@ -19,7 +19,7 @@ import { NostrEvent } from "./nostr";
  * @example
  * ```
  * const [tx, chIter] = Channel.make<NostrEvent>();
- * const sub = ...; // initializeing subscription
+ * const sub = ...; // initializing subscription
  * const closeSub = () => {
  *   sub.close();
  *   // any cleanups for subscription go here
