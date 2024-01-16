@@ -364,12 +364,12 @@
     yargs "^17.7.2"
 
 "@lerna-lite/cli@^3.1.0":
-  version "3.2.0"
-  resolved "https://registry.yarnpkg.com/@lerna-lite/cli/-/cli-3.2.0.tgz#9f5c68e741a380ee15f8ea6279f265c9c158e447"
-  integrity sha512-ypPr++CSCeKbmKI1X9ATqwtHxZFqUMO1+Ruzhu2rysZ7QMj4GzitUWsDnPhu6O2mHzGt4T2H49Q9kBHZgoszKw==
+  version "3.2.1"
+  resolved "https://registry.yarnpkg.com/@lerna-lite/cli/-/cli-3.2.1.tgz#d4bc5286e5d5520d9c5eb9fe538d218a9c9083d3"
+  integrity sha512-aF7lfe+TOmL+YxaKgJcHCfFT/nZ3ZI+icZTEVM80LaEIhVvgBJZSqabGFu1PbQ9onvBdKX2/FYaWhJz+fO7cIQ==
   dependencies:
-    "@lerna-lite/core" "3.2.0"
-    "@lerna-lite/init" "3.2.0"
+    "@lerna-lite/core" "3.2.1"
+    "@lerna-lite/init" "3.2.1"
     dedent "^1.5.1"
     dotenv "^16.3.1"
     import-local "^3.1.0"
@@ -409,10 +409,10 @@
     write-json-file "^5.0.0"
     write-pkg "^6.0.1"
 
-"@lerna-lite/core@3.2.0":
-  version "3.2.0"
-  resolved "https://registry.yarnpkg.com/@lerna-lite/core/-/core-3.2.0.tgz#032dbebb0aaba65001a792f05a1cb7290351aa60"
-  integrity sha512-45xUQh//wv+wjRa/IUE09HtdoYsIr5Fy6NFZql/1VAdNsP1hBf7gC/igezjzgSqo4KoH1sn4KdV9eycJrnCBQg==
+"@lerna-lite/core@3.2.1":
+  version "3.2.1"
+  resolved "https://registry.yarnpkg.com/@lerna-lite/core/-/core-3.2.1.tgz#e69feae6df039909c8375766c40517bd103b043c"
+  integrity sha512-vqH4bpg0vaAPwzDGnyTR4RRjffZDhuSRJSa+lKhGH5NymM15KskB2HGZtRvSutX2Q5MZExTQ9IijWz7l139gaA==
   dependencies:
     "@npmcli/run-script" "^7.0.3"
     chalk "^5.3.0"
@@ -460,12 +460,12 @@
     p-map "^7.0.0"
     write-json-file "^5.0.0"
 
-"@lerna-lite/init@3.2.0":
-  version "3.2.0"
-  resolved "https://registry.yarnpkg.com/@lerna-lite/init/-/init-3.2.0.tgz#d857f186741298ea4185f8485d113e0f911e45df"
-  integrity sha512-6RuesqWxvZdmEEISfUkit4ug4PuQgc6x8Sw9ta13+5Af7o7XQqx64SErkTCfzh9t6ZqRcDqzuGkGM4bR0r34Lw==
+"@lerna-lite/init@3.2.1":
+  version "3.2.1"
+  resolved "https://registry.yarnpkg.com/@lerna-lite/init/-/init-3.2.1.tgz#e5b8880c7978495b5851a2a15244bf6dd9fa1e84"
+  integrity sha512-DuEsi4Jii4nmP+c7aID3L5viXkMKhWGKRtI798pcnNjB3dyVN22dZNCDzhiaetMo+ayTsLTe50UDpf5+yxamNg==
   dependencies:
-    "@lerna-lite/core" "3.2.0"
+    "@lerna-lite/core" "3.2.1"
     fs-extra "^11.2.0"
     p-map "^7.0.1"
     write-json-file "^5.0.0"
