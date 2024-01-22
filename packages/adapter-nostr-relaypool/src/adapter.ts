@@ -102,10 +102,8 @@ export class NRTPoolAdapter implements NostrFetcherBackend {
         r.on("connect", () => {
           // setup debug log
           // listener for notice/error will be overwritten in fetchTillEose
-          this.addListener(
-            rurl,
-            "disconnect",
-            (msg) => logger?.log("info", `disconnected: ${msg}`),
+          this.addListener(rurl, "disconnect", (msg) =>
+            logger?.log("info", `disconnected: ${msg}`),
           );
           this.addListener(rurl, "error", (msg) => {
             logger?.log("error", `Websocket error: ${msg}`);
@@ -113,10 +111,8 @@ export class NRTPoolAdapter implements NostrFetcherBackend {
           this.addListener(rurl, "notice", (msg) => {
             logger?.log("warn", `NOTICE: ${msg}`);
           });
-          this.addListener(
-            rurl,
-            "auth",
-            () => logger?.log("warn", "received AUTH challenge (ignoring)"),
+          this.addListener(rurl, "auth", () =>
+            logger?.log("warn", "received AUTH challenge (ignoring)"),
           );
           resolve(rurl);
         });
