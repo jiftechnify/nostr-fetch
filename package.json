@@ -29,7 +29,7 @@
     "@typescript-eslint/parser": "^6.1.0",
     "conventional-changelog-cli": "^4.0.0",
     "copy-file-util": "^1.0.0",
-    "esbuild": "^0.19.2",
+    "esbuild": "^0.20.0",
     "eslint": "^8.18.0",
     "eslint-config-prettier": "^9.0.0",
     "fs-extra": "^11.1.0",
