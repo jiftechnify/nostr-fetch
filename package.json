@@ -41,6 +41,6 @@
     "typescript": "^5.1.0",
     "vitest": "^1.0.4",
     "vitest-websocket-mock": "^0.3.0",
-    "websocket-polyfill": "^0.0.3"
+    "websocket-polyfill": "^1.0.0"
   }
 }

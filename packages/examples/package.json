@@ -27,7 +27,7 @@
     "nostr-tools-v2": "npm:nostr-tools@^2.1.0",
     "rx-nostr": "^1.2.0",
     "rxjs": "^7.8.0",
-    "websocket-polyfill": "^0.0.3",
+    "websocket-polyfill": "^1.0.0",
     "ws": "^8.13.0"
   }
 }
