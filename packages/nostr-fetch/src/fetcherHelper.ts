@@ -122,6 +122,7 @@ export class EventBuckets<K> {
   #buckets: Map<K, NostrEvent[]>;
   #limitPerKey: number;
 
+  // pre-condition: `keys` should be deduped in advance.
   constructor(keys: K[], limit: number) {
     this.#buckets = new Map(keys.map((k) => [k, []]));
     this.#limitPerKey = limit;
@@ -188,6 +189,7 @@ export class KeyRelayMatrix<K extends string | number, V> {
   #matrix: Map<string, V>;
   #byKey: Map<K, V[]>;
 
+  // pre-condition: each array of `relayToKeys.values()` should be deduped in advance.
   constructor(relayToKeys: Map<string, K[]>, initVal: () => V) {
     this.#matrix = new Map();
 

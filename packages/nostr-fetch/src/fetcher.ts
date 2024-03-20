@@ -865,14 +865,15 @@ export class NostrFetcher {
   }
 
   // creates mapping of available relays to keys.
-  // returns that mapping and array of all keys.
+  // returns triple: the mapping, array of all keys, and array of all relay URLs.
+  // these arrays are guaranteed to be deduped.
   async #mapAvailableRelayToKeys<K extends FetchFilterKeyName>(
     kr: KeysAndRelays<K>,
     ensureOpts: EnsureRelaysOptions,
     reqNips: number[],
   ): Promise<
     [
-      map: Map<string, FetchFilterKeyElem<K>[]>,
+      relayToKeys: Map<string, FetchFilterKeyElem<K>[]>,
       allKeys: FetchFilterKeyElem<K>[],
       allRelays: string[],
     ]
@@ -886,13 +887,17 @@ export class NostrFetcher {
         ],
         this.#debugLogger,
       );
-
+      const dedupedKeys = [...new Set(kr.keys)];
       const eligibleRelays = await this.#ensureRelaysWithCapCheck(
         kr.relayUrls,
         ensureOpts,
         reqNips,
       );
-      return [new Map(eligibleRelays.map((rurl) => [rurl, kr.keys])), kr.keys, kr.relayUrls];
+      return [
+        new Map(eligibleRelays.map((rurl) => [rurl, dedupedKeys])),
+        dedupedKeys,
+        eligibleRelays,
+      ];
     }
 
     if (isRelaySetsPerKey(kr)) {
@@ -910,13 +915,15 @@ export class NostrFetcher {
         this.#debugLogger,
       );
 
+      const dedupedKeys = [...new Set(krArr.map(([key]) => key))];
+
       // transpose: key to rurls -> rurl to keys
-      const rurl2keys = new Map<string, FetchFilterKeyElem<K>[]>();
+      const rurl2keys = new Map<string, Set<FetchFilterKeyElem<K>>>();
       for (const [key, rurls] of krArr) {
         const normalized = normalizeRelayUrlSet(rurls);
         for (const rurl of normalized) {
           const keys = rurl2keys.get(rurl);
-          rurl2keys.set(rurl, [...(keys ?? []), key as FetchFilterKeyElem<K>]);
+          rurl2keys.set(rurl, keys ? keys.add(key) : new Set([key]));
         }
       }
       const allRelays = [...rurl2keys.keys()];
@@ -925,9 +932,9 @@ export class NostrFetcher {
       // retain eligible relays only
       return [
         /* eslint-disable-next-line @typescript-eslint/no-non-null-assertion */
-        new Map(eligibleRelays.map((rurl) => [rurl, rurl2keys.get(rurl)!])),
-        krArr.map(([key]) => key),
-        allRelays,
+        new Map(eligibleRelays.map((rurl) => [rurl, [...rurl2keys.get(rurl)!]])),
+        dedupedKeys,
+        eligibleRelays,
       ];
     }
 

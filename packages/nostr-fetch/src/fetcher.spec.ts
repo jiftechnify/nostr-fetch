@@ -549,12 +549,83 @@ describe.concurrent("NostrFetcher", () => {
       expect(authors).toStrictEqual([pkC, pkB, pkA]);
     });
 
+    test("relay set for all authors (w/ duplicated key)", async () => {
+      const iter = fetcher.fetchLatestEventsPerKey(
+        "authors",
+        {
+          keys: [pkA, pkB, pkC, pkC, pkB, pkA],
+          relayUrls: ["wss://per-author1/", "wss://per-author2/", "wss://per-author3/"],
+        },
+        {},
+        5,
+      );
+      const authors: string[] = [];
+
+      for await (const { key: author, events } of iter) {
+        authors.push(author);
+
+        expect(events.length).toBe(5);
+        assert(events.every((ev) => ev.pubkey === author));
+
+        // check if events are sorted
+        const sorted = events.slice().sort(createdAtDesc);
+        expect(events).toStrictEqual(sorted);
+      }
+      // all events of pkC > all events of pkB > all events of pkA, where `>` is "after than"
+      // so events of pkC should be returned first, then events of pkB, then events of pkA.
+      expect(authors).toStrictEqual([pkC, pkB, pkA]);
+    });
+
     test("relay set per author", async () => {
       const relaySetPerAuthor = new Map([
         [pkA, ["wss://per-author1/", "wss://per-author2/"]],
         [pkB, ["wss://per-author2/", "wss://per-author3/"]],
         [pkC, ["wss://per-author3/", "wss://per-author1/"]],
       ]);
+
+      const eventsPerAuthor = new Map<string, NostrEvent[]>();
+
+      const iter = fetcher.fetchLatestEventsPerKey("authors", relaySetPerAuthor, {}, 5);
+      for await (const { key: author, events } of iter) {
+        eventsPerAuthor.set(author, events);
+
+        expect(events.length).toBe(5);
+        assert(events.every((ev) => ev.pubkey === author));
+
+        // check if events are sorted
+        const sorted = events.slice().sort(createdAtDesc);
+        expect(events).toStrictEqual(sorted);
+      }
+
+      // check if events are fetched from only specified relays for each author
+      /* eslint-disable @typescript-eslint/no-non-null-assertion */
+      assert(
+        eventsPerAuthor
+          .get(pkA)!
+          .every(({ content }) => content.includes("test1") || content.includes("test2")),
+      );
+      assert(
+        eventsPerAuthor
+          .get(pkB)!
+          .every(({ content }) => content.includes("test2") || content.includes("test3")),
+      );
+      assert(
+        eventsPerAuthor
+          .get(pkC)!
+          .every(({ content }) => content.includes("test3") || content.includes("test1")),
+      );
+      /* eslint-enable @typescript-eslint/no-non-null-assertion */
+    });
+
+    test("relay set per author (w/ duplicated key)", async () => {
+      const relaySetPerAuthor: [string, string[]][] = [
+        [pkA, ["wss://per-author1/", "wss://per-author2/"]],
+        [pkA, ["wss://per-author2/"]],
+        [pkB, ["wss://per-author2/", "wss://per-author3/"]],
+        [pkB, ["wss://per-author3/"]],
+        [pkC, ["wss://per-author3/", "wss://per-author1/"]],
+        [pkC, ["wss://per-author1/"]],
+      ];
 
       const eventsPerAuthor = new Map<string, NostrEvent[]>();
 
