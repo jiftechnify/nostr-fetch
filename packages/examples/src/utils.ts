@@ -1,4 +1,4 @@
-import { NostrEvent, eventKind } from "nostr-fetch";
+import { type NostrEvent, eventKind } from "nostr-fetch";
 
 export const nHoursAgo = (hrs: number): number =>
   Math.floor((Date.now() - hrs * 60 * 60 * 1000) / 1000);
