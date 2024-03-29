@@ -1,4 +1,4 @@
-import { LogLevel } from "./debugLogger";
+import type { LogLevel } from "./debugLogger";
 import type { Filter, NostrEvent } from "./nostr";
 
 export type EnsureRelaysOptions = {
@@ -71,7 +71,7 @@ export interface NostrFetcherBackend {
  */
 export class FetchTillEoseFailedSignal extends Error {
   static {
-    this.prototype.name = "FetchTillEoseFailedSignal";
+    FetchTillEoseFailedSignal.prototype.name = "FetchTillEoseFailedSignal";
   }
 }
 
@@ -80,7 +80,7 @@ export class FetchTillEoseFailedSignal extends Error {
  */
 export class FetchTillEoseAbortedSignal extends Error {
   static {
-    this.prototype.name = "FetchTillEoseAbortedSignal";
+    FetchTillEoseAbortedSignal.prototype.name = "FetchTillEoseAbortedSignal";
   }
 }
 

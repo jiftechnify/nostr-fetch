@@ -1,6 +1,6 @@
-import { ChannelSender } from "./channel";
-import { FetchTillEoseAbortedSignal, FetchTillEoseOptions } from "./fetcherBackend";
-import { NostrEvent } from "./nostr";
+import type { ChannelSender } from "./channel";
+import { FetchTillEoseAbortedSignal, type FetchTillEoseOptions } from "./fetcherBackend";
+import type { NostrEvent } from "./nostr";
 
 /**
  * Helper that sets up two types of subscription abortions:
