@@ -640,7 +640,6 @@ describe.concurrent("NostrFetcher", () => {
       }
 
       // check if events are fetched from only specified relays for each author
-      /* eslint-disable @typescript-eslint/no-non-null-assertion */
       assert(
         eventsPerAuthor
           .get(pkA)
@@ -656,7 +655,6 @@ describe.concurrent("NostrFetcher", () => {
           .get(pkC)
           ?.every(({ content }) => content.includes("test3") || content.includes("test1")),
       );
-      /* eslint-enable @typescript-eslint/no-non-null-assertion */
     });
 
     test("asOf works correctly", async () => {
