@@ -27,7 +27,7 @@
     "access": "public"
   },
   "scripts": {
-    "prepack": "yarn build",
+    "prepack": "npm run build",
     "check-type": "tsc -p tsconfig.lint.json || exit 0",
     "test": "vitest run",
     "testw": "vitest",

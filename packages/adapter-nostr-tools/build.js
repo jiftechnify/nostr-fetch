@@ -31,7 +31,7 @@ const buildESM = async () =>
 /** @type { () => Promise<void> } */
 const buildTypes = async () =>
   new Promise((resolve, reject) => {
-    const proc = cp.spawn("yarn", ["tsc", "-p", BUILD_TS_CONFIG_PATH], { stdio: "inherit" });
+    const proc = cp.spawn("npx", ["tsc", "-p", BUILD_TS_CONFIG_PATH], { stdio: "inherit" });
     proc.on("exit", (code) => {
       if (code != null && code !== 0) {
         reject(Error(`tsc exited with code ${code}`));

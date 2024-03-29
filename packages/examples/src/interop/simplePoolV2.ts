@@ -1,12 +1,13 @@
 import { simplePoolAdapter } from "@nostr-fetch/adapter-nostr-tools-v2";
 import { eventKind, NostrFetcher } from "nostr-fetch";
-import { SimplePool } from "nostr-tools-v2";
-import "websocket-polyfill";
+import { SimplePool, useWebSocketImplementation } from "nostr-tools-v2";
+import ws from "ws";
 
 import { defaultRelays, nHoursAgo } from "../utils";
 
 const main = async () => {
   // initialize fetcher based on nostr-tools SimplePool
+  useWebSocketImplementation(ws);
   const pool = new SimplePool();
   const fetcher = NostrFetcher.withCustomPool(simplePoolAdapter(pool));
 

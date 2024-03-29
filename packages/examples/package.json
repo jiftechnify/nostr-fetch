@@ -29,5 +29,8 @@
     "rxjs": "^7.8.0",
     "websocket-polyfill": "^0.0.3",
     "ws": "^8.13.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.10"
   }
 }

@@ -27,7 +27,7 @@
     "src"
   ],
   "scripts": {
-    "prepack": "yarn build",
+    "prepack": "npm run build",
     "tsc": "tsc",
     "test": "vitest run",
     "testw": "vitest",
