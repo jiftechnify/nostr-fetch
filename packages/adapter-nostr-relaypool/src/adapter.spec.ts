@@ -1,4 +1,4 @@
-import { FetchTillEoseOptions, NostrFetcherBackend } from "@nostr-fetch/kernel/fetcherBackend";
+import type { FetchTillEoseOptions, NostrFetcherBackend } from "@nostr-fetch/kernel/fetcherBackend";
 import { setupMockRelayServer } from "@nostr-fetch/testutil/mockRelayServer";
 import { NRTPoolAdapter } from "./adapter";
 

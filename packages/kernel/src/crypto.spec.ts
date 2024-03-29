@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { verifyEventSig } from "./crypto";
-import { NostrEvent } from "./nostr";
+import type { NostrEvent } from "./nostr";
 
 const validEvent: NostrEvent = {
   id: "381e2ea15a5b16f4ebdaa68ed3d9a112dc4ea6cc95641ef7eb57f1ec826f07e4",

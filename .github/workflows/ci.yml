@@ -32,10 +32,10 @@ jobs:
             turbo-${{ github.job }}-${{ github.ref_name }}-${{ matrix.node }}-
 
       - name: Install dependencies
-        run: yarn
+        run: npm ci
 
       - name: Lint, Test and Build
-        run: yarn run-all-gha
+        run: npm run run-all-gha
 
   typos:
     name: Detect typos

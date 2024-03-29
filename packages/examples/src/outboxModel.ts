@@ -1,5 +1,5 @@
 import { setTimeout } from "node:timers/promises";
-import { eventKind, NostrEvent, NostrFetcher } from "nostr-fetch";
+import { type NostrEvent, NostrFetcher, eventKind } from "nostr-fetch";
 import "websocket-polyfill";
 
 import { defaultRelays, getWriteRelaysFromEvent } from "./utils";

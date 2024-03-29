@@ -1,4 +1,4 @@
-import { FetchTillEoseOptions } from "@nostr-fetch/kernel/fetcherBackend";
+import type { FetchTillEoseOptions } from "@nostr-fetch/kernel/fetcherBackend";
 import { setupMockRelayServer } from "@nostr-fetch/testutil/mockRelayServer";
 import { NDKAdapter } from "./adapter";
 

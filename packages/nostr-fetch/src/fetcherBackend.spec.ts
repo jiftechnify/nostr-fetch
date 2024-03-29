@@ -1,6 +1,6 @@
 import {
-  FetchTillEoseOptions,
-  NostrFetcherBackend,
+  type FetchTillEoseOptions,
+  type NostrFetcherBackend,
   isFetchTillEoseFailedSignal,
 } from "@nostr-fetch/kernel/fetcherBackend";
 import { setupMockRelayServer } from "@nostr-fetch/testutil/mockRelayServer";

@@ -1,8 +1,8 @@
-import { fail } from "assert";
+import { fail } from "node:assert";
 import { describe, expect, test } from "vitest";
 import {
   FilterMatcher,
-  NostrEvent,
+  type NostrEvent,
   isNoticeForReqError,
   parseR2CMessage,
   validateEvent,
@@ -227,7 +227,9 @@ describe("validateEvent", () => {
       propDeletedEvent("sig"),
       modifiedEvent({ sig: 1 }),
       modifiedEvent({ sig: "not hex str" }),
-      modifiedEvent({ sig: "d1d1747115d16751a97c239f46ec1703292c3b7e9988b9ebdd4ec4705b15ed44" }), // invalid length
+      modifiedEvent({
+        sig: "d1d1747115d16751a97c239f46ec1703292c3b7e9988b9ebdd4ec4705b15ed44",
+      }), // invalid length
     ];
     for (const ev of malformedEvs) {
       expect(validateEvent(ev)).toBe(false);

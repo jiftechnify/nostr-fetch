@@ -8,7 +8,7 @@ import {
   type NostrFetcherBackend,
   type NostrFetcherCommonOptions,
 } from "@nostr-fetch/kernel/fetcherBackend";
-import { NostrEvent, isNoticeForReqError, type Filter } from "@nostr-fetch/kernel/nostr";
+import { type NostrEvent, isNoticeForReqError, type Filter } from "@nostr-fetch/kernel/nostr";
 import { normalizeRelayUrl, normalizeRelayUrlSet, withTimeout } from "@nostr-fetch/kernel/utils";
 
 import type { AbstractSimplePool } from "nostr-tools/abstract-pool";
@@ -83,7 +83,7 @@ export class SimplePoolAdapter implements NostrFetcherBackend {
 
       // dispatch events to "per-relay" listeners.
       r.onclose = () => {
-        logger?.log("info", `closed`);
+        logger?.log("info", "closed");
         this.#listeners.close.get(rurl)?.();
       };
       r.onnotice = (notice) => {

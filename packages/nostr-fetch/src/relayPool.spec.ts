@@ -1,7 +1,7 @@
-import { RelayOptions } from "./relay";
-import { RelayPool, initRelayPool } from "./relayPool";
+import type { RelayOptions } from "./relay";
+import { type RelayPool, initRelayPool } from "./relayPool";
 
-import { afterEach, assert, beforeEach, describe, expect, test } from "vitest";
+import { assert, afterEach, beforeEach, describe, expect, test } from "vitest";
 import { WS } from "vitest-websocket-mock";
 
 import { setTimeout as delay } from "node:timers/promises";

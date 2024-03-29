@@ -2,7 +2,7 @@ import type { Relay, RelayOptions } from "./relay";
 import { initRelay } from "./relay";
 
 import { Deferred } from "@nostr-fetch/kernel/channel";
-import { DebugLogger, LogLevel } from "@nostr-fetch/kernel/debugLogger";
+import { DebugLogger, type LogLevel } from "@nostr-fetch/kernel/debugLogger";
 import {
   currUnixtimeMilli,
   normalizeRelayUrl,
@@ -107,7 +107,7 @@ class RelayPoolImpl implements RelayPool {
           this.#relays.set(rurl, { state: "connecting", relayUrl: rurl, wait: deferred.promise });
 
           const r = initRelay(rurl, relayOpts);
-          r.on("connect", () => logger?.log("info", `connected`));
+          r.on("connect", () => logger?.log("info", "connected"));
           r.on("disconnect", (ev) => {
             logger?.log("info", `disconnected: ${JSON.stringify(ev)}`);
             this.#relays.set(r.url, {
@@ -117,7 +117,7 @@ class RelayPoolImpl implements RelayPool {
             });
           });
           r.on("error", () => {
-            logger?.log("error", `WebSocket error`);
+            logger?.log("error", "WebSocket error");
             this.#relays.set(r.url, {
               state: "disconnected",
               relayUrl: r.url,

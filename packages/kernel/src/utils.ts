@@ -62,7 +62,7 @@ export const normalizeRelayUrlSet = (relayUrls: string[]): string[] => {
 /**
  *  Empty AsyncGenerator
  */
-// eslint-disable-next-line require-yield
+// biome-ignore lint/correctness/useYield: we want empty generator so it's fine
 export async function* emptyAsyncGen() {
   return;
 }

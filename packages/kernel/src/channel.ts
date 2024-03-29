@@ -3,7 +3,7 @@ export interface Deferred<T> {
   reject(e?: unknown): void;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
+// biome-ignore lint/suspicious/noUnsafeDeclarationMerging: this is necessary
 export class Deferred<T> {
   promise: Promise<T>;
   constructor() {
@@ -162,9 +162,8 @@ export class Channel<T> {
         if (err instanceof ChannelCloseSignal) {
           // closed while awaiting fulfillment of recv queue
           break;
-        } else {
-          throw err;
         }
+        throw err;
       }
     }
   }

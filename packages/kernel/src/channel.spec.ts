@@ -1,5 +1,5 @@
 import { setTimeout as wait } from "node:timers/promises";
-import { inspect } from "util";
+import { inspect } from "node:util";
 import { describe, expect, test } from "vitest";
 import { Channel } from "./channel";
 
@@ -112,6 +112,7 @@ describe("channel", () => {
     // check if `wait` is pending
     const wait1 = tx.waitUntilDrained();
     const wait2 = tx.waitUntilDrained();
+    // biome-ignore lint/complexity/noForEach: performance implications are negligible
     [wait1, wait2].forEach((w) => {
       expect(inspect(w).includes("pending")).toBe(true);
     });
@@ -124,6 +125,7 @@ describe("channel", () => {
     res.push(fst.value);
 
     // check if `wait` have been resolved
+    // biome-ignore lint/complexity/noForEach: performance implications are negligible
     [wait1, wait2].forEach((w) => {
       expect(inspect(w).includes("pending")).toBe(false);
     });

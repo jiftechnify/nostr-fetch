@@ -1,4 +1,4 @@
-import { Filter } from "@nostr-fetch/kernel/nostr";
+import type { Filter } from "@nostr-fetch/kernel/nostr";
 
 /**
  * Structure of Nostr event filter except `limit`, `since` and `until`.
@@ -22,7 +22,7 @@ export type FetchTimeRangeFilter = Pick<Filter, "since" | "until">;
  */
 export class NostrFetchError extends Error {
   static {
-    this.prototype.name = "NostrFetchError";
+    NostrFetchError.prototype.name = "NostrFetchError";
   }
 }
 

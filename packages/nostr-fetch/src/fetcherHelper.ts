@@ -1,15 +1,15 @@
 import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
-import { NostrFetcherCommonOptions } from "@nostr-fetch/kernel/fetcherBackend";
-import { NostrEvent, querySupportedNips } from "@nostr-fetch/kernel/nostr";
+import type { NostrFetcherCommonOptions } from "@nostr-fetch/kernel/fetcherBackend";
+import { type NostrEvent, querySupportedNips } from "@nostr-fetch/kernel/nostr";
 import { normalizeRelayUrlSet } from ".";
 import {
-  FetchFilterKeyElem,
-  FetchFilterKeyName,
-  FetchStats,
-  FetchStatsListener,
+  type FetchFilterKeyElem,
+  type FetchFilterKeyName,
+  type FetchStats,
+  type FetchStatsListener,
   NostrFetchError,
-  RelayFetchStats,
-  RelayStatus,
+  type RelayFetchStats,
+  type RelayStatus,
 } from "./types";
 
 type AssertionResult =
@@ -201,7 +201,7 @@ export class KeyRelayMatrix<K extends string | number, V> {
         const v = initVal();
 
         this.#matrix.set(this.#getKey(k, r), v);
-        this.#byKey.get(k)!.push(v); // eslint-disable-line @typescript-eslint/no-non-null-assertion
+        this.#byKey.get(k)?.push(v);
       }
     }
   }

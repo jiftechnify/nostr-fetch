@@ -7,11 +7,11 @@
   "scripts": {
     "check-type": "tsc -p tsconfig.lint.json || exit 0",
     "lint": "run-p check-type lint:*",
-    "lint:format": "prettier --check --log-level warn src/**/*.ts",
-    "lint:js": "eslint --max-warnings 0 src/",
+    "lint:format": "biome format ./src",
+    "lint:js": "biome lint ./src",
     "fix": "run-s fix:*",
-    "fix:format": "prettier --write --log-level warn src/**/*.ts",
-    "fix:js": "eslint --fix src/",
+    "fix:format": "biome format --write ./src",
+    "fix:js": "biome lint --apply ./src",
     "tsx": "tsx"
   },
   "dependencies": {
@@ -29,5 +29,8 @@
     "rxjs": "^7.8.0",
     "websocket-polyfill": "^0.0.3",
     "ws": "^8.13.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.10"
   }
 }
