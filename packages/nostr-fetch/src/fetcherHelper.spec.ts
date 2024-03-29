@@ -87,7 +87,7 @@ describe("KeyRelayMatrix", () => {
         ["relay2", [2, 3]],
         ["relay3", [3]],
       ]),
-      () => 0
+      () => 0,
     );
 
     expect(matrix.get(1, "relay1")).toBeDefined();

@@ -1,21 +1,21 @@
 import { Channel } from "@nostr-fetch/kernel/channel";
 import { verifyEventSig } from "@nostr-fetch/kernel/crypto";
-import {
+import type {
   EnsureRelaysOptions,
   FetchTillEoseOptions,
   NostrFetcherBackend,
   NostrFetcherCommonOptions,
 } from "@nostr-fetch/kernel/fetcherBackend";
-import { Filter, NostrEvent, generateSubId } from "@nostr-fetch/kernel/nostr";
+import { type Filter, type NostrEvent, generateSubId } from "@nostr-fetch/kernel/nostr";
 import {
   emptyAsyncGen,
   normalizeRelayUrl,
   normalizeRelayUrlSet,
   withTimeout,
 } from "@nostr-fetch/kernel/utils";
-import { FakeEventsSpec, generateFakeEvents } from "@nostr-fetch/testutil/fakeEvent";
+import { type FakeEventsSpec, generateFakeEvents } from "@nostr-fetch/testutil/fakeEvent";
 import { NostrFetcher } from "../fetcher";
-import { RelayCapabilityChecker, createdAtDesc } from "../fetcherHelper";
+import { type RelayCapabilityChecker, createdAtDesc } from "../fetcherHelper";
 
 import { setTimeout as delay } from "node:timers/promises";
 
@@ -82,9 +82,8 @@ class FakeRelay {
 
     if (this.#spec.connectable) {
       return Promise.resolve();
-    } else {
-      return Promise.reject(Error("failed to connect to the relay"));
     }
+    return Promise.reject(Error("failed to connect to the relay"));
   }
 
   req(

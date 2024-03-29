@@ -1,16 +1,16 @@
 import { Channel } from "@nostr-fetch/kernel/channel";
 import {
+  type EnsureRelaysOptions,
   FetchTillEoseAbortedSignal,
   FetchTillEoseFailedSignal,
-  type EnsureRelaysOptions,
   type FetchTillEoseOptions,
   type NostrFetcherBackend,
   type NostrFetcherCommonOptions,
 } from "@nostr-fetch/kernel/fetcherBackend";
-import { isNoticeForReqError, type Filter, type NostrEvent } from "@nostr-fetch/kernel/nostr";
+import { type Filter, type NostrEvent, isNoticeForReqError } from "@nostr-fetch/kernel/nostr";
 
 import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
-import { RelayPool, initRelayPool } from "./relayPool";
+import { type RelayPool, initRelayPool } from "./relayPool";
 
 /**
  * Default implementation of `NostrFetchBackend`.

@@ -14,7 +14,8 @@
       "recommended": true,
       "complexity": {
         "useLiteralKeys": "off",
-        "noStaticOnlyClass": "off"
+        "noStaticOnlyClass": "off",
+        "noForEach": "off"
       }
     }
   }

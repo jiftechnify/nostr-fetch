@@ -1,4 +1,4 @@
-import { NostrEvent } from "@nostr-fetch/kernel/nostr";
+import type { NostrEvent } from "@nostr-fetch/kernel/nostr";
 import { pubkeyFromAuthorName } from "@nostr-fetch/testutil/fakeEvent";
 import { createdAtDesc } from "./fetcherHelper";
 import { FakedFetcherBuilder } from "./testutil/fakedFetcher";
@@ -598,23 +598,21 @@ describe.concurrent("NostrFetcher", () => {
       }
 
       // check if events are fetched from only specified relays for each author
-      /* eslint-disable @typescript-eslint/no-non-null-assertion */
       assert(
         eventsPerAuthor
-          .get(pkA)!
-          .every(({ content }) => content.includes("test1") || content.includes("test2")),
+          .get(pkA)
+          ?.every(({ content }) => content.includes("test1") || content.includes("test2")),
       );
       assert(
         eventsPerAuthor
-          .get(pkB)!
-          .every(({ content }) => content.includes("test2") || content.includes("test3")),
+          .get(pkB)
+          ?.every(({ content }) => content.includes("test2") || content.includes("test3")),
       );
       assert(
         eventsPerAuthor
-          .get(pkC)!
-          .every(({ content }) => content.includes("test3") || content.includes("test1")),
+          .get(pkC)
+          ?.every(({ content }) => content.includes("test3") || content.includes("test1")),
       );
-      /* eslint-enable @typescript-eslint/no-non-null-assertion */
     });
 
     test("relay set per author (w/ duplicated key)", async () => {
@@ -645,18 +643,18 @@ describe.concurrent("NostrFetcher", () => {
       /* eslint-disable @typescript-eslint/no-non-null-assertion */
       assert(
         eventsPerAuthor
-          .get(pkA)!
-          .every(({ content }) => content.includes("test1") || content.includes("test2")),
+          .get(pkA)
+          ?.every(({ content }) => content.includes("test1") || content.includes("test2")),
       );
       assert(
         eventsPerAuthor
-          .get(pkB)!
-          .every(({ content }) => content.includes("test2") || content.includes("test3")),
+          .get(pkB)
+          ?.every(({ content }) => content.includes("test2") || content.includes("test3")),
       );
       assert(
         eventsPerAuthor
-          .get(pkC)!
-          .every(({ content }) => content.includes("test3") || content.includes("test1")),
+          .get(pkC)
+          ?.every(({ content }) => content.includes("test3") || content.includes("test1")),
       );
       /* eslint-enable @typescript-eslint/no-non-null-assertion */
     });

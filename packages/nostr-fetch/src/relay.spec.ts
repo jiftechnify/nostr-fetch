@@ -13,8 +13,8 @@ import type {
 } from "./relay";
 import { initRelay } from "./relay";
 
-import { WebSocketReadyState } from "@nostr-fetch/kernel/webSocket";
 import { setTimeout as delay } from "node:timers/promises";
+import { WebSocketReadyState } from "@nostr-fetch/kernel/webSocket";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import WS from "vitest-websocket-mock";
 import "websocket-polyfill";

@@ -2,16 +2,16 @@ import { Channel, Deferred } from "@nostr-fetch/kernel/channel";
 import { verifyEventSig } from "@nostr-fetch/kernel/crypto";
 import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
 import {
-  EnsureRelaysOptions,
-  FetchTillEoseOptions,
-  NostrFetcherBackend,
-  NostrFetcherBackendInitializer,
-  NostrFetcherCommonOptions,
+  type EnsureRelaysOptions,
+  type FetchTillEoseOptions,
+  type NostrFetcherBackend,
+  type NostrFetcherBackendInitializer,
+  type NostrFetcherCommonOptions,
   defaultFetcherCommonOptions,
   isFetchTillEoseAbortedSignal,
   isFetchTillEoseFailedSignal,
 } from "@nostr-fetch/kernel/fetcherBackend";
-import { NostrEvent } from "@nostr-fetch/kernel/nostr";
+import type { NostrEvent } from "@nostr-fetch/kernel/nostr";
 import { abbreviate, currUnixtimeSec, normalizeRelayUrlSet } from "@nostr-fetch/kernel/utils";
 
 import { DefaultFetcherBackend } from "./fetcherBackend";
@@ -20,8 +20,8 @@ import {
   FetchStatsManager,
   KeyRelayMatrix,
   ProgressTracker,
-  RelayCapCheckerInitializer,
-  RelayCapabilityChecker,
+  type RelayCapCheckerInitializer,
+  type RelayCapabilityChecker,
   assertReq,
   checkIfNonEmpty,
   checkIfTimeRangeIsValid,
@@ -32,11 +32,11 @@ import {
   initSeenEvents,
 } from "./fetcherHelper";
 import {
-  FetchFilter,
-  FetchFilterKeyElem,
-  FetchFilterKeyName,
-  FetchStatsListener,
-  FetchTimeRangeFilter,
+  type FetchFilter,
+  type FetchFilterKeyElem,
+  type FetchFilterKeyName,
+  type FetchStatsListener,
+  type FetchTimeRangeFilter,
   NostrFetchError,
 } from "./types";
 
@@ -788,7 +788,7 @@ export class NostrFetcher {
           }
           if (finalOpts.abortSignal?.aborted) {
             // termination condition 3
-            logger?.log("info", `aborted`);
+            logger?.log("info", "aborted");
             statsMngr?.setRelayStatus(rurl, "aborted");
             break;
           }
@@ -931,7 +931,7 @@ export class NostrFetcher {
 
       // retain eligible relays only
       return [
-        /* eslint-disable-next-line @typescript-eslint/no-non-null-assertion */
+        // biome-ignore lint/style/noNonNullAssertion: rurl2keys should have all relay URLs in eligibleRelays
         new Map(eligibleRelays.map((rurl) => [rurl, [...rurl2keys.get(rurl)!]])),
         dedupedKeys,
         eligibleRelays,
@@ -1032,7 +1032,7 @@ export class NostrFetcher {
         // procedure to complete the subscription in the middle, resolving all remaining promises.
         // resolve() is called even if a promise is already resolved, but it's not a problem.
         const resolveAllOnEarlyBreak = () => {
-          logger?.log("verbose", `resolving bucket on early return`);
+          logger?.log("verbose", "resolving bucket on early return");
           for (const pk of keys) {
             latches.get(pk, rurl)?.resolve(evBucketsPerKey.getBucket(pk) ?? []);
           }
@@ -1043,7 +1043,7 @@ export class NostrFetcher {
 
           if (nextKeys.length === 0) {
             // termination condition 1
-            logger?.log("verbose", `fulfilled buckets for all keys`);
+            logger?.log("verbose", "fulfilled buckets for all keys");
             statsMngr?.setRelayStatus(rurl, "completed");
             break;
           }
@@ -1054,7 +1054,7 @@ export class NostrFetcher {
             until: nextUntil,
             limit: Math.min(nextLimit, MAX_LIMIT_PER_REQ),
           };
-          logger?.log("verbose", `refinedFilter=%O`, refinedFilter);
+          logger?.log("verbose", "refinedFilter=%O", refinedFilter);
 
           let gotNewEvent = false;
           let oldestCreatedAt = Number.MAX_SAFE_INTEGER;
@@ -1120,7 +1120,7 @@ export class NostrFetcher {
           }
           if (options.abortSignal?.aborted) {
             // termination condition 3
-            logger?.log("info", `aborted`);
+            logger?.log("info", "aborted");
             statsMngr?.setRelayStatus(rurl, isAboutToAbort ? "aborted" : "completed");
             resolveAllOnEarlyBreak();
             break;
@@ -1141,7 +1141,7 @@ export class NostrFetcher {
 
         // wait for all the buckets for the key to fulfilled
         const evsPerRelay = await Promise.all(latches.itemsByKey(key)?.map((d) => d.promise) ?? []);
-        logger?.log("verbose", `fulfilled all buckets for this key`);
+        logger?.log("verbose", "fulfilled all buckets for this key");
 
         // merge and sort
         const evsDeduped = (() => {
