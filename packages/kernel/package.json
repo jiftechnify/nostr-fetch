@@ -39,11 +39,11 @@
     "testw": "vitest",
     "tsc": "tsc",
     "lint": "run-p tsc lint:*",
-    "lint:format": "prettier --check --log-level warn src/**/*.ts",
-    "lint:js": "eslint --max-warnings 0 src/",
+    "lint:format": "biome format ./src",
+    "lint:js": "biome lint ./src",
     "fix": "run-s fix:*",
-    "fix:format": "prettier --write --log-level warn src/**/*.ts",
-    "fix:js": "eslint --fix src/",
+    "fix:format": "biome format --write ./src",
+    "fix:js": "biome lint --apply ./src",
     "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
