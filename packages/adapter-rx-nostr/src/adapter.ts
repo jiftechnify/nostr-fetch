@@ -16,7 +16,7 @@ import {
 } from "@nostr-fetch/kernel/nostr";
 import { normalizeRelayUrl, normalizeRelayUrlSet } from "@nostr-fetch/kernel/utils";
 
-import { RxNostr, createRxOneshotReq, filterType, verify } from "rx-nostr";
+import { type RxNostr, createRxOneshotReq, filterType, verify } from "rx-nostr";
 import { filter } from "rxjs";
 
 export class RxNostrAdapter implements NostrFetcherBackend {

@@ -12,7 +12,7 @@ import { isNoticeForReqError, type Filter, type NostrEvent } from "@nostr-fetch/
 import { normalizeRelayUrl, normalizeRelayUrlSet, withTimeout } from "@nostr-fetch/kernel/utils";
 
 import type NDK from "@nostr-dev-kit/ndk";
-import { NDKEvent, NDKRelay, NDKRelaySet, NDKRelayStatus } from "@nostr-dev-kit/ndk";
+import { type NDKEvent, NDKRelay, NDKRelaySet, NDKRelayStatus } from "@nostr-dev-kit/ndk";
 
 export class NDKAdapter implements NostrFetcherBackend {
   #ndk: NDK;

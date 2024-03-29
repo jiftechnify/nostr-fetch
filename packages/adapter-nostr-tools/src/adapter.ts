@@ -8,7 +8,7 @@ import {
   type NostrFetcherBackend,
   type NostrFetcherCommonOptions,
 } from "@nostr-fetch/kernel/fetcherBackend";
-import { NostrEvent, isNoticeForReqError, type Filter } from "@nostr-fetch/kernel/nostr";
+import { type NostrEvent, isNoticeForReqError, type Filter } from "@nostr-fetch/kernel/nostr";
 import { normalizeRelayUrl, normalizeRelayUrlSet, withTimeout } from "@nostr-fetch/kernel/utils";
 
 import type { SimplePool, Relay as ToolsRelay } from "nostr-tools";
@@ -48,10 +48,10 @@ export class SimplePoolExt implements NostrFetcherBackend {
       const r = await this.#simplePool.ensureRelay(rurl);
 
       // setup debug log
-      r.on("disconnect", () => logger?.log("info", `disconnected`));
-      r.on("error", () => logger?.log("error", `WebSocket error`));
+      r.on("disconnect", () => logger?.log("info", "disconnected"));
+      r.on("error", () => logger?.log("error", "WebSocket error"));
       r.on("notice", (notice) => logger?.log("warn", `NOTICE: ${notice}`));
-      r.on("auth", () => logger?.log("warn", `received AUTH challenge (ignoring)`));
+      r.on("auth", () => logger?.log("warn", "received AUTH challenge (ignoring)"));
 
       return r;
     };

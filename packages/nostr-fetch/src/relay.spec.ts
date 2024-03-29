@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-empty-function */
 import { Deferred } from "@nostr-fetch/kernel/channel";
 import { setupMockRelayServer } from "@nostr-fetch/testutil/mockRelayServer";
 import type {
