@@ -25,7 +25,7 @@
     "nostr-relaypool": "^0.6.28",
     "nostr-tools": "^1.13.1",
     "nostr-tools-v2": "npm:nostr-tools@^2.1.0",
-    "rx-nostr": "^1.2.0",
+    "rx-nostr": "^2.7.0",
     "rxjs": "^7.8.0",
     "websocket-polyfill": "^0.0.3",
     "ws": "^8.13.0"
