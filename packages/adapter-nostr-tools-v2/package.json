@@ -46,7 +46,7 @@
   "devDependencies": {
     "@nostr-fetch/testutil": "^0.15.1",
     "nostr-fetch": "^0.15.1",
-    "nostr-tools": "2.1.8"
+    "nostr-tools": "2.3.2"
   },
   "peerDependencies": {
     "nostr-fetch": "^0.15.1",

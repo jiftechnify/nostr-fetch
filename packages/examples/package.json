@@ -23,7 +23,7 @@
     "@nostr-fetch/adapter-rx-nostr": "^0.15.1",
     "nostr-fetch": "^0.15.1",
     "nostr-relaypool": "^0.6.28",
-    "nostr-tools": "^1.13.1",
+    "nostr-tools": "^2.3.2",
     "nostr-tools-v2": "npm:nostr-tools@^2.1.0",
     "rx-nostr": "^1.2.0",
     "rxjs": "^7.8.0",
