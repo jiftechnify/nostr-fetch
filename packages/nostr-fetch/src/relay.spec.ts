@@ -8,12 +8,14 @@ import type {
   SubClosedCb,
   SubEoseCb,
   SubEventCb,
+  SubscriptionOptions,
   WSCloseEvent,
 } from "./relay";
 import { initRelay } from "./relay";
 
 import { setTimeout as delay } from "node:timers/promises";
 import { verifyEventSig } from "@nostr-fetch/kernel/crypto";
+import type { NostrEvent } from "@nostr-fetch/kernel/nostr";
 import { WebSocketReadyState } from "@nostr-fetch/kernel/webSocket";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import WS from "vitest-websocket-mock";
@@ -146,6 +148,19 @@ describe("Relay", () => {
   describe("subscription", () => {
     const rurl = "ws://localhost:8000";
 
+    const defaultOpts: SubscriptionOptions = {
+      eventVerifier: verifyEventSig,
+      skipVerification: false,
+      skipFilterMatching: false,
+      abortSubBeforeEoseTimeoutMs: 1000,
+    };
+    const optsWithDefault = (opts: Partial<SubscriptionOptions>) => {
+      return {
+        ...defaultOpts,
+        ...opts,
+      };
+    };
+
     let server: WS;
     let spyCbs: {
       event: SubEventCb;
@@ -172,13 +187,11 @@ describe("Relay", () => {
       await r.connect();
 
       const waitEose = new Deferred<void>();
-      const sub = r.prepareSub([{}], {
-        eventVerifier: verifyEventSig,
-        skipVerification: false,
-        skipFilterMatching: false,
-        abortSubBeforeEoseTimeoutMs: 1000,
-        subId: "normal",
-      });
+
+      // mock it to check if the eventVerifier is actually called
+      const eventVerifier = vi.fn((ev: NostrEvent) => verifyEventSig(ev));
+
+      const sub = r.prepareSub([{}], optsWithDefault({ eventVerifier, subId: "normal" }));
       sub.on("event", spyCbs.event);
       sub.on("eose", spyCbs.eose);
       sub.on("eose", () => waitEose.resolve());
@@ -196,6 +209,9 @@ describe("Relay", () => {
       expect(spyCbs.event).toBeCalledTimes(5);
       expect(spyCbs.eose).toBeCalledTimes(1);
       expect(spyCbs.closed).not.toBeCalled();
+
+      // specified eventVerifier should be called for each event
+      expect(eventVerifier).toBeCalledTimes(5);
     });
 
     test("CLOSED by relay", async () => {
@@ -206,13 +222,7 @@ describe("Relay", () => {
 
       const waitClosed = new Deferred<void>();
 
-      const sub = r.prepareSub([{}], {
-        eventVerifier: verifyEventSig,
-        skipVerification: false,
-        skipFilterMatching: false,
-        abortSubBeforeEoseTimeoutMs: 1000,
-        subId: "malformed_sub",
-      });
+      const sub = r.prepareSub([{}], defaultOpts);
       sub.on("event", spyCbs.event);
       sub.on("eose", spyCbs.eose);
       sub.on("closed", spyCbs.closed);
@@ -238,12 +248,7 @@ describe("Relay", () => {
       await r.connect();
 
       const waitEose = new Deferred<void>();
-      const sub = r.prepareSub([{}], {
-        eventVerifier: verifyEventSig,
-        skipVerification: false,
-        skipFilterMatching: false,
-        abortSubBeforeEoseTimeoutMs: 1000,
-      });
+      const sub = r.prepareSub([{}], defaultOpts);
       sub.on("event", spyCbs.event);
       sub.on("eose", spyCbs.eose);
       sub.on("eose", () => waitEose.resolve());
@@ -266,12 +271,7 @@ describe("Relay", () => {
       await r.connect();
 
       const waitEose = new Deferred<void>();
-      const sub = r.prepareSub([{}], {
-        eventVerifier: verifyEventSig,
-        skipVerification: false,
-        skipFilterMatching: false,
-        abortSubBeforeEoseTimeoutMs: 1000,
-      });
+      const sub = r.prepareSub([{}], defaultOpts);
       sub.on("event", spyCbs.event);
       sub.on("eose", () => waitEose.resolve());
 
@@ -292,12 +292,7 @@ describe("Relay", () => {
       await r.connect();
 
       const waitEose = new Deferred<void>();
-      const sub = r.prepareSub([{}], {
-        eventVerifier: verifyEventSig,
-        skipVerification: true,
-        skipFilterMatching: false,
-        abortSubBeforeEoseTimeoutMs: 1000,
-      });
+      const sub = r.prepareSub([{}], optsWithDefault({ skipVerification: true }));
       sub.on("event", spyCbs.event);
       sub.on("eose", () => waitEose.resolve());
 
@@ -318,12 +313,7 @@ describe("Relay", () => {
       await r.connect();
 
       const waitEose = new Deferred<void>();
-      const sub = r.prepareSub([{ kinds: [1] }], {
-        eventVerifier: verifyEventSig,
-        skipVerification: false,
-        skipFilterMatching: false,
-        abortSubBeforeEoseTimeoutMs: 1000,
-      });
+      const sub = r.prepareSub([{ kinds: [1] }], defaultOpts);
       sub.on("event", spyCbs.event);
       sub.on("eose", () => waitEose.resolve());
 
@@ -344,12 +334,7 @@ describe("Relay", () => {
       await r.connect();
 
       const waitEose = new Deferred<void>();
-      const sub = r.prepareSub([{ kinds: [1] }], {
-        eventVerifier: verifyEventSig,
-        skipVerification: false,
-        skipFilterMatching: true,
-        abortSubBeforeEoseTimeoutMs: 1000,
-      });
+      const sub = r.prepareSub([{ kinds: [1] }], optsWithDefault({ skipFilterMatching: true }));
       sub.on("event", spyCbs.event);
       sub.on("eose", () => waitEose.resolve());
 

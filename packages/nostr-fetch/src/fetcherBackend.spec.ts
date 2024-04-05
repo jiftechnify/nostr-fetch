@@ -7,7 +7,8 @@ import { setupMockRelayServer } from "@nostr-fetch/testutil/mockRelayServer";
 import { DefaultFetcherBackend } from "./fetcherBackend";
 
 import { verifyEventSig } from "@nostr-fetch/kernel/crypto";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import type { NostrEvent } from "@nostr-fetch/kernel/nostr";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { WS } from "vitest-websocket-mock";
 
 const collectAsyncIter = async <T>(iter: AsyncIterable<T>): Promise<T[]> => {
@@ -54,14 +55,17 @@ describe("DefaultFetcherBackend", () => {
 
     test("fetches events until EOSE", async () => {
       setupMockRelayServer(wsServer, [{ type: "events", eventsSpec: { content: "test", n: 10 } }]);
+      const eventVerifier = vi.fn((ev: NostrEvent) => verifyEventSig(ev));
 
       await backend.ensureRelays([url], { connectTimeoutMs: 1000 });
-      const iter = backend.fetchTillEose(url, {}, defaultOpts);
+      const iter = backend.fetchTillEose(url, {}, optsWithDefault({ eventVerifier }));
       const evs = await collectAsyncIter(iter);
       expect(evs.length).toBe(10);
 
       await expect(wsServer).toReceiveMessage(["REQ", "test", {}]);
       await expect(wsServer).toReceiveMessage(["CLOSE", "test"]);
+
+      expect(eventVerifier).toBeCalled();
     });
 
     test("handles subscription close by relay w/ CLOSED message", async () => {
