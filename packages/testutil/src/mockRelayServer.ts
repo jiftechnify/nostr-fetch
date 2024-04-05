@@ -1,8 +1,8 @@
-import WS from "vitest-websocket-mock";
+import type WS from "vitest-websocket-mock";
 
-import { NostrEvent } from "@nostr-fetch/kernel/nostr";
-import { setTimeout as delay } from "timers/promises";
-import { FakeEventsSpec, generateFakeEvents } from "./fakeEvent";
+import { setTimeout as delay } from "node:timers/promises";
+import type { NostrEvent } from "@nostr-fetch/kernel/nostr";
+import { type FakeEventsSpec, generateFakeEvents } from "./fakeEvent";
 
 /**
  * Mocking Nostr relay server for testing.
