@@ -1,5 +1,4 @@
 import { Channel } from "@nostr-fetch/kernel/channel";
-import { verifyEventSig } from "@nostr-fetch/kernel/crypto";
 import type {
   EnsureRelaysOptions,
   FetchTillEoseOptions,
@@ -177,7 +176,7 @@ class FakeFetcherBackend implements NostrFetcherBackend {
 
     const [tx, iter] = Channel.make<NostrEvent>();
     const onEvent = (ev: NostrEvent) => {
-      if (options.skipVerification || verifyEventSig(ev)) {
+      if (options.skipVerification || options.eventVerifier(ev)) {
         tx.send(ev);
       }
     };
