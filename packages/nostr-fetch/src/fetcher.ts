@@ -97,6 +97,31 @@ export type NostrEventWithAuthor<SeenOn extends boolean> = {
  */
 export type FetchOptions<SeenOn extends boolean = false> = {
   /**
+   * If specified, the fetcher uses the given function as an event signature verifier instead of the default one.
+   *
+   * The function must return `true` if the event signature is valid. Otherwise, it should return `false`.
+   *
+   * @example
+   * // How to use nostr-wasm's verifyEvent() with nostr-fetch
+   * import { NostrFetcher, type NostrEvent } from "nostr-fetch";
+   * import { initNostrWasm } from "nostr-wasm";
+   *
+   * const nw = await initNostrWasm();
+   * const nwVerifyEvent = (ev: NostrEvent) => {
+   *   try {
+   *     nw.verifyEvent(ev);
+   *     return true;
+   *   } catch {
+   *     return false;
+   *   }
+   * };
+   * const fetcher = NostrFetcher.init({
+   *   eventVerifier: nwVerifyEvent,
+   * });
+   */
+  eventVerifier?: (event: NostrEvent) => boolean;
+
+  /**
    * If true, the fetcher skips event signature verification.
    *
    * Note: This option has no effect under some relay pool adapters.
@@ -168,6 +193,7 @@ export type FetchOptions<SeenOn extends boolean = false> = {
 };
 
 const defaultFetchOptions: Required<FetchOptions> = {
+  eventVerifier: verifyEventSig,
   skipVerification: false,
   skipFilterMatching: false,
   withSeenOn: false,
