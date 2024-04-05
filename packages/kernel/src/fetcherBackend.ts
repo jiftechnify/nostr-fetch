@@ -7,6 +7,7 @@ export type EnsureRelaysOptions = {
 
 export type FetchTillEoseOptions = {
   subId?: string;
+  eventVerifier: (event: NostrEvent) => boolean;
   skipVerification: boolean;
   skipFilterMatching: boolean;
   connectTimeoutMs: number;

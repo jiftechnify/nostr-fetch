@@ -1,4 +1,3 @@
-import { verifyEventSig } from "@nostr-fetch/kernel/crypto";
 import type { C2RMessage, Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
 import { FilterMatcher, generateSubId, parseR2CMessage } from "@nostr-fetch/kernel/nostr";
 import { WebSocketReadyState } from "@nostr-fetch/kernel/webSocket";
@@ -238,6 +237,7 @@ export interface Subscription {
 
 export interface SubscriptionOptions {
   subId?: string;
+  eventVerifier: (event: NostrEvent) => boolean;
   skipVerification: boolean;
   skipFilterMatching: boolean;
   abortSubBeforeEoseTimeoutMs: number;
@@ -314,7 +314,7 @@ class RelaySubscription implements Subscription {
   _forwardEvent(ev: NostrEvent) {
     this.#resetAbortSubTimer();
 
-    if (!this.#options.skipVerification && !verifyEventSig(ev)) {
+    if (!this.#options.skipVerification && !this.#options.eventVerifier(ev)) {
       return;
     }
     if (!this.#options.skipFilterMatching && !this.#filterMatcher.match(ev)) {
