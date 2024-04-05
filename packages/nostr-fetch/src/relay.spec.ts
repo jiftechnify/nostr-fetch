@@ -13,6 +13,7 @@ import type {
 import { initRelay } from "./relay";
 
 import { setTimeout as delay } from "node:timers/promises";
+import { verifyEventSig } from "@nostr-fetch/kernel/crypto";
 import { WebSocketReadyState } from "@nostr-fetch/kernel/webSocket";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import WS from "vitest-websocket-mock";
@@ -172,6 +173,7 @@ describe("Relay", () => {
 
       const waitEose = new Deferred<void>();
       const sub = r.prepareSub([{}], {
+        eventVerifier: verifyEventSig,
         skipVerification: false,
         skipFilterMatching: false,
         abortSubBeforeEoseTimeoutMs: 1000,
@@ -205,6 +207,7 @@ describe("Relay", () => {
       const waitClosed = new Deferred<void>();
 
       const sub = r.prepareSub([{}], {
+        eventVerifier: verifyEventSig,
         skipVerification: false,
         skipFilterMatching: false,
         abortSubBeforeEoseTimeoutMs: 1000,
@@ -236,6 +239,7 @@ describe("Relay", () => {
 
       const waitEose = new Deferred<void>();
       const sub = r.prepareSub([{}], {
+        eventVerifier: verifyEventSig,
         skipVerification: false,
         skipFilterMatching: false,
         abortSubBeforeEoseTimeoutMs: 1000,
@@ -263,6 +267,7 @@ describe("Relay", () => {
 
       const waitEose = new Deferred<void>();
       const sub = r.prepareSub([{}], {
+        eventVerifier: verifyEventSig,
         skipVerification: false,
         skipFilterMatching: false,
         abortSubBeforeEoseTimeoutMs: 1000,
@@ -288,6 +293,7 @@ describe("Relay", () => {
 
       const waitEose = new Deferred<void>();
       const sub = r.prepareSub([{}], {
+        eventVerifier: verifyEventSig,
         skipVerification: true,
         skipFilterMatching: false,
         abortSubBeforeEoseTimeoutMs: 1000,
@@ -313,6 +319,7 @@ describe("Relay", () => {
 
       const waitEose = new Deferred<void>();
       const sub = r.prepareSub([{ kinds: [1] }], {
+        eventVerifier: verifyEventSig,
         skipVerification: false,
         skipFilterMatching: false,
         abortSubBeforeEoseTimeoutMs: 1000,
@@ -338,6 +345,7 @@ describe("Relay", () => {
 
       const waitEose = new Deferred<void>();
       const sub = r.prepareSub([{ kinds: [1] }], {
+        eventVerifier: verifyEventSig,
         skipVerification: false,
         skipFilterMatching: true,
         abortSubBeforeEoseTimeoutMs: 1000,

@@ -6,6 +6,7 @@ import {
 import { setupMockRelayServer } from "@nostr-fetch/testutil/mockRelayServer";
 import { DefaultFetcherBackend } from "./fetcherBackend";
 
+import { verifyEventSig } from "@nostr-fetch/kernel/crypto";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { WS } from "vitest-websocket-mock";
 
@@ -24,6 +25,7 @@ const collectAsyncIter = async <T>(iter: AsyncIterable<T>): Promise<T[]> => {
 describe("DefaultFetcherBackend", () => {
   describe("fetchTillEose", () => {
     const defaultOpts: FetchTillEoseOptions = {
+      eventVerifier: verifyEventSig,
       abortSignal: undefined,
       abortSubBeforeEoseTimeoutMs: 5000,
       connectTimeoutMs: 1000,
