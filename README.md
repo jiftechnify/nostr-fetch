@@ -38,7 +38,7 @@ import "websocket-polyfill";
 ### Basics
 
 ```ts
-import { eventKind, NostrFetcher } from "nostr-fetch";
+import { NostrFetcher } from "nostr-fetch";
 
 const nHoursAgo = (hrs: number): number =>
   Math.floor((Date.now() - hrs * 60 * 60 * 1000) / 1000);
@@ -50,7 +50,7 @@ const relayUrls = [/* relay URLs */];
 const postIter = fetcher.allEventsIterator(
     relayUrls, 
     /* filter (kinds, authors, ids, tags) */
-    { kinds: [ eventKind.text ] },
+    { kinds: [ 1 ] },
     /* time range filter (since, until) */
     { since: nHoursAgo(24) },
     /* fetch options (optional) */
@@ -64,7 +64,7 @@ for await (const ev of postIter) {
 const allPosts = await fetcher.fetchAllEvents(
     relayUrls,
     /* filter */
-    { kinds: [ eventKind.text ] },
+    { kinds: [ 1 ] },
     /* time range filter */
     { since: nHoursAgo(24) },
     /* fetch options (optional) */
@@ -75,7 +75,7 @@ const allPosts = await fetcher.fetchAllEvents(
 ### Various Fetch Methods
 
 ```ts
-import { eventKind, NostrFetcher } from "nostr-fetch";
+import { NostrFetcher } from "nostr-fetch";
 
 const fetcher = NostrFetcher.init();
 const relayUrls = [/* relay URLs */];
@@ -88,7 +88,7 @@ const relayUrls = [/* relay URLs */];
 const latestPosts: NostrEvent[] = await fetcher.fetchLatestEvents(
     relayUrls,
     /* filter */
-    { kinds: [ eventKind.text ] },
+    { kinds: [ 1 ] },
     /* number of events to fetch */
     100,
 );
@@ -100,7 +100,7 @@ const latestPosts: NostrEvent[] = await fetcher.fetchLatestEvents(
 const lastMetadata: NostrEvent | undefined = await fetcher.fetchLastEvent(
     relayUrls,
     /* filter */
-    { kinds: [ eventKind.metadata ], authors: [ "deadbeef..." ] },
+    { kinds: [ 0 ], authors: [ "deadbeef..." ] },
 );
 
 // fetches latest 10 text posts from each author in `authors`
@@ -113,7 +113,7 @@ const postsPerAuthor = fetcher.fetchLatestEventsPerAuthor(
         relayUrls,
     },
     /* filter */
-    { kinds: [ eventKind.text ] },
+    { kinds: [ 1 ] },
     /* number of events to fetch for each author */
     10,
 );
@@ -134,7 +134,7 @@ const metadataPerAuthor = fetcher.fetchLastEventPerAuthor(
         relayUrls,
     }
     /* filter */
-    { kinds: [ eventKind.metadata ] },
+    { kinds: [ 0 ] },
 );
 for await (const { author, event } of metadataPerAuthor ) {
     console.log(`${author}: ${event?.content ?? "not found"}`);
@@ -152,7 +152,7 @@ npm install @nostr-fetch/adapter-nostr-tools
 
 Then, wrap your relay pool instance with the adapter and pass it to the initializer `NostrFetcher.withCustomPool()`.
 ```ts
-import { eventKind, NostrFetcher } from "nostr-fetch";
+import { NostrFetcher } from "nostr-fetch";
 import { simplePoolAdapter } from "@nostr-fetch/adapter-nostr-tools";
 import { SimplePool } from "nostr-tools";
 
@@ -177,7 +177,7 @@ const fetcher = NostrFetcher.withCustomPool(simplePoolAdapter(pool));
 ### Cancelling by AbortController
 
 ```ts
-import { eventKind, NostrFecher } from "nostr-fetch"
+import { NostrFecher } from "nostr-fetch"
 
 const fetcher = NostrFetcher.init();
 const relayUrls = [/* relay URLs */];

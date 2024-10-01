@@ -1,5 +1,5 @@
 import { setTimeout as delay } from "node:timers/promises";
-import { NostrFetcher, eventKind } from "nostr-fetch";
+import { NostrFetcher } from "nostr-fetch";
 import "websocket-polyfill";
 
 import { defaultRelays, nHoursAgo } from "./utils";
@@ -12,7 +12,7 @@ const main = async () => {
   const eventsIter = fetcher.allEventsIterator(
     defaultRelays,
     {
-      kinds: [eventKind.text],
+      kinds: [1],
     },
     {
       since: nHoursAgo(3),

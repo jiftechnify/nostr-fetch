@@ -1,6 +1,6 @@
 import NDK from "@nostr-dev-kit/ndk";
 import { ndkAdapter } from "@nostr-fetch/adapter-ndk";
-import { NostrFetcher, eventKind, normalizeRelayUrlSet } from "nostr-fetch";
+import { NostrFetcher, normalizeRelayUrlSet } from "nostr-fetch";
 import { defaultRelays, nHoursAgo } from "../utils";
 
 import "websocket-polyfill";
@@ -21,7 +21,7 @@ const main = async () => {
   const eventsIter = fetcher.allEventsIterator(
     defaultRelays,
     {
-      kinds: [eventKind.text],
+      kinds: [1],
     },
     {
       since: nHoursAgo(1),
