@@ -1,8 +1,9 @@
 import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
 import type { NostrFetcherCommonOptions } from "@nostr-fetch/kernel/fetcherBackend";
-import { type NostrEvent, querySupportedNips } from "@nostr-fetch/kernel/nostr";
+import { type NostrEvent, isValidTagQueryKey, querySupportedNips } from "@nostr-fetch/kernel/nostr";
 import { normalizeRelayUrlSet } from ".";
 import {
+  type FetchFilter,
   type FetchFilterKeyElem,
   type FetchFilterKeyName,
   type FetchStats,
@@ -71,7 +72,6 @@ export function checkIfNonEmpty<T, U>(
 export function checkIfTimeRangeIsValid<T>(
   getTimeRange: (req: T) => { since?: number; until?: number },
   severity: "error" | "warn",
-  msg: string,
 ): (req: T) => AssertionResult {
   return (req: T) => {
     const { since, until } = getTimeRange(req);
@@ -80,7 +80,24 @@ export function checkIfTimeRangeIsValid<T>(
       // time range is always valid if at least one of the bounds is unbounded.
       return { severity: "none" };
     }
-    return since <= until ? { severity: "none" } : { severity, msg };
+    return since <= until
+      ? { severity: "none" }
+      : { severity, msg: "Invalid time range (since > until)" };
+  };
+}
+
+export function checkIfTagQueriesAreValid<T>(
+  getFilter: (req: T) => FetchFilter,
+  severity: "error" | "warn",
+): (req: T) => AssertionResult {
+  return (req: T) => {
+    const invalidTqks = Object.keys(getFilter(req)).filter(
+      (k) => k.startsWith("#") && !isValidTagQueryKey(k),
+    );
+    if (invalidTqks.length > 0) {
+      return { severity, msg: `Filter has invalid tag queries: ${invalidTqks.join(", ")}` };
+    }
+    return { severity: "none" };
   };
 }
 

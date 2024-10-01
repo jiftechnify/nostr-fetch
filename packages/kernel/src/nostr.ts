@@ -71,15 +71,27 @@ export const eventKind = {
 } as const;
 
 /**
- * Standardized single letter tag names.
- * cf. https://github.com/nostr-protocol/nips#standardized-tags
- */
-type SingleLetterTags = "a" | "d" | "e" | "g" | "i" | "k" | "l" | "L" | "m" | "p" | "r" | "t" | "x";
-
-/**
  * Keys of filter props for tag queries.
  */
-type TagQueryKey = `#${SingleLetterTags}`;
+type TagQueryKey = `#${string}`;
+
+// [A-Za-z]
+const isLatinAlphabet = (charCode: number) =>
+  (0x41 <= charCode && charCode <= 0x5a) || (0x61 <= charCode && charCode <= 0x7a);
+
+/**
+ * Checks if the given string is a "queryable" tag name.
+ */
+const isQueryableTagName = (s: string): boolean =>
+  s.length === 1 && isLatinAlphabet(s.charCodeAt(0));
+
+/**
+ * Checks if the given string is a valid key of tag query in filter.
+ *
+ * A valid tag query key is a string that starts with `#` and followed by a single Latin alphabet (`[A-Za-z]`).
+ */
+export const isValidTagQueryKey = (s: string): boolean =>
+  s.startsWith("#") && isQueryableTagName(s.substring(1));
 
 /**
  * Filter for Nostr event subscription.

@@ -11,7 +11,7 @@ import {
   isFetchTillEoseAbortedSignal,
   isFetchTillEoseFailedSignal,
 } from "@nostr-fetch/kernel/fetcherBackend";
-import type { NostrEvent } from "@nostr-fetch/kernel/nostr";
+import { type NostrEvent, isValidTagQueryKey } from "@nostr-fetch/kernel/nostr";
 import { abbreviate, currUnixtimeSec, normalizeRelayUrlSet } from "@nostr-fetch/kernel/utils";
 
 import { DefaultFetcherBackend } from "./fetcherBackend";
@@ -24,6 +24,7 @@ import {
   type RelayCapabilityChecker,
   assertReq,
   checkIfNonEmpty,
+  checkIfTagQueriesAreValid,
   checkIfTimeRangeIsValid,
   checkIfTrue,
   createdAtDesc,
@@ -423,14 +424,11 @@ export class NostrFetcher {
     options: AllEventsIterOptions<SeenOn> = {},
   ): AsyncIterable<NostrEventExt<SeenOn>> {
     assertReq(
-      { relayUrls, timeRangeFilter },
+      { relayUrls, filter, timeRangeFilter },
       [
         checkIfNonEmpty((r) => r.relayUrls, "warn", "Specify at least 1 relay URL"),
-        checkIfTimeRangeIsValid(
-          (r) => r.timeRangeFilter,
-          "error",
-          "Invalid time range (since > until)",
-        ),
+        checkIfTagQueriesAreValid((r) => r.filter, "error"),
+        checkIfTimeRangeIsValid((r) => r.timeRangeFilter, "error"),
       ],
       this.#debugLogger,
     );
@@ -608,14 +606,11 @@ export class NostrFetcher {
     options: FetchAllOptions<SeenOn> = {},
   ): Promise<NostrEventExt<SeenOn>[]> {
     assertReq(
-      { relayUrls, timeRangeFilter },
+      { relayUrls, filter, timeRangeFilter },
       [
         checkIfNonEmpty((r) => r.relayUrls, "warn", "Specify at least 1 relay URL"),
-        checkIfTimeRangeIsValid(
-          (r) => r.timeRangeFilter,
-          "error",
-          "Invalid time range (since > until)",
-        ),
+        checkIfTagQueriesAreValid((r) => r.filter, "error"),
+        checkIfTimeRangeIsValid((r) => r.timeRangeFilter, "error"),
       ],
       this.#debugLogger,
     );
@@ -668,9 +663,10 @@ export class NostrFetcher {
     options: FetchLatestOptions<SeenOn> = {},
   ): Promise<NostrEventExt<SeenOn>[]> {
     assertReq(
-      { relayUrls, limit },
+      { relayUrls, filter, limit },
       [
         checkIfNonEmpty((r) => r.relayUrls, "warn", "Specify at least 1 relay URL"),
+        checkIfTagQueriesAreValid((r) => r.filter, "error"),
         checkIfTrue((r) => r.limit > 0, "error", '"limit" should be positive number'),
       ],
       this.#debugLogger,
@@ -960,13 +956,26 @@ export class NostrFetcher {
   public fetchLatestEventsPerKey<K extends FetchFilterKeyName, SeenOn extends boolean = false>(
     keyName: K,
     keysAndRelays: KeysAndRelays<K>,
-    otherFilter: Omit<FetchFilter, K>,
+    otherFilter: FetchFilter,
     limit: number,
     options: FetchLatestOptions<SeenOn> = {},
   ): AsyncIterable<NostrEventListWithKey<K, SeenOn>> {
     assertReq(
-      { limit },
-      [checkIfTrue((r) => r.limit > 0, "error", '"limit" should be positive number')],
+      { limit, keyName, otherFilter },
+      [
+        checkIfTrue((r) => r.limit > 0, "error", '"limit" should be positive number'),
+        checkIfTrue(
+          (r) => !r.keyName.startsWith("#") || isValidTagQueryKey(r.keyName),
+          "error",
+          `Specified key '${keyName}' is invalid tag query key`,
+        ),
+        checkIfTagQueriesAreValid((r) => r.otherFilter, "error"),
+        checkIfTrue(
+          ({ keyName, otherFilter }) => !(keyName in otherFilter),
+          "warn",
+          `'${keyName}' field in "otherFilter" will be ignored because it is specified as main key`,
+        ),
+      ],
       this.#debugLogger,
     );
 
@@ -989,7 +998,7 @@ export class NostrFetcher {
   async *#fetchLatestEventPerKeyBody<K extends FetchFilterKeyName, SeenOn extends boolean = false>(
     keyName: K,
     keysAndRelays: KeysAndRelays<K>,
-    otherFilter: Omit<FetchFilter, K>,
+    otherFilter: FetchFilter,
     limit: number,
     options: Required<FetchLatestOptions<SeenOn>>,
   ): AsyncIterable<NostrEventListWithKey<K, SeenOn>> {
@@ -1218,7 +1227,7 @@ export class NostrFetcher {
   public async *fetchLastEventPerKey<K extends FetchFilterKeyName, SeenOn extends boolean = false>(
     keyName: K,
     keysAndRelays: KeysAndRelays<K>,
-    otherFilter: Omit<FetchFilter, K>,
+    otherFilter: FetchFilter,
     options: FetchLatestOptions<SeenOn> = {},
   ): AsyncIterable<NostrEventWithKey<K, SeenOn>> {
     const finalOpts = {

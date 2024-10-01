@@ -276,6 +276,16 @@ describe.concurrent("NostrFetcher", () => {
       assert(evs.every(({ content }) => content.includes("within range")));
     });
 
+    test("throws error if filter has invalid tag queries", () => {
+      expect(() => {
+        fetcher.allEventsIterator(
+          ["wss://healthy/"],
+          { "#invalid": ["invalid"], "#malformed": ["malformed"], "#e": ["foo"] },
+          {},
+        );
+      }).toThrow("Filter has invalid tag queries: #invalid, #malformed");
+    });
+
     test("throws error if time range is invalid", () => {
       expect(() => {
         fetcher.allEventsIterator(["wss://healthy/"], {}, { since: 1, until: 0 });
@@ -416,6 +426,16 @@ describe.concurrent("NostrFetcher", () => {
   });
 
   describe.concurrent("fetchAllEvents", () => {
+    test("throws error if filter has invalid tag queries", async () => {
+      await expect(() =>
+        fetcher.fetchAllEvents(
+          ["wss://healthy/"],
+          { "#invalid": ["invalid"], "#malformed": ["malformed"], "#e": ["foo"] },
+          {},
+        ),
+      ).rejects.toThrow("Filter has invalid tag queries: #invalid, #malformed");
+    });
+
     test("throws error if time range is invalid", async () => {
       await expect(() =>
         fetcher.fetchAllEvents(["wss://healthy/"], {}, { since: 1, until: 0 }),
@@ -446,6 +466,16 @@ describe.concurrent("NostrFetcher", () => {
   });
 
   describe.concurrent("fetchLatestEvents", () => {
+    test("throws error if filter has invalid tag queries", async () => {
+      await expect(() =>
+        fetcher.fetchLatestEvents(
+          ["wss://healthy/"],
+          { "#invalid": ["invalid"], "#malformed": ["malformed"], "#e": ["foo"] },
+          100,
+        ),
+      ).rejects.toThrow("Filter has invalid tag queries: #invalid, #malformed");
+    });
+
     test("throws error if limit <= 0", async () => {
       await expect(() => fetcher.fetchLatestEvents(["wss://healthy/"], {}, 0)).rejects.toThrow(
         '"limit" should be positive number',
@@ -518,6 +548,23 @@ describe.concurrent("NostrFetcher", () => {
   });
 
   describe.concurrent("fetchLatestEventsPerKey", () => {
+    test("throws error if keyName is an invalid tag query key", () => {
+      expect(() => {
+        fetcher.fetchLatestEventsPerKey("#invalid", [], { "#e": ["foo"] }, 100);
+      }).toThrow("Specified key '#invalid' is invalid tag query key");
+    });
+
+    test("throws error if otherFilter has invalid tag queries", () => {
+      expect(() => {
+        fetcher.fetchLatestEventsPerKey(
+          "authors",
+          [],
+          { "#invalid": ["invalid"], "#malformed": ["malformed"], "#e": ["foo"] },
+          100,
+        );
+      }).toThrow("Filter has invalid tag queries: #invalid, #malformed");
+    });
+
     const pkA = pubkeyFromAuthorName("alice");
     const pkB = pubkeyFromAuthorName("bob");
     const pkC = pubkeyFromAuthorName("cat");
