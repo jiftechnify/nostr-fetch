@@ -105,7 +105,7 @@ export type Filter = {
   limit?: number;
   search?: string;
 } & {
-  [tag in TagQueryKey]?: string[];
+  [tag in TagQueryKey]: string[];
 };
 
 // client to relay messages
