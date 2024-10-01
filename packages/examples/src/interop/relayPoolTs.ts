@@ -1,5 +1,5 @@
 import { relayPoolAdapter } from "@nostr-fetch/adapter-nostr-relaypool";
-import { NostrFetcher, eventKind } from "nostr-fetch";
+import { NostrFetcher } from "nostr-fetch";
 import { RelayPool } from "nostr-relaypool";
 
 import { defaultRelays, nHoursAgo } from "../utils";
@@ -13,7 +13,7 @@ const main = async () => {
   const eventsIter = fetcher.allEventsIterator(
     defaultRelays,
     {
-      kinds: [eventKind.text],
+      kinds: [1],
     },
     {
       since: nHoursAgo(1),

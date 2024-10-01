@@ -1,5 +1,5 @@
 import { setTimeout } from "node:timers/promises";
-import { type NostrEvent, NostrFetcher, eventKind } from "nostr-fetch";
+import { type NostrEvent, NostrFetcher } from "nostr-fetch";
 import "websocket-polyfill";
 
 import { defaultRelays, getWriteRelaysFromEvent } from "./utils";
@@ -15,7 +15,7 @@ const fetcher = NostrFetcher.init({});
 // fetch pubkeys of followees from the latest kind 3 event
 const fetchFollowees = async (pubkey: string): Promise<string[]> => {
   const ev = await fetcher.fetchLastEvent(defaultRelays, {
-    kinds: [eventKind.contacts],
+    kinds: [3],
     authors: [pubkey],
   });
   if (ev === undefined) {
@@ -29,7 +29,7 @@ const fetchWriteRelaysPerAuthors = async (authors: string[]): Promise<Map<string
   const iter = fetcher.fetchLastEventPerAuthor(
     { authors, relayUrls: defaultRelays },
     {
-      kinds: [eventKind.contacts, eventKind.relayList],
+      kinds: [3, 10002],
     },
   );
   const res = new Map<string, string[]>();
@@ -56,7 +56,7 @@ const main = async () => {
   const lastPostsPerFollowee = fetcher.fetchLastEventPerAuthor(
     writeRelaysPerFollowees,
     {
-      kinds: [eventKind.text],
+      kinds: [1],
     },
     { statsListener: (stats) => console.error(stats) },
   );

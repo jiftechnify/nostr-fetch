@@ -1,4 +1,4 @@
-import { type NostrEvent, eventKind } from "nostr-fetch";
+import type { NostrEvent } from "nostr-fetch";
 
 export const nHoursAgo = (hrs: number): number =>
   Math.floor((Date.now() - hrs * 60 * 60 * 1000) / 1000);
@@ -13,7 +13,7 @@ export const defaultRelays = [
 
 export const getWriteRelaysFromEvent = (ev: NostrEvent): string[] => {
   switch (ev.kind) {
-    case eventKind.contacts: {
+    case 3: {
       let parsedContent: unknown;
       try {
         parsedContent = JSON.parse(ev.content);
@@ -26,7 +26,7 @@ export const getWriteRelaysFromEvent = (ev: NostrEvent): string[] => {
       return es.filter(([, usage]) => usage.write ?? false).map(([relay]) => relay);
     }
 
-    case eventKind.relayList: {
+    case 10002: {
       return ev.tags
         .filter((t) => {
           if (t.length < 2 || t[0] !== "r") {

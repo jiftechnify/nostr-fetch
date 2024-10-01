@@ -1,4 +1,4 @@
-import { eventKind, NostrFetcher } from "nostr-fetch";
+import { NostrFetcher } from "nostr-fetch";
 import "websocket-polyfill";
 
 import { defaultRelays } from "./utils";
@@ -17,7 +17,7 @@ const main = async () => {
 
   // get pubkeys of followees from the latest kind 3 event
   const lastFollowEvent = await fetcher.fetchLastEvent(defaultRelays, {
-    kinds: [eventKind.contacts],
+    kinds: [3],
     authors: [pubkey],
   });
   if (lastFollowEvent === undefined) {
@@ -32,7 +32,7 @@ const main = async () => {
   const profilePerAuthor = fetcher.fetchLastEventPerAuthor(
     { authors: followees, relayUrls: defaultRelays },
     {
-      kinds: [eventKind.metadata],
+      kinds: [0],
     },
   );
 
