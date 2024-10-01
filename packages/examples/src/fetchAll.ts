@@ -1,4 +1,4 @@
-import { eventKind, NostrFetcher } from "nostr-fetch";
+import { NostrFetcher } from "nostr-fetch";
 import "websocket-polyfill";
 
 import { defaultRelays, nHoursAgo } from "./utils";
@@ -10,7 +10,7 @@ const main = async () => {
   const events = await fetcher.fetchAllEvents(
     defaultRelays,
     {
-      kinds: [eventKind.text],
+      kinds: [1],
     },
     {
       since: nHoursAgo(1),

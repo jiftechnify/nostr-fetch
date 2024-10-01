@@ -1,5 +1,5 @@
 import { rxNostrAdapter } from "@nostr-fetch/adapter-rx-nostr";
-import { NostrFetcher, eventKind } from "nostr-fetch";
+import { NostrFetcher } from "nostr-fetch";
 import { createRxNostr } from "rx-nostr";
 import "websocket-polyfill";
 
@@ -14,7 +14,7 @@ const main = async () => {
   const eventsIter = fetcher.allEventsIterator(
     defaultRelays,
     {
-      kinds: [eventKind.text],
+      kinds: [1],
     },
     {
       since: nHoursAgo(1),

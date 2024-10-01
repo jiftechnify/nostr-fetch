@@ -14,6 +14,8 @@ export type NostrEvent = {
 /**
  * Standardized Nostr event kinds.
  * cf. https://github.com/nostr-protocol/nips#event-kinds
+ *
+ * @deprecated use literal kind numbers instead.
  */
 export const eventKind = {
   metadata: 0,

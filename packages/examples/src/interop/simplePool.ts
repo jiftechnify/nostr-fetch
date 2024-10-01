@@ -1,5 +1,5 @@
 import { simplePoolAdapter } from "@nostr-fetch/adapter-nostr-tools";
-import { eventKind, NostrFetcher } from "nostr-fetch";
+import { NostrFetcher } from "nostr-fetch";
 import { SimplePool } from "nostr-tools";
 import "websocket-polyfill";
 
@@ -14,7 +14,7 @@ const main = async () => {
   const eventsIter = fetcher.allEventsIterator(
     defaultRelays,
     {
-      kinds: [eventKind.text],
+      kinds: [1],
     },
     {
       since: nHoursAgo(1),
