@@ -4,9 +4,26 @@ import {
   FilterMatcher,
   type NostrEvent,
   isNoticeForReqError,
+  isValidTagQueryKey,
   parseR2CMessage,
   validateEvent,
 } from "./nostr";
+
+describe("isValidTagQueryKey", () => {
+  test("returns true for valid tag query keys", () => {
+    const validKeys = ["#p", "#e", "#a", "#I"];
+    for (const key of validKeys) {
+      expect(isValidTagQueryKey(key)).toBe(true);
+    }
+  });
+
+  test("returns false for invalid tag query keys", () => {
+    const invalidKeys = ["", "p", "#", "#client", "#emoji", "#expiration", "#relay", "#-"];
+    for (const key of invalidKeys) {
+      expect(isValidTagQueryKey(key)).toBe(false);
+    }
+  });
+});
 
 const validEventJSON = `{
   "id": "381e2ea15a5b16f4ebdaa68ed3d9a112dc4ea6cc95641ef7eb57f1ec826f07e4",
