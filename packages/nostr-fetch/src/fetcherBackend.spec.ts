@@ -3,23 +3,15 @@ import {
   type NostrFetcherBackend,
   isFetchTillEoseFailedSignal,
 } from "@nostr-fetch/kernel/fetcherBackend";
+import { collectAsyncIterUntilThrow } from "@nostr-fetch/testutil/asyncIter";
 import { setupMockRelayServer } from "@nostr-fetch/testutil/mockRelayServer";
 import { DefaultFetcherBackend } from "./fetcherBackend";
 
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
-import { WS } from "vitest-websocket-mock";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import WS from "vitest-websocket-mock";
+import WebSocket from "ws";
 
-const collectAsyncIter = async <T>(iter: AsyncIterable<T>): Promise<T[]> => {
-  const res: T[] = [];
-  try {
-    for await (const t of iter) {
-      res.push(t);
-    }
-  } catch (err) {
-    console.error(err);
-  }
-  return res;
-};
+vi.mock("ws");
 
 describe("DefaultFetcherBackend", () => {
   describe("fetchTillEose", () => {
@@ -44,7 +36,8 @@ describe("DefaultFetcherBackend", () => {
 
     beforeEach(async () => {
       wsServer = new WS(url, { jsonProtocol: true });
-      backend = new DefaultFetcherBackend({ minLogLevel: "none" });
+
+      backend = new DefaultFetcherBackend({ minLogLevel: "none", webSocketConstructor: WebSocket });
     });
     afterEach(() => {
       WS.clean();
@@ -55,7 +48,7 @@ describe("DefaultFetcherBackend", () => {
 
       await backend.ensureRelays([url], { connectTimeoutMs: 1000 });
       const iter = backend.fetchTillEose(url, {}, defaultOpts);
-      const evs = await collectAsyncIter(iter);
+      const evs = await collectAsyncIterUntilThrow(iter);
       expect(evs.length).toBe(10);
 
       await expect(wsServer).toReceiveMessage(["REQ", "test", {}]);
@@ -90,7 +83,7 @@ describe("DefaultFetcherBackend", () => {
 
       await backend.ensureRelays([url], { connectTimeoutMs: 1000 });
       const iter = backend.fetchTillEose(url, {}, defaultOpts);
-      const evs = await collectAsyncIter(iter);
+      const evs = await collectAsyncIterUntilThrow(iter);
       expect(evs.length).toBe(9);
 
       await expect(wsServer).toReceiveMessage(["REQ", "test", {}]);
@@ -106,7 +99,7 @@ describe("DefaultFetcherBackend", () => {
 
       await backend.ensureRelays([url], { connectTimeoutMs: 1000 });
       const iter = backend.fetchTillEose(url, {}, defaultOpts);
-      const evs = await collectAsyncIter(iter);
+      const evs = await collectAsyncIterUntilThrow(iter);
       expect(evs.length).toBe(5);
 
       // CLOSE shouldn't be sent
@@ -126,7 +119,7 @@ describe("DefaultFetcherBackend", () => {
         {},
         optsWithDefault({ abortSubBeforeEoseTimeoutMs: 1000 }),
       );
-      const evs = await collectAsyncIter(iter);
+      const evs = await collectAsyncIterUntilThrow(iter);
       expect(evs.length).toBe(9);
 
       await expect(wsServer).toReceiveMessage(["REQ", "test", {}]);
@@ -145,7 +138,7 @@ describe("DefaultFetcherBackend", () => {
 
       await backend.ensureRelays([url], { connectTimeoutMs: 1000 });
       const iter = backend.fetchTillEose(url, {}, optsWithDefault({ abortSignal: ac.signal }));
-      const evs = await collectAsyncIter(iter);
+      const evs = await collectAsyncIterUntilThrow(iter);
       expect(evs.length).toBeLessThan(10);
 
       await expect(wsServer).toReceiveMessage(["REQ", "test", {}]);
@@ -160,7 +153,7 @@ describe("DefaultFetcherBackend", () => {
 
       await backend.ensureRelays([url], { connectTimeoutMs: 1000 });
       const iter = backend.fetchTillEose(url, {}, optsWithDefault({ skipVerification: true }));
-      const evs = await collectAsyncIter(iter);
+      const evs = await collectAsyncIterUntilThrow(iter);
       expect(evs.length).toBe(11);
 
       await expect(wsServer).toReceiveMessage(["REQ", "test", {}]);

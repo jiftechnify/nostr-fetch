@@ -1,7 +1,13 @@
 import { verifyEventSig } from "@nostr-fetch/kernel/crypto";
 import type { C2RMessage, Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
 import { FilterMatcher, generateSubId, parseR2CMessage } from "@nostr-fetch/kernel/nostr";
-import { WebSocketReadyState } from "@nostr-fetch/kernel/webSocket";
+import {
+  type WSCloseEvent,
+  type WSMessageEvent,
+  type WebSocketMin,
+  type WebSocketMinCtor,
+  WebSocketReadyState,
+} from "@nostr-fetch/kernel/webSocket";
 
 type Callback<E> = E extends void ? () => void : (ev: E) => void;
 
@@ -19,16 +25,11 @@ export interface Relay {
 
 export type RelayOptions = {
   connectTimeoutMs: number;
+  webSocketConstructor: WebSocketMinCtor;
 };
 
 export const initRelay = (relayUrl: string, options: RelayOptions): Relay => {
   return new RelayImpl(relayUrl, options);
-};
-
-export type WSCloseEvent = {
-  code: number;
-  reason: string;
-  wasClean: boolean | undefined; // optional since websocket-polyfill's CloseEvent doesn't have it
 };
 
 export type RelayConnectCb = Callback<void>;
@@ -51,7 +52,7 @@ type RelayListenersTable = {
 
 class RelayImpl implements Relay {
   #relayUrl: string;
-  #ws: WebSocket | undefined;
+  #ws: WebSocketMin | undefined;
 
   #options: Required<RelayOptions>;
 
@@ -135,46 +136,48 @@ class RelayImpl implements Relay {
         reject(Error(`attempt to connect to the relay '${this.#relayUrl}' timed out`));
       }, this.#options.connectTimeoutMs);
 
-      const ws = new WebSocket(this.#relayUrl);
+      const onErrorBeforeOpen = () => {
+        reject(Error("WebSocket error"));
+        clearTimeout(timeout);
+      };
 
-      ws.onopen = () => {
+      const ws = new this.#options.webSocketConstructor(this.#relayUrl);
+
+      ws.addEventListener("open", () => {
         if (!isTimedout) {
           this.#listeners.connect.forEach((cb) => cb());
           this.#ws = ws;
 
           // set error listeners after the connection opened successfully
-          ws.onerror = () => {
+          ws.removeEventListener("error", onErrorBeforeOpen);
+          ws.addEventListener("error", () => {
             this.#listeners.error.forEach((cb) => cb());
-          };
+          });
 
           resolve(this);
 
           clearTimeout(timeout);
         }
-      };
+      });
 
       // error listeners are *not* activated while attempt to connect is in progress
-      ws.onerror = () => {
-        reject(Error("WebSocket error"));
+      ws.addEventListener("error", onErrorBeforeOpen);
 
-        clearTimeout(timeout);
-      };
-
-      ws.onclose = (e: WSCloseEvent) => {
+      ws.addEventListener("close", (e: WSCloseEvent) => {
         const reducted = {
           code: e.code,
           reason: e.reason,
           wasClean: e.wasClean,
         };
         this.#listeners.disconnect.forEach((cb) => cb(reducted));
-      };
+      });
 
-      ws.onmessage = (e: MessageEvent) => {
+      ws.addEventListener("message", (e: WSMessageEvent) => {
         this.#msgQueue.push(e.data);
         if (this.#handleMsgsInterval === undefined) {
           this.#handleMsgsInterval = setInterval(() => this.handleMsgs(), 0);
         }
-      };
+      });
     });
   }
 
