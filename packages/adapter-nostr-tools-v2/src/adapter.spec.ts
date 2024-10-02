@@ -2,8 +2,8 @@ import type { FetchTillEoseOptions, NostrFetcherBackend } from "@nostr-fetch/ker
 import { setupMockRelayServer } from "@nostr-fetch/testutil/mockRelayServer";
 import { SimplePoolAdapter } from "./adapter";
 
-import { SimplePool, useWebSocketImplementation } from "nostr-tools";
-import { afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
+import { SimplePool } from "nostr-tools";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { WS } from "vitest-websocket-mock";
 
 import ws from "ws";
