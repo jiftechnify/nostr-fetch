@@ -15,10 +15,14 @@
   },
   "typesVersions": {
     "*": {
-      "*": [
-        "./src/*.ts"
-      ]
+      "*": ["./src/*.ts"]
     }
+  },
+  "scripts": {
+    "tsc": "tsc",
+    "lint": "run-p tsc lint:*",
+    "lint:format": "biome format ./src",
+    "lint:js": "biome lint ./src"
   },
   "devDependencies": {
     "@noble/hashes": "^1.3.1",
