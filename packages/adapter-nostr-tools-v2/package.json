@@ -19,10 +19,7 @@
     "require": "./dist/index.cjs",
     "types": "./dist/index.d.ts"
   },
-  "files": [
-    "dist",
-    "src"
-  ],
+  "files": ["dist", "src"],
   "publishConfig": {
     "access": "public"
   },
@@ -46,7 +43,7 @@
   "devDependencies": {
     "@nostr-fetch/testutil": "^0.15.1",
     "nostr-fetch": "^0.15.1",
-    "nostr-tools": "2.1.8"
+    "nostr-tools": "2.7.2"
   },
   "peerDependencies": {
     "nostr-fetch": "^0.15.1",
