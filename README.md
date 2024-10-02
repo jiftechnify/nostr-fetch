@@ -21,16 +21,19 @@ You can also use nostr-fetch in your HTML via `<script>` tags, thanks to [jsDeli
 </script>
 ```
 
-### Note for Node.js Users
-On Node.js, you must install and import `websocket-polyfill` to work nostr-fetch correctly.
+### Note for Users on Node.js < v22
+Node.js < v22 doesn't have native WebSocket implementation. 
+On Such a environment you may want to pass a custom `WebSocket` constructor from an external package like [`ws`](https://github.com/websockets/ws/tree/master) to `NostrFetcher.init()` as an option.
 
 ```
-npm install websocket-polyfill
+npm install ws
 ```
 
 ```ts
-import { ... } from "nostr-fetch";
-import "websocket-polyfill";
+import { NostrFetcher } from "nostr-fetch";
+import WebSocket from "ws";
+
+const fetcher = NostrFetcher.init({ webSocketConstructor: WebSocket });
 ```
 
 ## Usage
@@ -246,6 +249,7 @@ You should instantiate it with following initializers instead of the constructor
 #### `NostrFetcher.init`
 
 Initializes a `NostrFetcher` instance based on the default relay pool implementation.
+
 
 #### `NostrFetcher.withCustomPool`
 
