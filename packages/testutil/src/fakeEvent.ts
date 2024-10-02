@@ -1,4 +1,4 @@
-import { NostrEvent } from "@nostr-fetch/kernel/nostr";
+import type { NostrEvent } from "@nostr-fetch/kernel/nostr";
 
 import { sha256 } from "@noble/hashes/sha256";
 import { bytesToHex } from "@noble/hashes/utils";
