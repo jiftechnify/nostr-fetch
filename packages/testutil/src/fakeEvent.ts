@@ -1,8 +1,7 @@
 import type { NostrEvent } from "@nostr-fetch/kernel/nostr";
 
 import { sha256 } from "@noble/hashes/sha256";
-import { bytesToHex } from "@noble/hashes/utils";
-import { finishEvent, getPublicKey } from "nostr-tools";
+import { finalizeEvent, getPublicKey } from "nostr-tools/pure";
 
 /**
  * Generating fake Nostr events for testing
@@ -27,15 +26,15 @@ const genCreatedAt = (spec: number | { since: number; until: number }): number =
   return spec.since + d;
 };
 
-export const privkeyFromAuthorName = (name: string) => bytesToHex(sha256(name));
-export const pubkeyFromAuthorName = (name: string) => getPublicKey(privkeyFromAuthorName(name));
+export const seckeyFromAuthorName = (name: string) => sha256(name);
+export const pubkeyFromAuthorName = (name: string) => getPublicKey(seckeyFromAuthorName(name));
 
 export const generateFakeEvents = (spec: FakeEventsSpec): NostrEvent[] => {
   const { content, kind, tags, createdAt, authorName, invalidSig, n } = {
     ...{ kind: 1, tags: [], createdAt: 0, authorName: "test", invalidSig: false, n: 1 },
     ...spec,
   };
-  const privkey = privkeyFromAuthorName(authorName);
+  const privkey = seckeyFromAuthorName(authorName);
 
   const res: NostrEvent[] = [];
   for (let i = 0; i < n; i++) {
@@ -45,7 +44,7 @@ export const generateFakeEvents = (spec: FakeEventsSpec): NostrEvent[] => {
       content: `${content} ${i}`,
       created_at: genCreatedAt(createdAt),
     };
-    const signed = finishEvent(ev, privkey);
+    const signed = finalizeEvent(ev, privkey);
 
     if (invalidSig) {
       // change first char of the signature
