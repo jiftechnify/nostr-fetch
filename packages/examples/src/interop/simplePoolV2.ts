@@ -27,6 +27,7 @@ const main = async () => {
   }
 
   fetcher.shutdown();
+  pool.close(defaultRelays);
 };
 
 main()

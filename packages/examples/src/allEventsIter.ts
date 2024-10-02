@@ -1,11 +1,10 @@
 import { NostrFetcher } from "nostr-fetch";
-import "websocket-polyfill";
+import WebSocket from "ws";
 
 import { defaultRelays, nHoursAgo } from "./utils";
 
 const main = async () => {
-  // initialize fetcher based on nostr-relaypool's `RelayPool`
-  const fetcher = NostrFetcher.init();
+  const fetcher = NostrFetcher.init({ webSocketConstructor: WebSocket });
 
   // fetch all text events (kind: 1) posted in the last hour from the relays
   const eventsIter = fetcher.allEventsIterator(

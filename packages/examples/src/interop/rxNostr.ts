@@ -29,6 +29,7 @@ const main = async () => {
   }
 
   fetcher.shutdown();
+  rxNostr.dispose();
 };
 
 main()
