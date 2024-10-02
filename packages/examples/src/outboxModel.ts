@@ -1,6 +1,6 @@
 import { setTimeout } from "node:timers/promises";
 import { type NostrEvent, NostrFetcher } from "nostr-fetch";
-import "websocket-polyfill";
+import WebSocket from "ws";
 
 import { defaultRelays, getWriteRelaysFromEvent } from "./utils";
 
@@ -10,7 +10,7 @@ if (process.argv.length <= 2) {
 }
 const pubkey = process.argv[2] as string;
 
-const fetcher = NostrFetcher.init({});
+const fetcher = NostrFetcher.init({ webSocketConstructor: WebSocket });
 
 // fetch pubkeys of followees from the latest kind 3 event
 const fetchFollowees = async (pubkey: string): Promise<string[]> => {

@@ -1,5 +1,5 @@
 import { NostrFetcher } from "nostr-fetch";
-import "websocket-polyfill";
+import WebSocket from "ws";
 
 import { nHoursAgo } from "./utils";
 
@@ -12,7 +12,7 @@ if (process.argv.length <= 2) {
 const searchQuery = process.argv[2] as string;
 
 const main = async () => {
-  const fetcher = NostrFetcher.init();
+  const fetcher = NostrFetcher.init({ webSocketConstructor: WebSocket });
 
   // fetch all the text events (kind: 1) which match the search query and have posted in the last 24 hours
   const eventsIter = fetcher.allEventsIterator(

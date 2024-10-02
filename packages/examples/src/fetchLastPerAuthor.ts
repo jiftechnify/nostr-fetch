@@ -1,5 +1,5 @@
 import { NostrFetcher } from "nostr-fetch";
-import "websocket-polyfill";
+import WebSocket from "ws";
 
 import { defaultRelays } from "./utils";
 
@@ -13,7 +13,7 @@ if (process.argv.length <= 2) {
 const pubkey = process.argv[2] as string;
 
 const main = async () => {
-  const fetcher = NostrFetcher.init();
+  const fetcher = NostrFetcher.init({ webSocketConstructor: WebSocket });
 
   // get pubkeys of followees from the latest kind 3 event
   const lastFollowEvent = await fetcher.fetchLastEvent(defaultRelays, {

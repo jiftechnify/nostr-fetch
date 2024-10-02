@@ -1,10 +1,10 @@
 import { NostrFetcher } from "nostr-fetch";
-import "websocket-polyfill";
+import WebSocket from "ws";
 
 import { defaultRelays } from "./utils";
 
 const main = async () => {
-  const fetcher = NostrFetcher.init();
+  const fetcher = NostrFetcher.init({ webSocketConstructor: WebSocket });
 
   // fetch the latest 100 text events (kind: 1) from the relays, with "seen on" information
   const latestPosts = await fetcher.fetchLatestEvents(
@@ -13,7 +13,7 @@ const main = async () => {
       kinds: [1],
     },
     100,
-    { withSeenOn: false },
+    { withSeenOn: true },
   );
 
   console.log(`got ${latestPosts.length} events`);

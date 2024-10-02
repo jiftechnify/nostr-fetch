@@ -1,10 +1,10 @@
 import { NostrFetcher } from "nostr-fetch";
-import "websocket-polyfill";
+import WebSocket from "ws";
 
 import { defaultRelays } from "./utils";
 
 const main = async () => {
-  const fetcher = NostrFetcher.init();
+  const fetcher = NostrFetcher.init({ webSocketConstructor: WebSocket });
 
   // fetch the last metadata event (kind 0) and contact list event (kind 3) published by the pubkey from the relays
   const [lastMetadata, lastContacts] = await Promise.all(
