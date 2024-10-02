@@ -349,7 +349,7 @@ export class NostrFetcher {
    * Initializes {@linkcode NostrFetcher} with the default relay pool implementation.
    *
    * If you are on an runtime that doesn't have a native WebSocket implementation (e.g. Node.js < v22),
-   * you may want to set custom `WebSocket` constructor imported from an external library as follows:
+   * you may want to set custom `WebSocket` constructor imported from an external package as follows:
    *
    * ```ts
    * import { NostrFetcher } from "nostr-fetch";
