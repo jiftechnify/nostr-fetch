@@ -17,7 +17,7 @@ export type DefaultFetcherBackendOptions = {
 };
 
 export const defaultDefaultFetcherBackendOptions: Required<DefaultFetcherBackendOptions> = {
-  webSocketConstructor: WebSocket,
+  webSocketConstructor: globalThis.WebSocket,
 };
 
 /**

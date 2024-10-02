@@ -371,7 +371,7 @@ export class NostrFetcher {
     };
     if (finalOpts.webSocketConstructor === undefined) {
       throw Error(
-        "No WebSocket implementation found. Please set the `webSocketConstructor` option explicitly.",
+        "No WebSocket implementation found. Please explicitly set a custom `WebSocket` constructor to the `webSocketConstructor` option.",
       );
     }
     const backend = new DefaultFetcherBackend(finalOpts);
