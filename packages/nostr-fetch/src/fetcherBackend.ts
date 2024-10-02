@@ -1,4 +1,5 @@
 import { Channel } from "@nostr-fetch/kernel/channel";
+import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
 import {
   type EnsureRelaysOptions,
   FetchTillEoseAbortedSignal,
@@ -8,21 +9,30 @@ import {
   type NostrFetcherCommonOptions,
 } from "@nostr-fetch/kernel/fetcherBackend";
 import { type Filter, type NostrEvent, isNoticeForReqError } from "@nostr-fetch/kernel/nostr";
-
-import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
+import type { WebSocketMinCtor } from "@nostr-fetch/kernel/webSocket";
 import { type RelayPool, initRelayPool } from "./relayPool";
+
+export type DefaultFetcherBackendOptions = {
+  webSocketConstructor?: WebSocketMinCtor;
+};
+
+export const defaultDefaultFetcherBackendOptions: Required<DefaultFetcherBackendOptions> = {
+  webSocketConstructor: WebSocket,
+};
 
 /**
  * Default implementation of `NostrFetchBackend`.
  */
 export class DefaultFetcherBackend implements NostrFetcherBackend {
   #relayPool: RelayPool;
+  #wsCtor: WebSocketMinCtor;
   #debugLogger: DebugLogger | undefined;
 
-  public constructor(commonOpts: Required<NostrFetcherCommonOptions>) {
-    this.#relayPool = initRelayPool(commonOpts);
-    if (commonOpts.minLogLevel !== "none") {
-      this.#debugLogger = new DebugLogger(commonOpts.minLogLevel);
+  public constructor(opts: Required<NostrFetcherCommonOptions & DefaultFetcherBackendOptions>) {
+    this.#relayPool = initRelayPool(opts);
+    this.#wsCtor = opts.webSocketConstructor;
+    if (opts.minLogLevel !== "none") {
+      this.#debugLogger = new DebugLogger(opts.minLogLevel);
     }
   }
 
@@ -34,7 +44,10 @@ export class DefaultFetcherBackend implements NostrFetcherBackend {
    * It should *normalize* the passed `relayUrls` before establishing connections to relays.
    */
   public async ensureRelays(relayUrls: string[], options: EnsureRelaysOptions): Promise<string[]> {
-    return this.#relayPool.ensureRelays(relayUrls, options);
+    return this.#relayPool.ensureRelays(relayUrls, {
+      ...options,
+      webSocketConstructor: this.#wsCtor,
+    });
   }
 
   /**
@@ -67,7 +80,10 @@ export class DefaultFetcherBackend implements NostrFetcherBackend {
   ): AsyncIterable<NostrEvent> {
     const logger = this.#debugLogger?.subLogger(relayUrl);
 
-    const relay = await this.#relayPool.ensureSingleRelay(relayUrl, options);
+    const relay = await this.#relayPool.ensureSingleRelay(relayUrl, {
+      connectTimeoutMs: options.connectTimeoutMs,
+      webSocketConstructor: this.#wsCtor,
+    });
     if (relay === undefined) {
       throw new FetchTillEoseFailedSignal("failed to ensure connection to the relay");
     }

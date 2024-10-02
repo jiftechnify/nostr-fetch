@@ -1,10 +1,13 @@
 import type { RelayOptions } from "./relay";
 import { type RelayPool, initRelayPool } from "./relayPool";
 
-import { assert, afterEach, beforeEach, describe, expect, test } from "vitest";
+import { assert, afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { WS } from "vitest-websocket-mock";
+import WebSocket from "ws";
 
 import { setTimeout as delay } from "node:timers/promises";
+
+vi.mock("ws");
 
 class MockRelayServer {
   #ws: WS;
@@ -37,11 +40,11 @@ class MockRelayServer {
 }
 
 describe("RelayPool", () => {
-  const opts: RelayOptions = { connectTimeoutMs: 1000 };
+  const opts: RelayOptions = { connectTimeoutMs: 1000, webSocketConstructor: WebSocket };
   let pool: RelayPool;
 
   beforeEach(() => {
-    pool = initRelayPool({ minLogLevel: "none" });
+    pool = initRelayPool({ minLogLevel: "none", webSocketConstructor: WebSocket });
   });
   afterEach(() => {
     WS.clean();
@@ -88,7 +91,10 @@ describe("RelayPool", () => {
   test("connection error", async () => {
     const url = "ws://localhost:8000/";
 
-    const ensuredRelays1 = await pool.ensureRelays([url], { connectTimeoutMs: 1000 });
+    const ensuredRelays1 = await pool.ensureRelays([url], {
+      connectTimeoutMs: 1000,
+      webSocketConstructor: WebSocket,
+    });
     expect(ensuredRelays1).toEqual([]);
 
     // TODO: test behavior around reconnection cool time

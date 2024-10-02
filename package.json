@@ -4,9 +4,7 @@
   "private": true,
   "license": "MIT",
   "type": "module",
-  "workspaces": [
-    "packages/*"
-  ],
+  "workspaces": ["packages/*"],
   "scripts": {
     "lint": "turbo lint --filter=!@nostr-fetch/examples",
     "fix": "turbo fix --filter=!@nostr-fetch/examples",
@@ -19,7 +17,7 @@
     "example": "node scripts/runExample.js"
   },
   "devDependencies": {
-    "@biomejs/biome": "^1.6.3",
+    "@biomejs/biome": "^1.9.3",
     "@lerna-lite/changed": "^3.6.0",
     "@lerna-lite/cli": "^3.6.0",
     "@lerna-lite/publish": "^3.6.0",
@@ -36,8 +34,9 @@
     "tsx": "^4.6.2",
     "turbo": "^1.11.1",
     "typescript": "^5.1.0",
-    "vitest": "^1.0.4",
-    "vitest-websocket-mock": "^0.3.0",
-    "websocket-polyfill": "^0.0.3"
+    "vitest": "^2.1.2",
+    "vitest-websocket-mock": "^0.4.0",
+    "websocket-polyfill": "^0.0.3",
+    "ws": "^8.18.0"
   }
 }

@@ -5,22 +5,30 @@ import type {
   RelayDisconnectCb,
   RelayErrorCb,
   RelayNoticeCb,
+  RelayOptions,
   SubClosedCb,
   SubEoseCb,
   SubEventCb,
-  WSCloseEvent,
 } from "./relay";
 import { initRelay } from "./relay";
 
 import { setTimeout as delay } from "node:timers/promises";
-import { WebSocketReadyState } from "@nostr-fetch/kernel/webSocket";
+import { type WSCloseEvent, WebSocketReadyState } from "@nostr-fetch/kernel/webSocket";
+
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import WS from "vitest-websocket-mock";
-import "websocket-polyfill";
+import WebSocket from "ws";
+
+vi.mock("ws");
+
+const defaultRelayOpts: RelayOptions = {
+  connectTimeoutMs: 5000,
+  webSocketConstructor: WebSocket,
+};
 
 describe("Relay", () => {
   test(".url returns relay's URL", () => {
-    const r = initRelay("wss://example.com", { connectTimeoutMs: 0 });
+    const r = initRelay("wss://example.com", { ...defaultRelayOpts, connectTimeoutMs: 0 });
     expect(r.url).toBe("wss://example.com");
   });
 
@@ -34,7 +42,7 @@ describe("Relay", () => {
     test("succeeds", async () => {
       const ws = new WS(rurl);
 
-      const r = initRelay(rurl, { connectTimeoutMs: 5000 });
+      const r = initRelay(rurl, defaultRelayOpts);
       await expect(
         r.connect().then((r) => {
           return { url: r.url, readyState: r.wsReadyState };
@@ -49,7 +57,7 @@ describe("Relay", () => {
     });
 
     test("connect() fails if relay is unreachable", async () => {
-      const r = initRelay(rurl, { connectTimeoutMs: 5000 });
+      const r = initRelay(rurl, defaultRelayOpts);
       await expect(r.connect()).rejects.toThrow("WebSocket error");
     });
 
@@ -80,7 +88,7 @@ describe("Relay", () => {
     });
 
     test("normal case", async () => {
-      const r = initRelay(rurl, { connectTimeoutMs: 5000 });
+      const r = initRelay(rurl, defaultRelayOpts);
       r.on("connect", spyCbs.connect);
       r.on("disconnect", spyCbs.disconnect);
       r.on("error", spyCbs.error);
@@ -103,7 +111,7 @@ describe("Relay", () => {
     });
 
     test("error case", async () => {
-      const r = initRelay(rurl, { connectTimeoutMs: 5000 });
+      const r = initRelay(rurl, defaultRelayOpts);
       r.on("connect", spyCbs.connect);
       r.on("disconnect", spyCbs.disconnect);
       r.on("error", spyCbs.error);
@@ -126,7 +134,7 @@ describe("Relay", () => {
     });
 
     test("notice", async () => {
-      const r = initRelay(rurl, { connectTimeoutMs: 5000 });
+      const r = initRelay(rurl, defaultRelayOpts);
       r.on("notice", spyCbs.notice);
       await r.connect();
 
@@ -165,7 +173,7 @@ describe("Relay", () => {
     });
 
     test("normal case", async () => {
-      const r = initRelay(rurl, { connectTimeoutMs: 5000 });
+      const r = initRelay(rurl, defaultRelayOpts);
       setupMockRelayServer(server, [{ type: "events", eventsSpec: { content: "test", n: 5 } }]);
 
       await r.connect();
@@ -197,7 +205,7 @@ describe("Relay", () => {
     });
 
     test("CLOSED by relay", async () => {
-      const r = initRelay(rurl, { connectTimeoutMs: 5000 });
+      const r = initRelay(rurl, defaultRelayOpts);
       setupMockRelayServer(server, [{ type: "closed", message: "closed by relay" }]);
 
       await r.connect();
@@ -225,7 +233,7 @@ describe("Relay", () => {
     });
 
     test("aborts before EOSE if relay doesn't return events for a while", async () => {
-      const r = initRelay(rurl, { connectTimeoutMs: 5000 });
+      const r = initRelay(rurl, defaultRelayOpts);
       setupMockRelayServer(server, [
         { type: "events", eventsSpec: { content: "test" } },
         { type: "delay", delayMs: 2000 },
@@ -254,7 +262,7 @@ describe("Relay", () => {
     });
 
     test("verifies signature by default", async () => {
-      const r = initRelay(rurl, { connectTimeoutMs: 5000 });
+      const r = initRelay(rurl, defaultRelayOpts);
       setupMockRelayServer(server, [
         { type: "events", eventsSpec: { content: "test", n: 5 } },
         { type: "events", eventsSpec: { content: "invalid", invalidSig: true } },
@@ -279,7 +287,7 @@ describe("Relay", () => {
     });
 
     test("skips signature verification if enabled", async () => {
-      const r = initRelay(rurl, { connectTimeoutMs: 5000 });
+      const r = initRelay(rurl, defaultRelayOpts);
       setupMockRelayServer(server, [
         { type: "events", eventsSpec: { content: "test", n: 5 } },
         { type: "events", eventsSpec: { content: "invalid", invalidSig: true } },
@@ -304,7 +312,7 @@ describe("Relay", () => {
     });
 
     test("match events with filters by default", async () => {
-      const r = initRelay(rurl, { connectTimeoutMs: 5000 });
+      const r = initRelay(rurl, defaultRelayOpts);
       setupMockRelayServer(server, [
         { type: "events", eventsSpec: { kind: 1, content: "test", n: 5 } },
         { type: "events", eventsSpec: { kind: 0, content: "malicious", n: 1 } },
@@ -329,7 +337,7 @@ describe("Relay", () => {
     });
 
     test("skips matching events with filters if enabled", async () => {
-      const r = initRelay(rurl, { connectTimeoutMs: 5000 });
+      const r = initRelay(rurl, defaultRelayOpts);
       setupMockRelayServer(server, [
         { type: "events", eventsSpec: { kind: 1, content: "test", n: 5 } },
         { type: "events", eventsSpec: { kind: 0, content: "malicious", n: 1 } },
