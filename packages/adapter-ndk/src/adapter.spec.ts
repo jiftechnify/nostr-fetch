@@ -1,23 +1,12 @@
 import type { FetchTillEoseOptions } from "@nostr-fetch/kernel/fetcherBackend";
+import { collectAsyncIterUntilThrow } from "@nostr-fetch/testutil/asyncIter";
 import { setupMockRelayServer } from "@nostr-fetch/testutil/mockRelayServer";
 import { NDKAdapter } from "./adapter";
 
 import NDK from "@nostr-dev-kit/ndk";
 
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
-import { WS } from "vitest-websocket-mock";
-
-const collectAsyncIter = async <T>(iter: AsyncIterable<T>): Promise<T[]> => {
-  const res: T[] = [];
-  try {
-    for await (const t of iter) {
-      res.push(t);
-    }
-  } catch (err) {
-    console.error(err);
-  }
-  return res;
-};
+import WS from "vitest-websocket-mock";
 
 describe("NDKAdapter", () => {
   describe("fetchTillEose", () => {
@@ -56,7 +45,7 @@ describe("NDKAdapter", () => {
 
       await backend.ensureRelays([url], { connectTimeoutMs: 1000 });
       const iter = backend.fetchTillEose(url, {}, defaultOpts);
-      const evs = await collectAsyncIter(iter);
+      const evs = await collectAsyncIterUntilThrow(iter);
       expect(evs.length).toBe(10);
 
       await expect(wsServer).toReceiveMessage(["REQ", expect.anything(), {}]);
@@ -72,7 +61,7 @@ describe("NDKAdapter", () => {
 
       await backend.ensureRelays([url], { connectTimeoutMs: 1000 });
       const iter = backend.fetchTillEose(url, {}, defaultOpts);
-      const evs = await collectAsyncIter(iter);
+      const evs = await collectAsyncIterUntilThrow(iter);
       expect(evs.length).toBe(9);
 
       expect.toHaveReceivedMessages([]);
@@ -94,7 +83,7 @@ describe("NDKAdapter", () => {
         {},
         optsWithDefault({ abortSubBeforeEoseTimeoutMs: 1000 }),
       );
-      const evs = await collectAsyncIter(iter);
+      const evs = await collectAsyncIterUntilThrow(iter);
       expect(evs.length).toBe(9);
 
       await expect(wsServer).toReceiveMessage(["REQ", expect.anything(), {}]);
@@ -113,7 +102,7 @@ describe("NDKAdapter", () => {
 
       await backend.ensureRelays([url], { connectTimeoutMs: 1000 });
       const iter = backend.fetchTillEose(url, {}, optsWithDefault({ abortSignal: ac.signal }));
-      const evs = await collectAsyncIter(iter);
+      const evs = await collectAsyncIterUntilThrow(iter);
       expect(evs.length).toBeLessThan(10);
 
       await expect(wsServer).toReceiveMessage(["REQ", expect.anything(), {}]);

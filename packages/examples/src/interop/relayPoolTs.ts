@@ -25,6 +25,7 @@ const main = async () => {
   }
 
   fetcher.shutdown();
+  await pool.close();
 };
 
 main()

@@ -1,17 +1,10 @@
 import type { NostrEvent } from "@nostr-fetch/kernel/nostr";
+import { collectAsyncIter } from "@nostr-fetch/testutil/asyncIter";
 import { pubkeyFromAuthorName } from "@nostr-fetch/testutil/fakeEvent";
 import { createdAtDesc } from "./fetcherHelper";
 import { FakedFetcherBuilder } from "./testutil/fakedFetcher";
 
 import { assert, describe, expect, test } from "vitest";
-
-const collectAsyncIter = async <T>(iter: AsyncIterable<T>): Promise<T[]> => {
-  const res: T[] = [];
-  for await (const t of iter) {
-    res.push(t);
-  }
-  return res;
-};
 
 /* Tests */
 describe.concurrent("NostrFetcher", () => {

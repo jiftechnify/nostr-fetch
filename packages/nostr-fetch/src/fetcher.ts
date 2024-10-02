@@ -14,7 +14,11 @@ import {
 import { type NostrEvent, isValidTagQueryKey } from "@nostr-fetch/kernel/nostr";
 import { abbreviate, currUnixtimeSec, normalizeRelayUrlSet } from "@nostr-fetch/kernel/utils";
 
-import { DefaultFetcherBackend } from "./fetcherBackend";
+import {
+  DefaultFetcherBackend,
+  type DefaultFetcherBackendOptions,
+  defaultDefaultFetcherBackendOptions,
+} from "./fetcherBackend";
 import {
   EventBuckets,
   FetchStatsManager,
@@ -343,12 +347,33 @@ export class NostrFetcher {
 
   /**
    * Initializes {@linkcode NostrFetcher} with the default relay pool implementation.
+   *
+   * If you are on an runtime that doesn't have a native WebSocket implementation (e.g. Node.js < v22),
+   * you may want to set custom `WebSocket` constructor imported from an external package as follows:
+   *
+   * ```ts
+   * import { NostrFetcher } from "nostr-fetch";
+   * import WebSocket from "ws";
+   *
+   * const fetcher = NostrFetcher.init({
+   *   webSocketConstructor: WebSocket
+   * });
+   * ```
    */
   public static init(
-    options: NostrFetcherCommonOptions = {},
+    options: NostrFetcherCommonOptions & DefaultFetcherBackendOptions = {},
     initRelayCapChecker: RelayCapCheckerInitializer = initDefaultRelayCapChecker,
   ): NostrFetcher {
-    const finalOpts = { ...defaultFetcherCommonOptions, ...options };
+    const finalOpts = {
+      ...defaultFetcherCommonOptions,
+      ...defaultDefaultFetcherBackendOptions,
+      ...options,
+    };
+    if (finalOpts.webSocketConstructor === undefined) {
+      throw Error(
+        "No WebSocket implementation found. Please explicitly set a custom `WebSocket` constructor to the `webSocketConstructor` option.",
+      );
+    }
     const backend = new DefaultFetcherBackend(finalOpts);
     const relayCapChecker = initRelayCapChecker(finalOpts);
     return new NostrFetcher(backend, relayCapChecker, finalOpts);

@@ -4,10 +4,8 @@ export const nHoursAgo = (hrs: number): number =>
   Math.floor((Date.now() - hrs * 60 * 60 * 1000) / 1000);
 
 export const defaultRelays = [
-  "wss://relay-jp.nostr.wirednet.jp",
   "wss://nrelay.c-stellar.net",
-  "wss://nostr.holybea.com",
-  "wss://nostr-relay.nokotaro.com",
+  "wss://nos.lol",
   "wss://relay.damus.io",
 ];
 

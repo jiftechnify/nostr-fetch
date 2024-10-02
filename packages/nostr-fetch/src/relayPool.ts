@@ -8,7 +8,7 @@ import {
   normalizeRelayUrl,
   normalizeRelayUrlSet,
 } from "@nostr-fetch/kernel/utils";
-import { WebSocketReadyState } from "@nostr-fetch/kernel/webSocket";
+import { type WebSocketMinCtor, WebSocketReadyState } from "@nostr-fetch/kernel/webSocket";
 
 export interface RelayPool {
   ensureRelays(relayUrls: string[], relayOpts: RelayOptions): Promise<string[]>;
@@ -18,6 +18,7 @@ export interface RelayPool {
 
 export type RelayPoolOptions = {
   minLogLevel: LogLevel;
+  webSocketConstructor: WebSocketMinCtor;
 };
 
 export const initRelayPool = (opts: RelayPoolOptions): RelayPool => {
@@ -65,7 +66,10 @@ class RelayPoolImpl implements RelayPool {
       this.#debugLogger?.log("info", "watchdog started");
 
       const rurls = Array.from(this.#relays.keys());
-      this.addRelays(rurls, { connectTimeoutMs: WATCHDOG_CONN_TIMEOUT }).then(() => {
+      this.addRelays(rurls, {
+        connectTimeoutMs: WATCHDOG_CONN_TIMEOUT,
+        webSocketConstructor: options.webSocketConstructor,
+      }).then(() => {
         this.#debugLogger?.log("info", "watchdog completed");
       });
     }, WATCHDOG_INTERVAL);
