@@ -1,4 +1,15 @@
 /**
+ * Collects items from an async iterator into an array. Rethrows the first error thrown from the iterator.
+ */
+export const collectAsyncIter = async <T>(iter: AsyncIterable<T>): Promise<T[]> => {
+  const res: T[] = [];
+  for await (const t of iter) {
+    res.push(t);
+  }
+  return res;
+};
+
+/**
  * Collects items from an async iterator into an array until the first error is thrown.
  */
 export const collectAsyncIterUntilThrow = async <T>(iter: AsyncIterable<T>): Promise<T[]> => {
