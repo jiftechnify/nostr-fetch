@@ -1,4 +1,4 @@
-import { NostrFetcher } from "nostr-fetch";
+import { NostrFetcher, noopVerifier } from "nostr-fetch";
 import WebSocket from "ws";
 
 import { nHoursAgo } from "./utils";
@@ -25,7 +25,7 @@ const main = async () => {
       since: nHoursAgo(24),
     },
     {
-      skipVerification: true,
+      eventVerifier: noopVerifier,
     },
   );
 
