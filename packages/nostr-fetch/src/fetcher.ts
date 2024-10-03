@@ -862,7 +862,7 @@ export class NostrFetcher {
     evs.sort(createdAtDesc);
 
     // take latest events
-    const res = (() => {
+    const res = (async () => {
       // return latest `limit` events if not "reduced verification mode"
       if (finalOpts.skipVerification || !finalOpts.reduceVerification) {
         return evs.slice(0, limit);
@@ -870,7 +870,7 @@ export class NostrFetcher {
       // reduced verification: return latest `limit` events whose signature is valid
       const verified: NostrEvent[] = [];
       for (const ev of evs) {
-        if (verifyEventSig(ev)) {
+        if (await finalOpts.eventVerifier(ev)) {
           verified.push(ev);
           if (verified.length >= limit) {
             break;
@@ -881,10 +881,10 @@ export class NostrFetcher {
     })();
 
     if (!finalOpts.withSeenOn) {
-      return res as NostrEventExt<SeenOn>[];
+      return (await res) as NostrEventExt<SeenOn>[];
     }
     // append "seen on" data to events if `withSeenOn` is true.
-    return res.map((e) => {
+    return (await res).map((e) => {
       return { ...e, seenOn: globalSeenEvents.getSeenOn(e.id) };
     }) as NostrEventExt<SeenOn>[];
   }
