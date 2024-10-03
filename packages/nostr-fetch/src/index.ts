@@ -8,4 +8,4 @@ export {
 } from "./types";
 
 export { eventKind, type NostrEvent } from "@nostr-fetch/kernel/nostr";
-export { normalizeRelayUrl, normalizeRelayUrlSet } from "@nostr-fetch/kernel/utils";
+export { normalizeRelayUrl, normalizeRelayUrlSet, noopVerifier } from "@nostr-fetch/kernel/utils";
