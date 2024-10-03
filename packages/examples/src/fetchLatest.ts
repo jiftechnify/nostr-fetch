@@ -13,7 +13,6 @@ const main = async () => {
       kinds: [1],
     },
     100,
-    // { skipVerification: true }
   );
 
   console.log(`got ${latestPosts.length} events`);

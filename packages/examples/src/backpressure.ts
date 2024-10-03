@@ -1,5 +1,5 @@
 import { setTimeout as delay } from "node:timers/promises";
-import { NostrFetcher } from "nostr-fetch";
+import { NostrFetcher, noopVerifier } from "nostr-fetch";
 import WebSocket from "ws";
 
 import { defaultRelays, nHoursAgo } from "./utils";
@@ -17,7 +17,7 @@ const main = async () => {
       since: nHoursAgo(3),
     },
     {
-      skipVerification: true,
+      eventVerifier: noopVerifier,
       enableBackpressure: true, // enabling backpressure mode!
     },
   );

@@ -19,9 +19,6 @@ const main = async () => {
     {
       since: nHoursAgo(1),
     },
-    {
-      skipVerification: true,
-    },
   );
 
   for await (const ev of eventsIter) {
