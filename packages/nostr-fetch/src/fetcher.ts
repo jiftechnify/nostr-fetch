@@ -11,7 +11,7 @@ import {
   isFetchTillEoseAbortedSignal,
   isFetchTillEoseFailedSignal,
 } from "@nostr-fetch/kernel/fetcherBackend";
-import { type NostrEvent, isValidTagQueryKey } from "@nostr-fetch/kernel/nostr";
+import { type EventVerifier, type NostrEvent, isValidTagQueryKey } from "@nostr-fetch/kernel/nostr";
 import { abbreviate, currUnixtimeSec, normalizeRelayUrlSet } from "@nostr-fetch/kernel/utils";
 
 import {
@@ -124,7 +124,7 @@ export type FetchOptions<SeenOn extends boolean = false> = {
    *   eventVerifier: nwVerifyEvent,
    * });
    */
-  eventVerifier?: (event: NostrEvent) => boolean;
+  eventVerifier?: EventVerifier;
 
   /**
    * If true, the fetcher skips event signature verification.

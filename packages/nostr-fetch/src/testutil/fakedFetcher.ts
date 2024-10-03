@@ -88,7 +88,7 @@ class FakeRelay {
   req(
     filter: Filter,
     subId: string,
-    onEvent: (ev: NostrEvent) => void,
+    onEvent: (ev: NostrEvent) => Promise<void>,
     onEose: () => void,
   ): () => void {
     this.#subs.add(subId);
@@ -113,7 +113,7 @@ class FakeRelay {
           if (this.#spec.sendEventInterval > 0) {
             await delay(this.#spec.sendEventInterval);
           }
-          onEvent(ev);
+          await onEvent(ev);
           n++;
         }
       }
@@ -175,8 +175,8 @@ class FakeFetcherBackend implements NostrFetcherBackend {
     }
 
     const [tx, iter] = Channel.make<NostrEvent>();
-    const onEvent = (ev: NostrEvent) => {
-      if (options.skipVerification || options.eventVerifier(ev)) {
+    const onEvent = async (ev: NostrEvent) => {
+      if (options.skipVerification || (await options.eventVerifier(ev))) {
         tx.send(ev);
       }
     };
