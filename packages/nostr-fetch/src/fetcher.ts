@@ -133,6 +133,8 @@ export type FetchOptions<SeenOn extends boolean = false> = {
    * Check the document of the relay pool adapter you want to use.
    *
    * @default false
+   *
+   * @deprecated This option will be removed in nostr-fetch v1. Set the `noopVerifier` to the `eventVerifier` option instead of turning this on.
    */
   skipVerification?: boolean;
 
@@ -265,6 +267,8 @@ export type FetchLatestOptions<SeenOn extends boolean = false> = FetchOptions<Se
    * In the reduced verification mode, event signature verification is performed only to minimum amount of events enough to ensure validity.
    *
    * @default false
+   *
+   * @deprecated This option will be removed in nostr-fetch v1. Fetch with `eventVerifier: noopVerifier` first, then verify fetched events by yourself.
    */
   reduceVerification?: boolean;
 };
@@ -272,7 +276,7 @@ export type FetchLatestOptions<SeenOn extends boolean = false> = FetchOptions<Se
 const defaultFetchLatestOptions: Required<FetchLatestOptions> = {
   ...defaultFetchOptions,
   asOf: undefined,
-  reduceVerification: true,
+  reduceVerification: false,
 };
 
 /**
