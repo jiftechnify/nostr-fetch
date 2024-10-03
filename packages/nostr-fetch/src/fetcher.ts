@@ -1221,7 +1221,7 @@ export class NostrFetcher {
         evsDeduped.sort(createdAtDesc);
 
         // take latest events
-        const res = (() => {
+        const res = (async () => {
           // return latest `limit` events if not "reduced verification mode"
           if (options.skipVerification || !options.reduceVerification) {
             return evsDeduped.slice(0, limit);
@@ -1230,7 +1230,7 @@ export class NostrFetcher {
           // reduced verification: return latest `limit` events whose signature is valid
           const verified = [];
           for (const ev of evsDeduped) {
-            if (verifyEventSig(ev)) {
+            if (await options.eventVerifier(ev)) {
               verified.push(ev);
               if (verified.length >= limit) {
                 break;
@@ -1245,12 +1245,12 @@ export class NostrFetcher {
           // append "seen on" data to events if `withSeenOn` is true.
           tx.send({
             key,
-            events: res.map((e) => {
+            events: (await res).map((e) => {
               return { ...e, seenOn: globalSeenEvents.getSeenOn(e.id) };
             }) as NostrEventExt<SeenOn>[],
           });
         } else {
-          tx.send({ key, events: res as NostrEventExt<SeenOn>[] });
+          tx.send({ key, events: (await res) as NostrEventExt<SeenOn>[] });
         }
         statsMngr?.addProgress(1);
       }),
