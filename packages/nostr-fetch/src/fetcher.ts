@@ -11,7 +11,7 @@ import {
   isFetchTillEoseAbortedSignal,
   isFetchTillEoseFailedSignal,
 } from "@nostr-fetch/kernel/fetcherBackend";
-import { type NostrEvent, isValidTagQueryKey } from "@nostr-fetch/kernel/nostr";
+import { type EventVerifier, type NostrEvent, isValidTagQueryKey } from "@nostr-fetch/kernel/nostr";
 import { abbreviate, currUnixtimeSec, normalizeRelayUrlSet } from "@nostr-fetch/kernel/utils";
 
 import {
@@ -102,6 +102,31 @@ export type NostrEventWithAuthor<SeenOn extends boolean> = {
  */
 export type FetchOptions<SeenOn extends boolean = false> = {
   /**
+   * If specified, the fetcher uses the given function as an event signature verifier instead of the default one.
+   *
+   * The function must return `true` if the event signature is valid. Otherwise, it should return `false`.
+   *
+   * @example
+   * // How to use nostr-wasm's verifyEvent() with nostr-fetch
+   * import { NostrFetcher, type NostrEvent } from "nostr-fetch";
+   * import { initNostrWasm } from "nostr-wasm";
+   *
+   * const nw = await initNostrWasm();
+   * const nwVerifyEvent = (ev: NostrEvent) => {
+   *   try {
+   *     nw.verifyEvent(ev);
+   *     return true;
+   *   } catch {
+   *     return false;
+   *   }
+   * };
+   * const fetcher = NostrFetcher.init({
+   *   eventVerifier: nwVerifyEvent,
+   * });
+   */
+  eventVerifier?: EventVerifier;
+
+  /**
    * If true, the fetcher skips event signature verification.
    *
    * Note: This option has no effect under some relay pool adapters.
@@ -173,6 +198,7 @@ export type FetchOptions<SeenOn extends boolean = false> = {
 };
 
 const defaultFetchOptions: Required<FetchOptions> = {
+  eventVerifier: verifyEventSig,
   skipVerification: false,
   skipFilterMatching: false,
   withSeenOn: false,
@@ -836,7 +862,7 @@ export class NostrFetcher {
     evs.sort(createdAtDesc);
 
     // take latest events
-    const res = (() => {
+    const res = (async () => {
       // return latest `limit` events if not "reduced verification mode"
       if (finalOpts.skipVerification || !finalOpts.reduceVerification) {
         return evs.slice(0, limit);
@@ -844,7 +870,7 @@ export class NostrFetcher {
       // reduced verification: return latest `limit` events whose signature is valid
       const verified: NostrEvent[] = [];
       for (const ev of evs) {
-        if (verifyEventSig(ev)) {
+        if (await finalOpts.eventVerifier(ev)) {
           verified.push(ev);
           if (verified.length >= limit) {
             break;
@@ -855,10 +881,10 @@ export class NostrFetcher {
     })();
 
     if (!finalOpts.withSeenOn) {
-      return res as NostrEventExt<SeenOn>[];
+      return (await res) as NostrEventExt<SeenOn>[];
     }
     // append "seen on" data to events if `withSeenOn` is true.
-    return res.map((e) => {
+    return (await res).map((e) => {
       return { ...e, seenOn: globalSeenEvents.getSeenOn(e.id) };
     }) as NostrEventExt<SeenOn>[];
   }
@@ -1195,7 +1221,7 @@ export class NostrFetcher {
         evsDeduped.sort(createdAtDesc);
 
         // take latest events
-        const res = (() => {
+        const res = (async () => {
           // return latest `limit` events if not "reduced verification mode"
           if (options.skipVerification || !options.reduceVerification) {
             return evsDeduped.slice(0, limit);
@@ -1204,7 +1230,7 @@ export class NostrFetcher {
           // reduced verification: return latest `limit` events whose signature is valid
           const verified = [];
           for (const ev of evsDeduped) {
-            if (verifyEventSig(ev)) {
+            if (await options.eventVerifier(ev)) {
               verified.push(ev);
               if (verified.length >= limit) {
                 break;
@@ -1219,12 +1245,12 @@ export class NostrFetcher {
           // append "seen on" data to events if `withSeenOn` is true.
           tx.send({
             key,
-            events: res.map((e) => {
+            events: (await res).map((e) => {
               return { ...e, seenOn: globalSeenEvents.getSeenOn(e.id) };
             }) as NostrEventExt<SeenOn>[],
           });
         } else {
-          tx.send({ key, events: res as NostrEventExt<SeenOn>[] });
+          tx.send({ key, events: (await res) as NostrEventExt<SeenOn>[] });
         }
         statsMngr?.addProgress(1);
       }),

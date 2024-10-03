@@ -1,5 +1,4 @@
-import { verifyEventSig } from "@nostr-fetch/kernel/crypto";
-import type { C2RMessage, Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
+import type { C2RMessage, EventVerifier, Filter, NostrEvent } from "@nostr-fetch/kernel/nostr";
 import { FilterMatcher, generateSubId, parseR2CMessage } from "@nostr-fetch/kernel/nostr";
 import {
   type WSCloseEvent,
@@ -80,14 +79,24 @@ class RelayImpl implements Relay {
     return this.#ws?.readyState ?? WebSocketReadyState.CONNECTING;
   }
 
-  private forwardToSub(subId: string, forwardFn: (sub: RelaySubscription) => void) {
+  private async forwardToSubAsync(
+    subId: string,
+    forwardFn: (sub: RelaySubscription) => Promise<void>,
+  ) {
+    const targSub = this.#subscriptions.get(subId);
+    if (targSub !== undefined) {
+      await forwardFn(targSub);
+    }
+  }
+
+  private async forwardToSub(subId: string, forwardFn: (sub: RelaySubscription) => void) {
     const targSub = this.#subscriptions.get(subId);
     if (targSub !== undefined) {
       forwardFn(targSub);
     }
   }
 
-  private handleMsgs() {
+  private async handleMsgs() {
     if (this.#msgQueue.length === 0) {
       clearInterval(this.#handleMsgsInterval);
       this.#handleMsgsInterval = undefined;
@@ -106,7 +115,7 @@ class RelayImpl implements Relay {
       switch (parsed[0]) {
         case "EVENT": {
           const [, subId, ev] = parsed;
-          this.forwardToSub(subId, (sub) => sub._forwardEvent(ev));
+          await this.forwardToSubAsync(subId, (sub) => sub._forwardEvent(ev));
           break;
         }
         case "EOSE": {
@@ -241,6 +250,7 @@ export interface Subscription {
 
 export interface SubscriptionOptions {
   subId?: string;
+  eventVerifier: EventVerifier;
   skipVerification: boolean;
   skipFilterMatching: boolean;
   abortSubBeforeEoseTimeoutMs: number;
@@ -314,10 +324,10 @@ class RelaySubscription implements Subscription {
     }, this.#options.abortSubBeforeEoseTimeoutMs);
   }
 
-  _forwardEvent(ev: NostrEvent) {
+  async _forwardEvent(ev: NostrEvent) {
     this.#resetAbortSubTimer();
 
-    if (!this.#options.skipVerification && !verifyEventSig(ev)) {
+    if (!this.#options.skipVerification && !(await this.#options.eventVerifier(ev))) {
       return;
     }
     if (!this.#options.skipFilterMatching && !this.#filterMatcher.match(ev)) {

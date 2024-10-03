@@ -4,7 +4,8 @@ import { pubkeyFromAuthorName } from "@nostr-fetch/testutil/fakeEvent";
 import { createdAtDesc } from "./fetcherHelper";
 import { FakedFetcherBuilder } from "./testutil/fakedFetcher";
 
-import { assert, describe, expect, test } from "vitest";
+import { verifyEventSig } from "@nostr-fetch/kernel/crypto";
+import { assert, describe, expect, test, vi } from "vitest";
 
 /* Tests */
 describe.concurrent("NostrFetcher", () => {
@@ -306,11 +307,18 @@ describe.concurrent("NostrFetcher", () => {
       expect(snd).toEqual(expect.arrayContaining(["wss://dup1/", "wss://dup2/"]));
     });
 
-    test("verifies signature by default", async () => {
-      const evIter = fetcher.allEventsIterator(["wss://healthy/", "wss://invalid-sig/"], {}, {});
+    test("verifies signature by default, with specified verifier", async () => {
+      const spyEventVerifier = vi.fn((ev: NostrEvent) => Promise.resolve(verifyEventSig(ev)));
+      const evIter = fetcher.allEventsIterator(
+        ["wss://healthy/", "wss://invalid-sig/"],
+        {},
+        {},
+        { eventVerifier: spyEventVerifier },
+      );
       const evs = await collectAsyncIter(evIter);
       expect(evs.length).toBe(10);
       assert(evs.every(({ content }) => content.includes("healthy")));
+      expect(spyEventVerifier).toBeCalled();
     });
 
     test("skips signature verification if skipVerification is true", async () => {

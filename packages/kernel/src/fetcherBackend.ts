@@ -1,5 +1,5 @@
 import type { LogLevel } from "./debugLogger";
-import type { Filter, NostrEvent } from "./nostr";
+import type { EventVerifier, Filter, NostrEvent } from "./nostr";
 
 export type EnsureRelaysOptions = {
   connectTimeoutMs: number;
@@ -7,6 +7,7 @@ export type EnsureRelaysOptions = {
 
 export type FetchTillEoseOptions = {
   subId?: string;
+  eventVerifier: EventVerifier;
   skipVerification: boolean;
   skipFilterMatching: boolean;
   connectTimeoutMs: number;

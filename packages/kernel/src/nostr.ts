@@ -248,6 +248,8 @@ const is64BytesHexStr = (s: string): boolean => {
   return /^[a-f0-9]{128}$/.test(s);
 };
 
+export type EventVerifier = (event: NostrEvent) => boolean | Promise<boolean>;
+
 type CompiledFilter = {
   ids: Set<string> | undefined;
   kinds: Set<number> | undefined;
