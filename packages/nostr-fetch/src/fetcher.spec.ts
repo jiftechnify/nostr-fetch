@@ -308,17 +308,17 @@ describe.concurrent("NostrFetcher", () => {
     });
 
     test("verifies signature by default, with specified verifier", async () => {
-      const eventVerifier = vi.fn((ev: NostrEvent) => verifyEventSig(ev));
+      const spyEventVerifier = vi.fn((ev: NostrEvent) => Promise.resolve(verifyEventSig(ev)));
       const evIter = fetcher.allEventsIterator(
         ["wss://healthy/", "wss://invalid-sig/"],
         {},
         {},
-        { eventVerifier },
+        { eventVerifier: spyEventVerifier },
       );
       const evs = await collectAsyncIter(evIter);
       expect(evs.length).toBe(10);
       assert(evs.every(({ content }) => content.includes("healthy")));
-      expect(eventVerifier).toBeCalled();
+      expect(spyEventVerifier).toBeCalled();
     });
 
     test("skips signature verification if skipVerification is true", async () => {
