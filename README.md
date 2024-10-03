@@ -57,7 +57,7 @@ const postIter = fetcher.allEventsIterator(
     /* time range filter (since, until) */
     { since: nHoursAgo(24) },
     /* fetch options (optional) */
-    { skipVerification: true }
+    { skipFilterMatching: true }
 );
 for await (const ev of postIter) {
     console.log(ev.content);
