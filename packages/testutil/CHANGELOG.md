@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.16.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.15.1...v0.16.0) (2024-10-04)
+
+### Features
+
+* add `webSocketConstructor` to option for  NostrFetcher.init() ([6335b4d](https://github.com/jiftechnify/nostr-fetch/commit/6335b4dce996681b6742a1d4cbfbf3c94458620a))
+
 ## [0.15.1](https://github.com/jiftechnify/nostr-fetch/compare/v0.15.0...v0.15.1) (2024-03-20)
 
 **Note:** Version bump only for package @nostr-fetch/testutil

@@ -3,6 +3,25 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.16.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.15.1...v0.16.0) (2024-10-04)
+
+### Bug Fixes
+
+* make Filter type compatible with NDK ([d9fb6f4](https://github.com/jiftechnify/nostr-fetch/commit/d9fb6f4e4f71a5e7b6cf406a54b0183684a8e18b))
+* remove dependency to NodeJS.Timeout type ([986f6ae](https://github.com/jiftechnify/nostr-fetch/commit/986f6aefae8fef974853d395c2e0587b8ad38a07))
+* timer leak on aborting fetch ([707b9bd](https://github.com/jiftechnify/nostr-fetch/commit/707b9bdf138de1eecb4de5d79c91db6cce829912))
+* use Abortsignal.timeout instead ([bc55b11](https://github.com/jiftechnify/nostr-fetch/commit/bc55b11ac9986c54179ac35434272ca59db26639))
+
+### Features
+
+* add `webSocketConstructor` to option for  NostrFetcher.init() ([6335b4d](https://github.com/jiftechnify/nostr-fetch/commit/6335b4dce996681b6742a1d4cbfbf3c94458620a))
+* add eventVerifier to FetcherOptions, to make the event verification logic customizable ([75810b3](https://github.com/jiftechnify/nostr-fetch/commit/75810b34223d14aa8d10cdd81028a8000df43e0a))
+* add noopVerifier to exports ([72cbc17](https://github.com/jiftechnify/nostr-fetch/commit/72cbc1788c390793c13c46c3e0696daee5d9eead))
+* allow async verifier ([dfebbd5](https://github.com/jiftechnify/nostr-fetch/commit/dfebbd534b6abf9c2174991a3d78dfa0fe395a2e))
+* change option name: "abortSignal" -> "signal" ([3d5e8f8](https://github.com/jiftechnify/nostr-fetch/commit/3d5e8f84e1aa259de0ec4ae3de6349cdfc8cbe68))
+* deprecate eventKind constants ([edbcc08](https://github.com/jiftechnify/nostr-fetch/commit/edbcc081a85ae39ebf9dd659214acd316fac3b83))
+* give up checking tag query key syntax statically ([aa9d893](https://github.com/jiftechnify/nostr-fetch/commit/aa9d893d78945ec98a7a86290b4fd0142ae9cf15))
+
 ## [0.15.1](https://github.com/jiftechnify/nostr-fetch/compare/v0.15.0...v0.15.1) (2024-03-20)
 
 **Note:** Version bump only for package @nostr-fetch/kernel
