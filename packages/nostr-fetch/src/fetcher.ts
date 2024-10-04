@@ -182,6 +182,15 @@ export type FetchOptions<SeenOn extends boolean = false> = {
    *
    * @default undefined
    */
+  signal?: AbortSignal | undefined;
+
+  /**
+   * The `AbortSignal` used to abort an event fetching.
+   *
+   * @default undefined
+   *
+   * @deprecated Set `signal` option instead.
+   */
   abortSignal?: AbortSignal | undefined;
 
   /**
@@ -208,6 +217,7 @@ const defaultFetchOptions: Required<FetchOptions> = {
   statsListener: undefined,
   statsNotifIntervalMs: 1000,
   connectTimeoutMs: 5000,
+  signal: undefined,
   abortSignal: undefined,
   abortSubBeforeEoseTimeoutMs: 10000,
   limitPerReq: MAX_LIMIT_PER_REQ,
@@ -494,9 +504,11 @@ export class NostrFetcher {
       ...options,
     } as Required<AllEventsIterOptions<SeenOn>>;
 
-    // use smaller limit if backpressure is enabled
     const finalOpts: Required<AllEventsIterOptions<SeenOn>> = {
       ...filledOpts,
+      // if only `abortSignal` is specified, copy it to `signal`
+      signal: filledOpts.signal ?? filledOpts.abortSignal,
+      // use smaller limit if backpressure is enabled
       limitPerReq: filledOpts.enableBackpressure
         ? Math.min(filledOpts.limitPerReq, MAX_LIMIT_PER_REQ_IN_BACKPRESSURE)
         : filledOpts.limitPerReq,
@@ -512,11 +524,11 @@ export class NostrFetcher {
     timeRangeFilter: FetchTimeRangeFilter,
     options: Required<AllEventsIterOptions<SeenOn>>,
   ): AsyncIterable<NostrEventExt<SeenOn>> {
-    const [breakableSig, breakSignal] = makeBreakableSignal(options.abortSignal);
+    const [breakableSig, breakSignal] = makeBreakableSignal(options.signal);
     try {
       yield* this.#allEventsIterBody(relayUrls, filter, timeRangeFilter, {
         ...options,
-        abortSignal: breakableSig,
+        signal: breakableSig,
       });
     } finally {
       // this block will be executed when:
@@ -646,7 +658,7 @@ export class NostrFetcher {
             statsMngr?.setCurrentProgress(progTracker.calcTotalProgress());
           }
 
-          if (options.abortSignal?.aborted) {
+          if (options.signal?.aborted) {
             // termination contidion 2
             logger?.log("info", "aborted");
             statsMngr?.setRelayStatus(rurl, "aborted");
@@ -753,6 +765,8 @@ export class NostrFetcher {
     const finalOpts = {
       ...defaultFetchLatestOptions,
       ...options,
+      // if only `abortSignal` is specified, copy it to `signal`
+      signal: options.signal ?? options.abortSignal,
     } as Required<FetchLatestOptions<SeenOn>>;
     this.#debugLogger?.log("verbose", "finalOpts=%O", finalOpts);
 
@@ -860,7 +874,7 @@ export class NostrFetcher {
             statsMngr?.setRelayStatus(rurl, isAboutToAbort ? "aborted" : "completed");
             break;
           }
-          if (finalOpts.abortSignal?.aborted) {
+          if (finalOpts.signal?.aborted) {
             // termination condition 3
             logger?.log("info", "aborted");
             statsMngr?.setRelayStatus(rurl, "aborted");
@@ -1068,6 +1082,8 @@ export class NostrFetcher {
       ...filledOpts,
       // skip "full" verification if `reduceVerification` is enabled
       skipVerification: filledOpts.skipVerification || filledOpts.reduceVerification,
+      // if only `abortSignal` is specified, copy it to `signal`
+      signal: filledOpts.signal ?? filledOpts.abortSignal,
     };
 
     return this.#fetchLatestEventPerKeyWithCleanupOnBreak(
@@ -1089,11 +1105,11 @@ export class NostrFetcher {
     limit: number,
     options: Required<FetchLatestOptions<SeenOn>>,
   ): AsyncIterable<NostrEventListWithKey<K, SeenOn>> {
-    const [breakableSig, breakSignal] = makeBreakableSignal(options.abortSignal);
+    const [breakableSig, breakSignal] = makeBreakableSignal(options.signal);
     try {
       yield* this.#fetchLatestEventPerKeyBody(keyName, keysAndRelays, otherFilter, limit, {
         ...options,
-        abortSignal: breakableSig,
+        signal: breakableSig,
       });
     } finally {
       // this block will be executed when:
@@ -1237,7 +1253,7 @@ export class NostrFetcher {
             resolveAllOnEarlyBreak();
             break;
           }
-          if (options.abortSignal?.aborted) {
+          if (options.signal?.aborted) {
             // termination condition 3
             logger?.log("info", "aborted");
             statsMngr?.setRelayStatus(rurl, isAboutToAbort ? "aborted" : "completed");

@@ -5,6 +5,7 @@ import { RxNostrAdapter } from "./adapter";
 
 import { createRxNostr } from "rx-nostr";
 
+import { noopVerifier } from "@nostr-fetch/kernel/utils";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { WS } from "vitest-websocket-mock";
 
@@ -12,7 +13,8 @@ import { WS } from "vitest-websocket-mock";
 describe.skip("RxNostrAdapter", () => {
   describe("fetchTillEose", () => {
     const defaultOpts: FetchTillEoseOptions = {
-      abortSignal: undefined,
+      eventVerifier: noopVerifier,
+      signal: undefined,
       abortSubBeforeEoseTimeoutMs: 5000,
       connectTimeoutMs: 1000,
       skipVerification: false,
@@ -118,7 +120,7 @@ describe.skip("RxNostrAdapter", () => {
       }, 500);
 
       await backend.ensureRelays([url], { connectTimeoutMs: 1000 });
-      const iter = backend.fetchTillEose(url, {}, optsWithDefault({ abortSignal: ac.signal }));
+      const iter = backend.fetchTillEose(url, {}, optsWithDefault({ signal: ac.signal }));
       const evs = await collectAsyncIterUntilThrow(iter);
       expect(evs.length).toBeLessThan(10);
 

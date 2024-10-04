@@ -1,4 +1,5 @@
 import type { FetchTillEoseOptions, NostrFetcherBackend } from "@nostr-fetch/kernel/fetcherBackend";
+import { noopVerifier } from "@nostr-fetch/kernel/utils";
 import { collectAsyncIterUntilThrow } from "@nostr-fetch/testutil/asyncIter";
 import { setupMockRelayServer } from "@nostr-fetch/testutil/mockRelayServer";
 import { SimplePoolExt } from "./adapter";
@@ -10,7 +11,8 @@ import { WS } from "vitest-websocket-mock";
 describe("SimplePoolExt", () => {
   describe("fetchTillEose", () => {
     const defaultOpts: FetchTillEoseOptions = {
-      abortSignal: undefined,
+      eventVerifier: noopVerifier,
+      signal: undefined,
       abortSubBeforeEoseTimeoutMs: 5000,
       connectTimeoutMs: 1000,
       skipVerification: false,
@@ -113,7 +115,7 @@ describe("SimplePoolExt", () => {
       }, 500);
 
       await backend.ensureRelays([url], { connectTimeoutMs: 1000 });
-      const iter = backend.fetchTillEose(url, {}, optsWithDefault({ abortSignal: ac.signal }));
+      const iter = backend.fetchTillEose(url, {}, optsWithDefault({ signal: ac.signal }));
       const evs = await collectAsyncIterUntilThrow(iter);
       expect(evs.length).toBeLessThan(10);
 
