@@ -192,7 +192,7 @@ class FakeFetcherBackend implements NostrFetcherBackend {
     };
 
     // auto abortion
-    let subAutoAbortTimer: NodeJS.Timeout | undefined;
+    let subAutoAbortTimer: ReturnType<typeof setTimeout> | undefined;
     const resetAutoAbortTimer = () => {
       if (subAutoAbortTimer !== undefined) {
         clearTimeout(subAutoAbortTimer);
