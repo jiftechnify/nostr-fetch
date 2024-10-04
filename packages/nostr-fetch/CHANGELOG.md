@@ -3,6 +3,29 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.16.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.15.1...v0.16.0) (2024-10-04)
+
+### Bug Fixes
+
+* allow async-iter fetchers do clean up on early return/break ([f79e6ef](https://github.com/jiftechnify/nostr-fetch/commit/f79e6ef046924407ae209ac59b97af4d407a86ab))
+* change default value for webSocketConstructor to `globalThis.WebSocket` so that correct error message is shown ([d587d2b](https://github.com/jiftechnify/nostr-fetch/commit/d587d2bd5e47cea8cf8d170d72c9c11abd4ba1ff))
+* event ordering; event with lower id comes first if two events have the same created_at ([70626e5](https://github.com/jiftechnify/nostr-fetch/commit/70626e56d464df2d8affac11e3fb214e99189a41))
+* remove dependency to NodeJS.Timeout type ([986f6ae](https://github.com/jiftechnify/nostr-fetch/commit/986f6aefae8fef974853d395c2e0587b8ad38a07))
+* Revert "fix: respect NIP-01's note on reconnections to relays" ([c3d2586](https://github.com/jiftechnify/nostr-fetch/commit/c3d25861931fbb5009f8b66d4c9cf056019615af))
+* timer leak on aborting fetch ([707b9bd](https://github.com/jiftechnify/nostr-fetch/commit/707b9bdf138de1eecb4de5d79c91db6cce829912))
+* use specified verifier for reduced verification ([6dc2e22](https://github.com/jiftechnify/nostr-fetch/commit/6dc2e221124e6a0cf5e76c6495cece0cc06c92a7))
+* use specified verifier for reduced verification ([37f53d1](https://github.com/jiftechnify/nostr-fetch/commit/37f53d1b03f3a6fad8390ed2f30beeba817844a6))
+
+### Features
+
+* add `webSocketConstructor` to option for  NostrFetcher.init() ([6335b4d](https://github.com/jiftechnify/nostr-fetch/commit/6335b4dce996681b6742a1d4cbfbf3c94458620a))
+* add eventVerifier to FetcherOptions, to make the event verification logic customizable ([75810b3](https://github.com/jiftechnify/nostr-fetch/commit/75810b34223d14aa8d10cdd81028a8000df43e0a))
+* add noopVerifier to exports ([72cbc17](https://github.com/jiftechnify/nostr-fetch/commit/72cbc1788c390793c13c46c3e0696daee5d9eead))
+* allow async verifier ([dfebbd5](https://github.com/jiftechnify/nostr-fetch/commit/dfebbd534b6abf9c2174991a3d78dfa0fe395a2e))
+* change option name: "abortSignal" -> "signal" ([3d5e8f8](https://github.com/jiftechnify/nostr-fetch/commit/3d5e8f84e1aa259de0ec4ae3de6349cdfc8cbe68))
+* deprecate skipVerification & reduceVerification options ([6a43d71](https://github.com/jiftechnify/nostr-fetch/commit/6a43d7156386fc4eb57340dbefdb146bc5ce8008))
+* give up checking tag query key syntax statically ([aa9d893](https://github.com/jiftechnify/nostr-fetch/commit/aa9d893d78945ec98a7a86290b4fd0142ae9cf15))
+
 ## [0.15.1](https://github.com/jiftechnify/nostr-fetch/compare/v0.15.0...v0.15.1) (2024-03-20)
 
 **Note:** Version bump only for package nostr-fetch
