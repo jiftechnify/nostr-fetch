@@ -311,6 +311,9 @@ class RelaySubscription implements Subscription {
     for (const s of Object.values(this.#listeners)) {
       s.clear();
     }
+    if (this.#abortSubTimer !== undefined) {
+      clearTimeout(this.#abortSubTimer);
+    }
   }
 
   #resetAbortSubTimer() {

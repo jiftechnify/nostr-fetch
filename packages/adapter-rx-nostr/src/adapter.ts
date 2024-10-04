@@ -1,18 +1,18 @@
-import { setupSubscriptionAbortion } from "@nostr-fetch/kernel/adapterHelpers";
+import { setupSubscriptionAutoAbortion } from "@nostr-fetch/kernel/adapterHelpers";
 import { Channel } from "@nostr-fetch/kernel/channel";
 import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
 import {
-  FetchTillEoseFailedSignal,
   type EnsureRelaysOptions,
+  FetchTillEoseFailedSignal,
   type FetchTillEoseOptions,
   type NostrFetcherBackend,
   type NostrFetcherCommonOptions,
 } from "@nostr-fetch/kernel/fetcherBackend";
 import {
-  FilterMatcher,
-  isNoticeForReqError,
   type Filter,
+  FilterMatcher,
   type NostrEvent,
+  isNoticeForReqError,
 } from "@nostr-fetch/kernel/nostr";
 import { normalizeRelayUrl, normalizeRelayUrlSet } from "@nostr-fetch/kernel/utils";
 
@@ -138,7 +138,7 @@ export class RxNostrAdapter implements NostrFetcherBackend {
       noticeSub.unsubscribe();
       errSub.unsubscribe();
     };
-    const resetAutoAbortTimer = setupSubscriptionAbortion(closeSub, tx, options);
+    const resetAutoAbortTimer = setupSubscriptionAutoAbortion(closeSub, tx, options);
 
     let observable = this.#rxNostr.use(req, { scope: [relayUrl] });
     if (!options.skipVerification) {

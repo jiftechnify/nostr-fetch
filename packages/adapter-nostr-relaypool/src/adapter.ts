@@ -1,14 +1,14 @@
-import { setupSubscriptionAbortion } from "@nostr-fetch/kernel/adapterHelpers";
+import { setupSubscriptionAutoAbortion } from "@nostr-fetch/kernel/adapterHelpers";
 import { Channel } from "@nostr-fetch/kernel/channel";
 import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
 import {
-  FetchTillEoseFailedSignal,
   type EnsureRelaysOptions,
+  FetchTillEoseFailedSignal,
   type FetchTillEoseOptions,
   type NostrFetcherBackend,
   type NostrFetcherCommonOptions,
 } from "@nostr-fetch/kernel/fetcherBackend";
-import { isNoticeForReqError, type Filter, type NostrEvent } from "@nostr-fetch/kernel/nostr";
+import { type Filter, type NostrEvent, isNoticeForReqError } from "@nostr-fetch/kernel/nostr";
 import { normalizeRelayUrlSet, withTimeout } from "@nostr-fetch/kernel/utils";
 
 import type { RelayPool } from "nostr-relaypool";
@@ -202,7 +202,7 @@ export class NRTPoolAdapter implements NostrFetcherBackend {
     this.addListener(relayUrl, "error", onError);
 
     // setup abortion
-    const resetAutoAbortTimer = setupSubscriptionAbortion(closeSub, tx, options);
+    const resetAutoAbortTimer = setupSubscriptionAutoAbortion(closeSub, tx, options);
 
     // start subscription
     const unsub = this.#pool.subscribe(

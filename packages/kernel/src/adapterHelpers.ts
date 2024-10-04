@@ -24,43 +24,51 @@ import type { NostrEvent } from "./nostr";
  *   sub.close();
  *   // any cleanups for subscription go here
  * }
- * const resetAutoAbortTimer = setupSubscriptionAbortion(closeSub, tx, options);
+ * const resetAutoAbortTimer = setupSubscriptionAutoAbortion(closeSub, tx, options);
  *
+ * // make sure that you call the function returned from
+ * // `setupSubscriptionAutoAbortion` each time you received an event!
  * sub.on("event", (ev: NostrEvent) => {
  *   tx.send(ev);
- *   resetAutoAbortion(); // please call the function returned from `setupSubscriptionAbortion` each time you received an event!
+ *   resetAutoAbortion();
  * });
  * ...
  * ```
  */
-export const setupSubscriptionAbortion = (
+export const setupSubscriptionAutoAbortion = (
   closeSub: () => void,
   tx: ChannelSender<NostrEvent>,
   options: FetchTillEoseOptions,
 ): (() => void) => {
   // auto abortion
   let subAutoAbortTimer: ReturnType<typeof setTimeout> | undefined;
-  const resetAutoAbortTimer = () => {
+  const clearTimer = () => {
     if (subAutoAbortTimer !== undefined) {
       clearTimeout(subAutoAbortTimer);
       subAutoAbortTimer = undefined;
     }
+  };
+
+  const resetTimer = () => {
+    clearTimer();
     subAutoAbortTimer = setTimeout(() => {
       closeSub();
       tx.error(new FetchTillEoseAbortedSignal("subscription aborted before EOSE due to timeout"));
     }, options.abortSubBeforeEoseTimeoutMs);
   };
-  resetAutoAbortTimer(); // initiate subscription auto abortion timer
+  resetTimer(); // initiate subscription auto abortion timer
 
   // handle abortion by AbortController
   if (options.abortSignal?.aborted) {
     closeSub();
+    clearTimer();
     tx.error(new FetchTillEoseAbortedSignal("subscription aborted by AbortController"));
   }
   options.abortSignal?.addEventListener("abort", () => {
     closeSub();
+    clearTimer();
     tx.error(new FetchTillEoseAbortedSignal("subscription aborted by AbortController"));
   });
 
-  return resetAutoAbortTimer;
+  return resetTimer;
 };
