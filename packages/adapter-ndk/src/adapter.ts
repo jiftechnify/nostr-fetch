@@ -1,14 +1,14 @@
-import { setupSubscriptionAbortion } from "@nostr-fetch/kernel/adapterHelpers";
+import { setupSubscriptionAutoAbortion } from "@nostr-fetch/kernel/adapterHelpers";
 import { Channel } from "@nostr-fetch/kernel/channel";
 import { DebugLogger } from "@nostr-fetch/kernel/debugLogger";
 import {
-  FetchTillEoseFailedSignal,
   type EnsureRelaysOptions,
+  FetchTillEoseFailedSignal,
   type FetchTillEoseOptions,
   type NostrFetcherBackend,
   type NostrFetcherCommonOptions,
 } from "@nostr-fetch/kernel/fetcherBackend";
-import { isNoticeForReqError, type Filter, type NostrEvent } from "@nostr-fetch/kernel/nostr";
+import { type Filter, type NostrEvent, isNoticeForReqError } from "@nostr-fetch/kernel/nostr";
 import { normalizeRelayUrl, normalizeRelayUrlSet, withTimeout } from "@nostr-fetch/kernel/utils";
 
 import type NDK from "@nostr-dev-kit/ndk";
@@ -161,7 +161,7 @@ export class NDKAdapter implements NostrFetcherBackend {
     relay.on("notice", onNotice);
 
     // setup abortion
-    const resetAutoAbortTimer = setupSubscriptionAbortion(closeSub, tx, options);
+    const resetAutoAbortTimer = setupSubscriptionAutoAbortion(closeSub, tx, options);
 
     // handle subscription events
     sub.on("event", (ndkEv: NDKEvent) => {
