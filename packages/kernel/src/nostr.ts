@@ -323,16 +323,10 @@ export const querySupportedNips = async (relayUrl: string): Promise<Set<number>>
   try {
     const httpUrl = toHttpUrl(relayUrl);
 
-    const abortCtrl = new AbortController();
-    const abortTimer = setTimeout(() => {
-      abortCtrl.abort();
-    }, 5000);
-
     const resp = await fetch(httpUrl, {
       headers: { Accept: "application/nostr+json" },
-      signal: abortCtrl.signal,
+      signal: AbortSignal.timeout(5000),
     });
-    clearTimeout(abortTimer);
 
     if (!resp.ok) {
       console.error("relay information response is not ok");
