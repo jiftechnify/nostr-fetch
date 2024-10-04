@@ -59,12 +59,12 @@ export const setupSubscriptionAutoAbortion = (
   resetTimer(); // initiate subscription auto abortion timer
 
   // handle abortion by AbortController
-  if (options.abortSignal?.aborted) {
+  if (options.signal?.aborted) {
     closeSub();
     clearTimer();
     tx.error(new FetchTillEoseAbortedSignal("subscription aborted by AbortController"));
   }
-  options.abortSignal?.addEventListener("abort", () => {
+  options.signal?.addEventListener("abort", () => {
     closeSub();
     clearTimer();
     tx.error(new FetchTillEoseAbortedSignal("subscription aborted by AbortController"));

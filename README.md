@@ -177,7 +177,7 @@ const fetcher = NostrFetcher.withCustomPool(simplePoolAdapter(pool));
 | [`@nostr-dev-kit/ndk`](https://github.com/nostr-dev-kit/ndk)          | `NDK`            | `@nostr-fetch/adapter-ndk`             | `ndkAdapter`        |
 | [`rx-nostr`](https://github.com/penpenpng/rx-nostr)                   | `RxNostr`        | `@nostr-fetch/adapter-rx-nostr`        | `rxNostrAdapter`    |
 
-### Cancelling by AbortController
+### Cancelling by AbortSignal
 
 ```ts
 import { NostrFecher } from "nostr-fetch"
@@ -189,8 +189,8 @@ const evIter = fetcher.allEventsIterator(
     relayUrls,
     {/* filter */},
     {/* time range */},
-    /* pass an `AbortSsignal` here to enable abortion! */
-    { abortSignal: AbortSignal.timeout(1000) },
+    /* pass an `AbortSignal` here to enable cancellation! */
+    { signal: AbortSignal.timeout(1000) },
 );
 
 for await (const ev of evIter) {

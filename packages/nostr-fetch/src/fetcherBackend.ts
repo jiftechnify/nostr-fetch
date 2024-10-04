@@ -164,7 +164,7 @@ export class DefaultFetcherBackend implements NostrFetcherBackend {
     }
 
     // handle abortion
-    if (options.abortSignal?.aborted) {
+    if (options.signal?.aborted) {
       closeSub();
       tx.error(
         new FetchTillEoseAbortedSignal(
@@ -172,7 +172,7 @@ export class DefaultFetcherBackend implements NostrFetcherBackend {
         ),
       );
     }
-    options.abortSignal?.addEventListener("abort", () => {
+    options.signal?.addEventListener("abort", () => {
       closeSub();
       tx.error(
         new FetchTillEoseAbortedSignal(

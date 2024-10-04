@@ -19,7 +19,7 @@ describe("DefaultFetcherBackend", () => {
   describe("fetchTillEose", () => {
     const defaultOpts: FetchTillEoseOptions = {
       eventVerifier: verifyEventSig,
-      abortSignal: undefined,
+      signal: undefined,
       abortSubBeforeEoseTimeoutMs: 5000,
       connectTimeoutMs: 1000,
       skipVerification: false,
@@ -143,7 +143,7 @@ describe("DefaultFetcherBackend", () => {
       }, 500);
 
       await backend.ensureRelays([url], { connectTimeoutMs: 1000 });
-      const iter = backend.fetchTillEose(url, {}, optsWithDefault({ abortSignal: ac.signal }));
+      const iter = backend.fetchTillEose(url, {}, optsWithDefault({ signal: ac.signal }));
       const evs = await collectAsyncIterUntilThrow(iter);
       expect(evs.length).toBeLessThan(10);
 

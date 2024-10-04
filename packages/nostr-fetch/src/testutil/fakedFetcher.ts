@@ -193,20 +193,31 @@ class FakeFetcherBackend implements NostrFetcherBackend {
 
     // auto abortion
     let subAutoAbortTimer: ReturnType<typeof setTimeout> | undefined;
-    const resetAutoAbortTimer = () => {
+    const clearTimer = () => {
+      if (subAutoAbortTimer !== undefined) {
+        clearTimeout(subAutoAbortTimer);
+        subAutoAbortTimer = undefined;
+      }
+    };
+
+    const resetTimer = () => {
       if (subAutoAbortTimer !== undefined) {
         clearTimeout(subAutoAbortTimer);
         subAutoAbortTimer = undefined;
       }
       subAutoAbortTimer = setTimeout(() => abortSub(), options.abortSubBeforeEoseTimeoutMs);
     };
-    resetAutoAbortTimer(); // initiate subscription auto abortion timer
+    resetTimer(); // initiate subscription auto abortion timer
 
     // handle abortion by AbortController
-    if (options.abortSignal?.aborted) {
+    if (options.signal?.aborted) {
       abortSub();
+      clearTimer();
     }
-    options.abortSignal?.addEventListener("abort", () => abortSub());
+    options.signal?.addEventListener("abort", () => {
+      abortSub();
+      clearTimer();
+    });
 
     return iter;
   }

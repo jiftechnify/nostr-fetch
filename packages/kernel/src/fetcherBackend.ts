@@ -12,7 +12,7 @@ export type FetchTillEoseOptions = {
   skipFilterMatching: boolean;
   connectTimeoutMs: number;
   abortSubBeforeEoseTimeoutMs: number;
-  abortSignal: AbortSignal | undefined;
+  signal: AbortSignal | undefined;
 };
 
 /**

@@ -15,7 +15,7 @@ const main = async () => {
     {
       since: nHoursAgo(24),
     },
-    { abortSignal: AbortSignal.timeout(1000) }, // pass an `AbortSignal` to enable cancallation
+    { signal: AbortSignal.timeout(1000) }, // pass an `AbortSignal` to enable cancallation
   );
 
   for await (const ev of evIter) {
