@@ -3,20 +3,24 @@ A utility library that allows JS/TS apps to effortlessly fetch *past* events fro
 
 ## Installation
 
+### for npm Project
+
 ```
 npm install nostr-fetch
-
-yarn add nostr-fetch
-
-pnpm add nostr-fetch
 ```
 
-### Using from Browsers without Bundlers
+### for Deno Project
+
+```
+deno add npm:nostr-fetch
+```
+
+### for Browser Apps, without Bundlers
 You can also use nostr-fetch in your HTML via `<script>` tags, thanks to [jsDelivr](https://www.jsdelivr.com/).
 
 ```html
 <script type="module">
-  import { NostrFetcher } from "https://cdn.jsdelivr.net/npm/nostr-fetch@0.15.1/+esm"
+  import { NostrFetcher } from "https://cdn.jsdelivr.net/npm/nostr-fetch@0.16.0/+esm"
   // ...
 </script>
 ```
@@ -175,7 +179,7 @@ const fetcher = NostrFetcher.withCustomPool(simplePoolAdapter(pool));
 | [`nostr-tools`](https://github.com/nbd-wtf/nostr-tools) (v2)          | `SimplePool`     | `@nostr-fetch/adapter-nostr-tools-v2`  | `simplePoolAdapter` |
 | [`nostr-relaypool`](https://github.com/adamritter/nostr-relaypool-ts) | `RelayPool`      | `@nostr-fetch/adapter-nostr-relaypool` | `relayPoolAdapter`  |
 | [`@nostr-dev-kit/ndk`](https://github.com/nostr-dev-kit/ndk)          | `NDK`            | `@nostr-fetch/adapter-ndk`             | `ndkAdapter`        |
-| [`rx-nostr`](https://github.com/penpenpng/rx-nostr)                   | `RxNostr`        | `@nostr-fetch/adapter-rx-nostr`        | `rxNostrAdapter`    |
+| [`rx-nostr`](https://github.com/penpenpng/rx-nostr) (v1)              | `RxNostr`        | `@nostr-fetch/adapter-rx-nostr`        | `rxNostrAdapter`    |
 
 ### Cancelling by AbortSignal
 
@@ -360,7 +364,7 @@ Returns `undefined` if no event matching the filter exists in any relay.
 public fetchLatestEventsPerKey<KN extends FetchFilterKeyName>(
     keyName: KN,
     keysAndRelays: KeysAndRelays<KN>,
-    otherFilter: Omit<FetchFilter, KN>,
+    otherFilter: FetchFilter,
     limit: number,
     options?: FetchLatestOptions
 ): AsyncIterable<NostrEventListWithKey<KN>>
@@ -389,7 +393,7 @@ Each array of events in the result are sorted in "newest to oldest" order.
 public fetchLatestEventsPerKey<KN extends FetchFilterKeyName>(
     keyName: KN,
     keysAndRelays: KeysAndRelays<KN>,
-    otherFilter: Omit<FetchFilter, KN>,
+    otherFilter: FetchFilter,
     options?: FetchLatestOptions
 ): AsyncIterable<NostrEventWithKey<KN>>
 ```
