@@ -243,6 +243,46 @@ export class KeyRelayMatrix<K extends string | number, V> {
   }
 }
 
+/**
+ * Takes an `AbortSignal` and makes a new `AbortSignal` and a "breaker" function.
+ *
+ * The signal returned is aborted when:
+ * - the original signal is aborted, or
+ * - the "breaker" function is called.
+ *
+ * The "breaker" function is designed to be called in a `finally` block:
+ * ```ts
+ * const f = (origSignal: AbortSignal) => {
+ *   const [signal, breakSignal] = makeBreakableSignal(origSignal);
+ *   try {
+ *     // ...
+ *   } finally {
+ *     breakSignal();
+ *   }
+ * }
+ */
+export const makeBreakableSignal = (signal?: AbortSignal): [AbortSignal, () => void] => {
+  const ac = new AbortController();
+
+  if (signal === undefined) {
+    return [ac.signal, () => ac.abort()];
+  }
+
+  if (AbortSignal.any !== undefined) {
+    const breakable = AbortSignal.any([signal, ac.signal]);
+    return [breakable, () => ac.abort()];
+  }
+
+  const onAbort = () => {
+    ac.abort();
+  };
+  signal.addEventListener("abort", onAbort, { once: true });
+  ac.signal.addEventListener("abort", () => {
+    signal.removeEventListener("abort", onAbort);
+  });
+  return [ac.signal, () => ac.abort()];
+};
+
 export interface RelayCapabilityChecker {
   relaySupportsNips(relayUrl: string, requiredNips: number[]): Promise<boolean>;
 }
