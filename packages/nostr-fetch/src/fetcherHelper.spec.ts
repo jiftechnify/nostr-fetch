@@ -1,7 +1,41 @@
+import type { NostrEvent } from "@nostr-fetch/kernel/nostr";
 import { describe, expect, test } from "vitest";
-import { EventBuckets, KeyRelayMatrix, initSeenEvents } from "./fetcherHelper";
+import { EventBuckets, KeyRelayMatrix, compareNostrEvents, initSeenEvents } from "./fetcherHelper";
 
-const dummyEvent = (id: string) => {
+const dummyEventWithCreatedAtAndId = (created_at: number, id: string): NostrEvent => ({
+  id,
+  pubkey: "",
+  kind: 0,
+  content: "",
+  tags: [],
+  created_at,
+  sig: "",
+});
+
+describe("compareNostrEvents", () => {
+  test("compares Nostr events correctly", () => {
+    const older = dummyEventWithCreatedAtAndId(100, "0");
+    const newer1 = dummyEventWithCreatedAtAndId(200, "1");
+    const newer2 = dummyEventWithCreatedAtAndId(200, "2");
+
+    // newer event comes first
+    expect(compareNostrEvents(newer1, older)).toBeLessThan(0);
+    expect(compareNostrEvents(newer2, older)).toBeLessThan(0);
+    expect(compareNostrEvents(older, newer1)).toBeGreaterThan(0);
+    expect(compareNostrEvents(older, newer2)).toBeGreaterThan(0);
+
+    // event with lower id comes first if they have the same created_at
+    expect(compareNostrEvents(newer1, newer2)).toBeLessThan(0);
+    expect(compareNostrEvents(newer2, newer1)).toBeGreaterThan(0);
+
+    // returns 0 if the events are the same
+    expect(compareNostrEvents(older, older)).toBe(0);
+    expect(compareNostrEvents(newer1, newer1)).toBe(0);
+    expect(compareNostrEvents(newer2, newer2)).toBe(0);
+  });
+});
+
+const dummyEventWithId = (id: string) => {
   return {
     id,
     pubkey: "",
@@ -23,8 +57,8 @@ describe("EventBuckets", () => {
   });
 
   test("add() works correctly", () => {
-    const e1 = dummyEvent("1");
-    const e2 = dummyEvent("2");
+    const e1 = dummyEventWithId("1");
+    const e2 = dummyEventWithId("2");
 
     const buckets = new EventBuckets(["alice", "bob"], 2);
 
@@ -45,7 +79,7 @@ describe("EventBuckets", () => {
   });
 
   test("calcKeyAndLimitForNextReq() works correctly", () => {
-    const e = dummyEvent("1");
+    const e = dummyEventWithId("1");
 
     const buckets = new EventBuckets(["alice", "bob"], 2);
     expect(buckets.calcKeysAndLimitForNextReq()).toEqual({
@@ -111,15 +145,15 @@ describe("SeenEvents", () => {
   test("SeenOnTable (withSeenOn = true) works", () => {
     const seenEvents = initSeenEvents(true);
 
-    const res1 = seenEvents.report(dummyEvent("1"), "relay1");
+    const res1 = seenEvents.report(dummyEventWithId("1"), "relay1");
     expect(res1.hasSeen).toBe(false);
     expect(res1.seenOn).toEqual(["relay1"]);
 
-    const res2 = seenEvents.report(dummyEvent("2"), "relay2");
+    const res2 = seenEvents.report(dummyEventWithId("2"), "relay2");
     expect(res2.hasSeen).toBe(false);
     expect(res2.seenOn).toEqual(["relay2"]);
 
-    const res3 = seenEvents.report(dummyEvent("1"), "relay2");
+    const res3 = seenEvents.report(dummyEventWithId("1"), "relay2");
     expect(res3.hasSeen).toBe(true);
     expect(res3.seenOn).toEqual(["relay1", "relay2"]);
 
@@ -131,14 +165,14 @@ describe("SeenEvents", () => {
   test("SeenEventsSet (withSeenOn = false) works", () => {
     const seenEvents = initSeenEvents(false);
 
-    const res1 = seenEvents.report(dummyEvent("1"), "relay1");
+    const res1 = seenEvents.report(dummyEventWithId("1"), "relay1");
     expect(res1.hasSeen).toBe(false);
     expect(res1.seenOn).toBeUndefined();
 
-    const res2 = seenEvents.report(dummyEvent("2"), "relay2");
+    const res2 = seenEvents.report(dummyEventWithId("2"), "relay2");
     expect(res2.hasSeen).toBe(false);
 
-    const res3 = seenEvents.report(dummyEvent("1"), "relay2");
+    const res3 = seenEvents.report(dummyEventWithId("1"), "relay2");
     expect(res3.hasSeen).toBe(true);
   });
 });
