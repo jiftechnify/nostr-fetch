@@ -35,6 +35,7 @@ import {
   getKeysOfEvent,
   initDefaultRelayCapChecker,
   initSeenEvents,
+  makeBreakableSignal,
 } from "./fetcherHelper";
 import {
   type FetchFilter,
@@ -502,7 +503,29 @@ export class NostrFetcher {
     };
     this.#debugLogger?.log("verbose", "finalOpts=%O", finalOpts);
 
-    return this.#allEventsIterBody(relayUrls, filter, timeRangeFilter, finalOpts);
+    return this.#allEventsIterWithCleanupOnBreak(relayUrls, filter, timeRangeFilter, finalOpts);
+  }
+
+  async *#allEventsIterWithCleanupOnBreak<SeenOn extends boolean>(
+    relayUrls: string[],
+    filter: FetchFilter,
+    timeRangeFilter: FetchTimeRangeFilter,
+    options: Required<AllEventsIterOptions<SeenOn>>,
+  ): AsyncIterable<NostrEventExt<SeenOn>> {
+    const [breakableSig, breakSignal] = makeBreakableSignal(options.abortSignal);
+    try {
+      yield* this.#allEventsIterBody(relayUrls, filter, timeRangeFilter, {
+        ...options,
+        abortSignal: breakableSig,
+      });
+    } finally {
+      // this block will be executed when:
+      // - iteration is finished normally (whether throws or not)
+      // - iteration is terminated early by break/return in a for-await-of loop
+      //
+      // in second case, breakSignal() causes the "cleanup" (abortion of event fetching by backend).
+      breakSignal();
+    }
   }
 
   async *#allEventsIterBody<SeenOn extends boolean>(
@@ -1047,7 +1070,39 @@ export class NostrFetcher {
       skipVerification: filledOpts.skipVerification || filledOpts.reduceVerification,
     };
 
-    return this.#fetchLatestEventPerKeyBody(keyName, keysAndRelays, otherFilter, limit, finalOpts);
+    return this.#fetchLatestEventPerKeyWithCleanupOnBreak(
+      keyName,
+      keysAndRelays,
+      otherFilter,
+      limit,
+      finalOpts,
+    );
+  }
+
+  async *#fetchLatestEventPerKeyWithCleanupOnBreak<
+    K extends FetchFilterKeyName,
+    SeenOn extends boolean = false,
+  >(
+    keyName: K,
+    keysAndRelays: KeysAndRelays<K>,
+    otherFilter: FetchFilter,
+    limit: number,
+    options: Required<FetchLatestOptions<SeenOn>>,
+  ): AsyncIterable<NostrEventListWithKey<K, SeenOn>> {
+    const [breakableSig, breakSignal] = makeBreakableSignal(options.abortSignal);
+    try {
+      yield* this.#fetchLatestEventPerKeyBody(keyName, keysAndRelays, otherFilter, limit, {
+        ...options,
+        abortSignal: breakableSig,
+      });
+    } finally {
+      // this block will be executed when:
+      // - iteration is finished normally (whether throws or not)
+      // - iteration is terminated early by break/return in a for-await-of loop
+      //
+      // in second case, breakSignal() causes the "cleanup" (abortion of event fetching by backend).
+      breakSignal();
+    }
   }
 
   async *#fetchLatestEventPerKeyBody<K extends FetchFilterKeyName, SeenOn extends boolean = false>(

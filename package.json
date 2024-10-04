@@ -4,7 +4,9 @@
   "private": true,
   "license": "MIT",
   "type": "module",
-  "workspaces": ["packages/*"],
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "lint": "turbo lint --filter=!@nostr-fetch/examples",
     "fix": "turbo fix --filter=!@nostr-fetch/examples",
@@ -33,7 +35,7 @@
     "prettier": "^3.0.0",
     "tsx": "^4.6.2",
     "turbo": "^1.11.1",
-    "typescript": "^5.1.0",
+    "typescript": "^5.6.2",
     "vitest": "^2.1.2",
     "vitest-websocket-mock": "^0.4.0",
     "websocket-polyfill": "^0.0.3",
