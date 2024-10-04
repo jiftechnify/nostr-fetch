@@ -14,7 +14,7 @@ import {
 } from "@nostr-fetch/kernel/utils";
 import { type FakeEventsSpec, generateFakeEvents } from "@nostr-fetch/testutil/fakeEvent";
 import { NostrFetcher } from "../fetcher";
-import { type RelayCapabilityChecker, createdAtDesc } from "../fetcherHelper";
+import { type RelayCapabilityChecker, compareNostrEvents } from "../fetcherHelper";
 
 import { setTimeout as delay } from "node:timers/promises";
 
@@ -71,7 +71,7 @@ class FakeRelay {
     };
 
     const evs = spec.eventsSpec.flatMap((spec) => generateFakeEvents(spec));
-    this.#events = evs.sort(createdAtDesc);
+    this.#events = evs.sort(compareNostrEvents);
   }
 
   async connect(): Promise<void> {

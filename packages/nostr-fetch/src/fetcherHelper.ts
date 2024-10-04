@@ -102,9 +102,16 @@ export function checkIfTagQueriesAreValid<T>(
 }
 
 /**
- * comparator represents descending order by `created_at` of events (a.k.a. "newest to oldest" order)
+ * The comparator for Nostr events. Pass it into `sort()` to sort Nostr events in "newest to oldest" order.
+ *
+ * If two events have the same `created_at`, the event with the lexicographically lower `id` should come first.
  */
-export const createdAtDesc = (a: NostrEvent, b: NostrEvent): number => b.created_at - a.created_at;
+export const compareNostrEvents = (a: NostrEvent, b: NostrEvent): number => {
+  if (a.created_at !== b.created_at) {
+    return b.created_at - a.created_at;
+  }
+  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+};
 
 /**
  * get keys corresponds to `keyName` from the event.

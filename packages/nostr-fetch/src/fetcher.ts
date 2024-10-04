@@ -31,7 +31,7 @@ import {
   checkIfTagQueriesAreValid,
   checkIfTimeRangeIsValid,
   checkIfTrue,
-  createdAtDesc,
+  compareNostrEvents,
   getKeysOfEvent,
   initDefaultRelayCapChecker,
   initSeenEvents,
@@ -699,7 +699,7 @@ export class NostrFetcher {
 
     // sort events in "newest to oldest" order if `sort` options is specified
     if (finalOpts.sort) {
-      res.sort(createdAtDesc);
+      res.sort(compareNostrEvents);
     }
     return res;
   }
@@ -863,7 +863,7 @@ export class NostrFetcher {
     for await (const ev of chIter) {
       evs.push(ev);
     }
-    evs.sort(createdAtDesc);
+    evs.sort(compareNostrEvents);
 
     // take latest events
     const res = (async () => {
@@ -1222,7 +1222,7 @@ export class NostrFetcher {
           }
           return res;
         })();
-        evsDeduped.sort(createdAtDesc);
+        evsDeduped.sort(compareNostrEvents);
 
         // take latest events
         const res = (async () => {
