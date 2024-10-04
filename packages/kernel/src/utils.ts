@@ -93,7 +93,7 @@ export const withTimeout = async <T>(
   timeoutMs: number,
   msgOnTimeout: string,
 ): Promise<T> => {
-  let timer: NodeJS.Timeout;
+  let timer: ReturnType<typeof setTimeout>;
   const timeout = new Promise<never>((_, reject) => {
     timer = setTimeout(() => reject(Error(msgOnTimeout)), timeoutMs);
   });

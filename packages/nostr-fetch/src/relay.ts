@@ -64,7 +64,7 @@ class RelayImpl implements Relay {
   #subscriptions: Map<string, RelaySubscription> = new Map();
 
   #msgQueue: string[] = [];
-  #handleMsgsInterval: NodeJS.Timeout | undefined;
+  #handleMsgsInterval: ReturnType<typeof setInterval> | undefined;
 
   constructor(relayUrl: string, options: RelayOptions) {
     this.#relayUrl = relayUrl;
@@ -273,7 +273,7 @@ class RelaySubscription implements Subscription {
     closed: new Set(),
   };
 
-  #abortSubTimer: NodeJS.Timeout | undefined;
+  #abortSubTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(relay: RelayImpl, subId: string, filters: Filter[], options: SubscriptionOptions) {
     this.#relay = relay;
