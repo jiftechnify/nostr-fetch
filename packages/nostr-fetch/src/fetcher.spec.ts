@@ -1,7 +1,7 @@
 import type { NostrEvent } from "@nostr-fetch/kernel/nostr";
 import { collectAsyncIter } from "@nostr-fetch/testutil/asyncIter";
 import { pubkeyFromAuthorName } from "@nostr-fetch/testutil/fakeEvent";
-import { createdAtDesc } from "./fetcherHelper";
+import { compareNostrEvents } from "./fetcherHelper";
 import { FakedFetcherBuilder } from "./testutil/fakedFetcher";
 
 import { verifyEventSig } from "@nostr-fetch/kernel/crypto";
@@ -450,7 +450,7 @@ describe.concurrent("NostrFetcher", () => {
         {},
         { sort: true },
       );
-      const sorted = evs.slice().sort(createdAtDesc);
+      const sorted = evs.slice().sort(compareNostrEvents);
       expect(evs).toStrictEqual(sorted);
     });
 
@@ -488,7 +488,7 @@ describe.concurrent("NostrFetcher", () => {
       expect(evs.length).toBe(20);
       assert(evs.every(({ content }) => content.includes("latest")));
 
-      const sorted = evs.slice().sort(createdAtDesc);
+      const sorted = evs.slice().sort(compareNostrEvents);
       expect(evs).toStrictEqual(sorted);
     });
 
@@ -500,7 +500,7 @@ describe.concurrent("NostrFetcher", () => {
       expect(evs.length).toBe(20);
       assert(evs.every(({ content }) => content.includes("middle")));
 
-      const sorted = evs.slice().sort(createdAtDesc);
+      const sorted = evs.slice().sort(compareNostrEvents);
       expect(evs).toStrictEqual(sorted);
     });
 
@@ -589,7 +589,7 @@ describe.concurrent("NostrFetcher", () => {
         assert(events.every((ev) => ev.pubkey === author));
 
         // check if events are sorted
-        const sorted = events.slice().sort(createdAtDesc);
+        const sorted = events.slice().sort(compareNostrEvents);
         expect(events).toStrictEqual(sorted);
       }
       // all events of pkC > all events of pkB > all events of pkA, where `>` is "after than"
@@ -616,7 +616,7 @@ describe.concurrent("NostrFetcher", () => {
         assert(events.every((ev) => ev.pubkey === author));
 
         // check if events are sorted
-        const sorted = events.slice().sort(createdAtDesc);
+        const sorted = events.slice().sort(compareNostrEvents);
         expect(events).toStrictEqual(sorted);
       }
       // all events of pkC > all events of pkB > all events of pkA, where `>` is "after than"
@@ -641,7 +641,7 @@ describe.concurrent("NostrFetcher", () => {
         assert(events.every((ev) => ev.pubkey === author));
 
         // check if events are sorted
-        const sorted = events.slice().sort(createdAtDesc);
+        const sorted = events.slice().sort(compareNostrEvents);
         expect(events).toStrictEqual(sorted);
       }
 
@@ -683,7 +683,7 @@ describe.concurrent("NostrFetcher", () => {
         assert(events.every((ev) => ev.pubkey === author));
 
         // check if events are sorted
-        const sorted = events.slice().sort(createdAtDesc);
+        const sorted = events.slice().sort(compareNostrEvents);
         expect(events).toStrictEqual(sorted);
       }
 
@@ -721,7 +721,7 @@ describe.concurrent("NostrFetcher", () => {
         assert(events.every((ev) => ev.content.includes("middle")));
 
         // check if events are sorted
-        const sorted = events.slice().sort(createdAtDesc);
+        const sorted = events.slice().sort(compareNostrEvents);
         expect(events).toStrictEqual(sorted);
       }
     });
@@ -756,7 +756,7 @@ describe.concurrent("NostrFetcher", () => {
         assert(events.every((ev) => ev.kind === kind));
 
         // check if events are sorted
-        const sorted = events.slice().sort(createdAtDesc);
+        const sorted = events.slice().sort(compareNostrEvents);
         expect(events).toStrictEqual(sorted);
       }
     });
