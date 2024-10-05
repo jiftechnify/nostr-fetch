@@ -7,5 +7,9 @@ export {
   type FetchTimeRangeFilter,
 } from "./types";
 
-export { eventKind, type NostrEvent } from "@nostr-fetch/kernel/nostr";
-export { normalizeRelayUrl, normalizeRelayUrlSet, noopVerifier } from "@nostr-fetch/kernel/utils";
+export {
+  eventKind,
+  type NostrEvent,
+  noopVerifier,
+} from "@nostr-fetch/kernel/nostr";
+export { normalizeRelayUrl, normalizeRelayUrlSet } from "@nostr-fetch/kernel/utils";
