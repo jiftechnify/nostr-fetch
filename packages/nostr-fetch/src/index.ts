@@ -9,7 +9,8 @@ export {
 
 export {
   eventKind,
-  type NostrEvent,
   noopVerifier,
+  type EventVerifier,
+  type NostrEvent,
 } from "@nostr-fetch/kernel/nostr";
 export { normalizeRelayUrl, normalizeRelayUrlSet } from "@nostr-fetch/kernel/utils";
