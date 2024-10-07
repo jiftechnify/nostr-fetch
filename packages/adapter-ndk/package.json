@@ -44,11 +44,11 @@
     "@nostr-fetch/kernel": "^0.16.0"
   },
   "devDependencies": {
-    "@nostr-dev-kit/ndk": "^1.0.0",
+    "@nostr-dev-kit/ndk": "^2.10.1",
     "nostr-fetch": "^0.16.0"
   },
   "peerDependencies": {
-    "@nostr-dev-kit/ndk": "^1.0.0",
+    "@nostr-dev-kit/ndk": "^2.10.1",
     "nostr-fetch": "^0.16.0"
   }
 }
