@@ -267,6 +267,26 @@ Cleans up the internal relay pool.
 
 If you use a fetcher instance initialized via `NostrFetcher.init`, calling this method closes connections to all the connected relays.
 
+You can use [a variable with `using` keyword](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-2.html#using-declarations-and-explicit-resource-management) to automatically shutdown a fetcher instance when the scope of the `using` variable ends. Roughly speaking, `withFinally()` and `withUsing()` in the code bellow are the same.
+
+```ts
+async function withFinally() {
+    const fetcher = NostrFetcher.init();
+    try {
+        // do some work with the fetcher...
+    } finally {
+        fetcher.shutdown();
+    }
+}
+
+async function withUsing() {
+    using fetcher = NostrFetcher.init();
+    // do some work with the fetcher...
+
+    // the fetcher will be automatically shutdown here!
+}
+```
+
 ---
 
 ### Fetch Methods
