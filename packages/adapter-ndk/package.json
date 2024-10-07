@@ -19,10 +19,7 @@
     "require": "./dist/index.cjs",
     "types": "./dist/index.d.ts"
   },
-  "files": [
-    "dist",
-    "src"
-  ],
+  "files": ["dist", "src"],
   "publishConfig": {
     "access": "public"
   },
@@ -44,11 +41,11 @@
     "@nostr-fetch/kernel": "^0.16.0"
   },
   "devDependencies": {
-    "@nostr-dev-kit/ndk": "^2.10.1",
+    "@nostr-dev-kit/ndk": "^2.8.2",
     "nostr-fetch": "^0.16.0"
   },
   "peerDependencies": {
-    "@nostr-dev-kit/ndk": "^2.10.1",
+    "@nostr-dev-kit/ndk": "^2.8.2",
     "nostr-fetch": "^0.16.0"
   }
 }

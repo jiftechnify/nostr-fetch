@@ -64,7 +64,7 @@ export class NDKAdapter implements NostrFetcherBackend {
           console.info(r.status);
           logger?.log("info", "disconnected");
         });
-        r.on("notice", (_: unknown, notice: string) => logger?.log("warn", `NOTICE: ${notice}`));
+        r.on("notice", (notice: string) => logger?.log("warn", `NOTICE: ${notice}`));
 
         try {
           this.#ndk.pool.useTemporaryRelay(r, 86400000); // virtually infinite lifetime
@@ -146,7 +146,7 @@ export class NDKAdapter implements NostrFetcherBackend {
 
     // error handlings
     // TODO: how to handle WebSocket error?
-    const onNotice = (_: unknown, notice: string) => {
+    const onNotice = (notice: string) => {
       // ignore if the message seems to have nothing to do with REQs by fetcher
       if (!isNoticeForReqError(notice)) {
         return;
