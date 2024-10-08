@@ -4,9 +4,7 @@
   "private": true,
   "license": "MIT",
   "type": "module",
-  "workspaces": [
-    "packages/*"
-  ],
+  "workspaces": ["packages/*"],
   "scripts": {
     "lint": "turbo lint --filter=!@nostr-fetch/examples",
     "fix": "turbo fix --filter=!@nostr-fetch/examples",
@@ -14,7 +12,7 @@
     "build": "turbo build --filter=!@nostr-fetch/examples",
     "run-all": "turbo lint",
     "run-all-gha": "turbo lint --cache-dir .turbo",
-    "bump-version": "lerna version --conventional-commits --allow-peer-dependencies-update",
+    "bump-version": "lerna version --conventional-commits --allow-peer-dependencies-update --no-push",
     "release": "lerna publish from-package",
     "example": "node scripts/runExample.js"
   },
