@@ -1447,7 +1447,7 @@ export class NostrFetcher {
   }
 
   /**
-   * Enables [explicit resourece management](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-2.html#using-declarations-and-explicit-resource-management) for `NostrFetcher` instances.
+   * Enables [explicit resource management](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-2.html#using-declarations-and-explicit-resource-management) for `NostrFetcher` instances.
    *
    * If you bind a `NostrFetcher` instance to a variable with `using` keyword, it will be automatically shut down when the scope of the variable ends.
    */
