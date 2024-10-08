@@ -3,6 +3,16 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.17.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.16.0...v0.17.0) (2024-10-08)
+
+### Bug Fixes
+
+* export type EventVerifier ([87db35d](https://github.com/jiftechnify/nostr-fetch/commit/87db35d416bebc0b8e936470d0a5cbf4963d5545))
+
+### Features
+
+* make NostrFetcher disposeable ([16ba9af](https://github.com/jiftechnify/nostr-fetch/commit/16ba9af8b5c41f8f2e165643e9d30015294edf84))
+
 # [0.16.0](https://github.com/jiftechnify/nostr-fetch/compare/v0.15.1...v0.16.0) (2024-10-04)
 
 ### Bug Fixes
