@@ -248,7 +248,22 @@ const is64BytesHexStr = (s: string): boolean => {
   return /^[a-f0-9]{128}$/.test(s);
 };
 
+/**
+ * Type of functions that verify the signature of the Nostr event.
+ */
 export type EventVerifier = (event: NostrEvent) => boolean | Promise<boolean>;
+
+/**
+ * no-op `EventVerifier` which regards all events have a valid signature.
+ *
+ * @example
+ * // emulating `skipVerification: true`
+ * import { NostrFetcher, noopVerifier } from "nostr-fetch";
+ *
+ * const fetcher = NostrFetcher.init();
+ * const events = fetcher.allEventsIterator({ ... }, { ... }, { eventVerifier: noopVerifier });
+ */
+export const noopVerifier: EventVerifier = (_: NostrEvent) => true;
 
 type CompiledFilter = {
   ids: Set<string> | undefined;

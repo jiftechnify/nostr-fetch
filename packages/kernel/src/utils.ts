@@ -1,5 +1,3 @@
-import type { EventVerifier, NostrEvent } from "./nostr";
-
 /**
  * Current unxitime in milliseconds.
  */
@@ -100,15 +98,3 @@ export const withTimeout = async <T>(
 
   return Promise.race([promise.finally(() => clearTimeout(timer)), timeout]);
 };
-
-/**
- * no-op `EventVerifier` which regards all events have a valid signature.
- *
- * @example
- * // emulating `skipVerification: true`
- * import { NostrFetcher, noopVerifier } from "nostr-fetch";
- *
- * const fetcher = NostrFetcher.init();
- * const events = fetcher.allEventsIterator({ ... }, { ... }, { eventVerifier: noopVerifier });
- */
-export const noopVerifier: EventVerifier = (_: NostrEvent) => true;

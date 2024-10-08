@@ -9,5 +9,8 @@ const utf8Encoder = new TextEncoder();
 export const verifyEventSig = (ev: NostrEvent): boolean => {
   const serializedEv = JSON.stringify([0, ev.pubkey, ev.created_at, ev.kind, ev.tags, ev.content]);
   const evHash = bytesToHex(sha256(utf8Encoder.encode(serializedEv)));
+  if (ev.id !== evHash) {
+    return false;
+  }
   return schnorr.verify(ev.sig, evHash, ev.pubkey);
 };
