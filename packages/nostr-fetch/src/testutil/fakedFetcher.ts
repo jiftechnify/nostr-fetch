@@ -214,10 +214,14 @@ class FakeFetcherBackend implements NostrFetcherBackend {
       abortSub();
       clearTimer();
     }
-    options.signal?.addEventListener("abort", () => {
-      abortSub();
-      clearTimer();
-    });
+    options.signal?.addEventListener(
+      "abort",
+      () => {
+        abortSub();
+        clearTimer();
+      },
+      { once: true },
+    );
 
     return iter;
   }

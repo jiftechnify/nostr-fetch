@@ -64,11 +64,15 @@ export const setupSubscriptionAutoAbortion = (
     clearTimer();
     tx.error(new FetchTillEoseAbortedSignal("subscription aborted by AbortController"));
   }
-  options.signal?.addEventListener("abort", () => {
-    closeSub();
-    clearTimer();
-    tx.error(new FetchTillEoseAbortedSignal("subscription aborted by AbortController"));
-  });
+  options.signal?.addEventListener(
+    "abort",
+    () => {
+      closeSub();
+      clearTimer();
+      tx.error(new FetchTillEoseAbortedSignal("subscription aborted by AbortController"));
+    },
+    { once: true },
+  );
 
   return resetTimer;
 };

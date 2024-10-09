@@ -172,14 +172,18 @@ export class DefaultFetcherBackend implements NostrFetcherBackend {
         ),
       );
     }
-    options.signal?.addEventListener("abort", () => {
-      closeSub();
-      tx.error(
-        new FetchTillEoseAbortedSignal(
-          `subscription (id: ${sub.subId}) aborted by AbortController`,
-        ),
-      );
-    });
+    options.signal?.addEventListener(
+      "abort",
+      () => {
+        closeSub();
+        tx.error(
+          new FetchTillEoseAbortedSignal(
+            `subscription (id: ${sub.subId}) aborted by AbortController`,
+          ),
+        );
+      },
+      { once: true },
+    );
 
     yield* chIter;
   }
