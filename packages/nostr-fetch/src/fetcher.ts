@@ -574,7 +574,7 @@ export class NostrFetcher {
       eligibleRelayUrls.map(async (rurl) => {
         // repeat subscription until one of the following conditions is met:
         // 1. the relay didn't return new event
-        // 2. aborted by AbortController
+        // 2. aborted by the AbortSignal
         // E. an error occurred while fetching events
 
         const logger = this.#debugLogger?.subLogger(rurl);
@@ -799,7 +799,7 @@ export class NostrFetcher {
         // repeat subscription until one of the following conditions is met:
         // 1. got enough amount of events
         // 2. the relay didn't return new event
-        // 3. aborted by AbortController
+        // 3. aborted by the AbortSignal
         // E. an error occurred while fetching events
 
         const logger = this.#debugLogger?.subLogger(rurl);
@@ -1155,7 +1155,7 @@ export class NostrFetcher {
         // repeat subscription until one of the following conditions is met:
         // 1. have fetched required number of events for all keys
         // 2. the relay didn't return new event
-        // 3. aborted by AbortController
+        // 3. aborted by the AbortSignal
         // E. an error occurred while fetching events
 
         const logger = this.#debugLogger?.subLogger(rurl);

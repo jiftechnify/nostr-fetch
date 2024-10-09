@@ -398,18 +398,10 @@ describe.concurrent("NostrFetcher", () => {
       );
     });
 
-    test("can be aborted by AbortController", async () => {
-      const ac = new AbortController();
-      setTimeout(() => {
-        ac.abort();
-      }, 500);
+    test("can be aborted by AbortSignal", async () => {
+      const timeout = AbortSignal.timeout(500);
 
-      const evIter = fetcher.allEventsIterator(
-        ["wss://delayed/"],
-        {},
-        {},
-        { abortSignal: ac.signal },
-      );
+      const evIter = fetcher.allEventsIterator(["wss://delayed/"], {}, {}, { signal: timeout });
       const evs = await collectAsyncIter(evIter);
       expect(evs.length).toBeLessThan(10);
     });

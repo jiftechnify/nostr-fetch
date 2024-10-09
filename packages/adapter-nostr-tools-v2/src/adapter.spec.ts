@@ -112,18 +112,15 @@ describe("SimplePoolAdapter", () => {
       await expect(wsServer).toReceiveMessage(["CLOSE", "test"]);
     });
 
-    test("should be aborted by AbortController", async () => {
+    test("should be aborted by AbortSignal", async () => {
       setupMockRelayServer(wsServer, [
         { type: "events", eventsSpec: { content: "test", n: 10 }, intervalMs: 100 },
       ]);
 
-      const ac = new AbortController();
-      setTimeout(() => {
-        ac.abort();
-      }, 500);
+      const timeout = AbortSignal.timeout(500);
 
       await backend.ensureRelays([url], { connectTimeoutMs: 1000 });
-      const iter = backend.fetchTillEose(url, {}, optsWithDefault({ signal: ac.signal }));
+      const iter = backend.fetchTillEose(url, {}, optsWithDefault({ signal: timeout }));
       const evs = await collectAsyncIterUntilThrow(iter);
       expect(evs.length).toBeLessThan(10);
 

@@ -49,7 +49,7 @@ export interface NostrFetcherBackend {
    * - A WebSocket error occurred during the fetch
    *
    *
-   * If the fetch was aborted (due to AbortController or auto abortion timer), it should throw `FetchTillEoseAbortedSignal`.
+   * If the fetch was aborted (due to AbortSignal or auto abortion timer), it should throw `FetchTillEoseAbortedSignal`.
    *
    * Hint:
    * You can make use of a `Channel` to convert "push" style code (bunch of event listers) to `AsyncIterable`.
@@ -77,7 +77,7 @@ export class FetchTillEoseFailedSignal extends Error {
 }
 
 /**
- * Error type signaling that `NostrFetcherBackend#fetchTillEose()` is aborted (due to AbortController or auto abortion)
+ * Error type signaling that `NostrFetcherBackend#fetchTillEose()` is aborted (due to AbortSignal or auto abortion)
  */
 export class FetchTillEoseAbortedSignal extends Error {
   static {

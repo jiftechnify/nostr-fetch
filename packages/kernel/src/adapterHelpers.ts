@@ -6,7 +6,7 @@ import type { NostrEvent } from "./nostr";
  * Helper that sets up two types of subscription abortions:
  *
  * - Auto-abortion when time (specified by `abortSubBeforeEoseTimeoutMs`) has passed without receiving any event since the last event was received
- * - Abortion by an AbortController (if enabled by `abortSignal`)
+ * - Abortion by an AbortSignal (if `signal` is set)
  *
  * Returns a function to reset the timer for the auto-abortion. Implementers of the `NostrFetcherBackend` **MUST** make sure that the function is called each time received an event from a relay.
  * Otherwise, the auto-abortion will not work collectly.
@@ -58,17 +58,21 @@ export const setupSubscriptionAutoAbortion = (
   };
   resetTimer(); // initiate subscription auto abortion timer
 
-  // handle abortion by AbortController
+  // handle abortion by AbortSignal
   if (options.signal?.aborted) {
     closeSub();
     clearTimer();
-    tx.error(new FetchTillEoseAbortedSignal("subscription aborted by AbortController"));
+    tx.error(new FetchTillEoseAbortedSignal("subscription aborted by the signal"));
   }
-  options.signal?.addEventListener("abort", () => {
-    closeSub();
-    clearTimer();
-    tx.error(new FetchTillEoseAbortedSignal("subscription aborted by AbortController"));
-  });
+  options.signal?.addEventListener(
+    "abort",
+    () => {
+      closeSub();
+      clearTimer();
+      tx.error(new FetchTillEoseAbortedSignal("subscription aborted by the signal"));
+    },
+    { once: true },
+  );
 
   return resetTimer;
 };

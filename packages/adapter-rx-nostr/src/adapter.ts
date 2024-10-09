@@ -60,10 +60,7 @@ export class RxNostrAdapter implements NostrFetcherBackend {
       }
     }
 
-    const ac = new AbortController();
-    setTimeout(() => {
-      ac.abort();
-    }, connectTimeoutMs);
+    const timeoutSignal = AbortSignal.timeout(connectTimeoutMs);
 
     const ensuredRelayUrls = new Promise<string[]>((resolve) => {
       const relayUrlsToConnect = new Set(normalizedUrls);
@@ -98,7 +95,7 @@ export class RxNostrAdapter implements NostrFetcherBackend {
               relayUrlsConnected.add(rurl);
               if (relayUrlsToConnect.size === relayUrlsConnected.size) {
                 connStateSub.unsubscribe();
-                ac.signal.removeEventListener("abort", onTimeout);
+                timeoutSignal.removeEventListener("abort", onTimeout);
                 resolve([...relayUrlsConnected]);
               }
             } else {
@@ -108,7 +105,7 @@ export class RxNostrAdapter implements NostrFetcherBackend {
         });
 
       // return relays connected so far on timeout
-      ac.signal.addEventListener("abort", onTimeout);
+      timeoutSignal.addEventListener("abort", onTimeout, { once: true });
     });
     return ensuredRelayUrls;
   }
