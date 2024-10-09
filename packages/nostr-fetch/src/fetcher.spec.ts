@@ -398,7 +398,7 @@ describe.concurrent("NostrFetcher", () => {
       );
     });
 
-    test("can be aborted by AbortController", async () => {
+    test("can be aborted by AbortSignal", async () => {
       const timeout = AbortSignal.timeout(500);
 
       const evIter = fetcher.allEventsIterator(["wss://delayed/"], {}, {}, { signal: timeout });

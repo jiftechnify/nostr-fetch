@@ -160,7 +160,7 @@ export class NRTPoolAdapter implements NostrFetcherBackend {
    * - Received a NOTICE message during the fetch
    * - A WebSocket error occurred during the fetch
    *
-   * If the fetch was aborted (due to AbortController or auto abortion timer), it should throw `FetchTillEoseAbortedSignal`.
+   * If the fetch was aborted (due to AbortSignal or auto abortion timer), it should throw `FetchTillEoseAbortedSignal`.
    */
   public fetchTillEose(
     relayUrl: string,

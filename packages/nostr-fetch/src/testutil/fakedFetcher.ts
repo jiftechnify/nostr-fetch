@@ -209,7 +209,7 @@ class FakeFetcherBackend implements NostrFetcherBackend {
     };
     resetTimer(); // initiate subscription auto abortion timer
 
-    // handle abortion by AbortController
+    // handle abortion by AbortSignal
     if (options.signal?.aborted) {
       abortSub();
       clearTimer();

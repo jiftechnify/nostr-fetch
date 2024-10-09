@@ -132,7 +132,7 @@ describe("DefaultFetcherBackend", () => {
       await expect(wsServer).toReceiveMessage(["CLOSE", "test"]);
     });
 
-    test("should be aborted by AbortController", async () => {
+    test("should be aborted by AbortSignal", async () => {
       setupMockRelayServer(wsServer, [
         { type: "events", eventsSpec: { content: "test", n: 10 }, intervalMs: 100 },
       ]);

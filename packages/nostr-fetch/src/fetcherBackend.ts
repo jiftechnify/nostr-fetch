@@ -71,7 +71,7 @@ export class DefaultFetcherBackend implements NostrFetcherBackend {
    * - Received a NOTICE message during the fetch
    * - A WebSocket error occurred during the fetch
    *
-   * If the fetch was aborted (due to AbortController or auto abortion timer), it should throw `FetchTillEoseAbortedSignal`.
+   * If the fetch was aborted (due to AbortSignal or auto abortion timer), it should throw `FetchTillEoseAbortedSignal`.
    */
   public async *fetchTillEose(
     relayUrl: string,
@@ -167,9 +167,7 @@ export class DefaultFetcherBackend implements NostrFetcherBackend {
     if (options.signal?.aborted) {
       closeSub();
       tx.error(
-        new FetchTillEoseAbortedSignal(
-          `subscription (id: ${sub.subId}) aborted by AbortController`,
-        ),
+        new FetchTillEoseAbortedSignal(`subscription (id: ${sub.subId}) aborted by the signal`),
       );
     }
     options.signal?.addEventListener(
@@ -177,9 +175,7 @@ export class DefaultFetcherBackend implements NostrFetcherBackend {
       () => {
         closeSub();
         tx.error(
-          new FetchTillEoseAbortedSignal(
-            `subscription (id: ${sub.subId}) aborted by AbortController`,
-          ),
+          new FetchTillEoseAbortedSignal(`subscription (id: ${sub.subId}) aborted by the signal`),
         );
       },
       { once: true },
