@@ -273,13 +273,13 @@ export const makeBreakableSignal = (signal?: AbortSignal): [AbortSignal, () => v
     return [breakable, () => ac.abort()];
   }
 
-  const onAbort = () => {
-    ac.abort();
-  };
-  signal.addEventListener("abort", onAbort, { once: true });
-  ac.signal.addEventListener("abort", () => {
-    signal.removeEventListener("abort", onAbort);
-  });
+  signal.addEventListener(
+    "abort",
+    () => {
+      ac.abort();
+    },
+    { once: true, signal: ac.signal },
+  );
   return [ac.signal, () => ac.abort()];
 };
 
