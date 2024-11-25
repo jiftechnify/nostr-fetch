@@ -23,7 +23,7 @@
     "@lerna-lite/publish": "^3.6.0",
     "@tsconfig/strictest": "^2.0.1",
     "@types/fs-extra": "^11.0.1",
-    "@types/node": "^20.4.1",
+    "@types/node": "^22.9.3",
     "conventional-changelog-cli": "^5.0.0",
     "copy-file-util": "^1.0.0",
     "esbuild": "^0.20.0",
